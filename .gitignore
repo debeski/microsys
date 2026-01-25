@@ -3,23 +3,22 @@
 *.pyc
 *.pyo
 **/.DS_Store
-.VSCodeCounter
 desktop.ini
+desktop.inf
 autorun.ini
+autorun.inf
 
 # Ignore app directories
-logs/*
-media/*
-staticfiles/*
-imports/*
-postgres_data/
-pgadmin_data/
-.backups/*
-.secrets
-.xpose
-.VSCodeCounter/
-micro_users.egg-info/
+logs/
+media/
+staticfiles/
+imports/
+.backups/
+.secrets/
+.xpose/
+venv/
 dist/
+*.egg-info/
 
 # Ignore celery-related files
 celerybeat-schedule
