@@ -28,3 +28,4 @@ class UsersConfig(AppConfig):
     def ready(self):
         from django.contrib.auth.models import Permission
         Permission.__str__ = custom_permission_str
+        import users.signals

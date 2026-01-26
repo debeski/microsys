@@ -2,6 +2,10 @@
 
 [![PyPI version](https://badge.fury.io/py/micro-users.svg)](https://pypi.org/project/micro-users/)
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/debeski/micro-users/main/users/static/img/login_logo.webp" alt="Micro Users Login Logo" width="200"/>
+</p>
+
 **Arabic** lightweight, reusable Django app providing user management with abstract user, permissions, localization, and activity logging.
 
 ## Requirements
@@ -16,10 +20,9 @@
 
 ## Features
 - Custom AbstractUser model
-- Department Management System
-- Custom Grouped User permissions system *NEW*
-- Custom Grouped User permissions system *NEW*
-- Activity logging (login/logout, CRUD tracking)
+- Scope Management System (replaces Department)
+- Custom Grouped User permissions system
+- Automatic Activity logging (login/logout, CRUD for all models)
 - Specific User detail and log view
 - Localization support
 - Admin interface integration
@@ -47,12 +50,22 @@ INSTALLED_APPS = [
 ]
 ```
 
-2. Set custom user model in settings.py:
+2. Add Middleware in `settings.py` (Required for logging):
+```python
+MIDDLEWARE = [
+    # ...
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # ...
+    'users.middleware.ActivityLogMiddleware',  # Add this line
+]
+```
+
+3. Set custom user model in `settings.py`:
 ```python
 AUTH_USER_MODEL = 'users.CustomUser'
 ```
 
-3. Include URLs in your main project folder `urls.py`:
+4. Include URLs in your main project folder `urls.py`:
 ```python
 urlpatterns = [
     ...
@@ -60,7 +73,7 @@ urlpatterns = [
 ]
 ```
 
-4. Run migrations:
+5. Run migrations:
 ```bash
 python manage.py migrate users
 ```
@@ -71,136 +84,18 @@ Once configured, the app automatically handles user management and activity logg
 
 ### Activity Logging
 
-The app automatically logs **LOGIN** and **LOGOUT** actions. For custom logging of other actions in your application, you can use the following helper functions:
+The app provides a fully **automated** activity logging system. No manual configuration is required in your views.
 
-#### Available Helper Functions
+- **Login/Logout**: Automatically tracked.
+- **Create/Update/Delete**: Any change to any model in your app (including `Scope` and `User`) is automatically logged via Django Signals.
+- **Log content**: Tracks the user, action type, model name, object ID, and timestamp.
+    - *Note*: `last_login` field updates are automatically filtered out to prevent redundant "Update" logs on login.
 
-1. **Get Client IP** - Extract the user's IP address from request:
-```python
-from users.signals import get_client_ip
-
-# Usage in views
-ip_address = get_client_ip(request)
-```
-
-2. **Log User Action** - Create a reusable logging function:
-```python
-from django.utils import timezone
-from users.models import UserActivityLog
-from users.signals import get_client_ip
-
-def log_user_action(request, instance, action, model_name):
-    """
-    Logs a user action to the activity log.
-    
-    Args:
-        request: HttpRequest object
-        instance: The model instance being acted upon
-        action: Action type (see ACTION_TYPES below)
-        model_name: Name of the model/entity (in Arabic or English)
-    """
-    UserActivityLog.objects.create(
-        user=request.user,
-        action=action,
-        model_name=model_name,
-        object_id=instance.pk,
-        number=instance.number if hasattr(instance, 'number') else '',
-        timestamp=timezone.now(),
-        ip_address=get_client_ip(request),
-        user_agent=request.META.get("HTTP_USER_AGENT", ""),
-    )
-```
-
-#### Action Types Available
-Use these constants when logging actions:
-
-| Action Constant | Arabic Display | Description |
-|-----------------|----------------|-------------|
-| `'LOGIN'` | تسجيل دخـول | User login (auto-logged) |
-| `'LOGOUT'` | تسجيل خـروج | User logout (auto-logged) |
-| `'CREATE'` | انشـاء | Object creation |
-| `'UPDATE'` | تعديـل | Object modification |
-| `'DELETE'` | حــذف | Object deletion |
-| `'VIEW'` | عـرض | Object viewing |
-| `'DOWNLOAD'` | تحميل | File download |
-| `'CONFIRM'` | تأكيـد | Action confirmation |
-| `'REJECT'` | رفــض | Action rejection |
-| `'RESET'` | اعادة ضبط | Password/Data reset |
-
-#### Usage Examples
-
-1. **Logging a CREATE action**:
-```python
-def create_document(request):
-    # ... create logic ...
-    document = Document.objects.create(...)
-    
-    # Log the action
-    from users.models import UserActivityLog
-    from users.signals import get_client_ip
-    
-    UserActivityLog.objects.create(
-        user=request.user,
-        action='CREATE',
-        model_name='وثيقة',
-        object_id=document.pk,
-        number=document.number,
-        ip_address=get_client_ip(request),
-        user_agent=request.META.get("HTTP_USER_AGENT", ""),
-    )
-```
-
-2. **Using the helper function**:
-```python
-# Create a helper function in your app
-def log_action(request, instance, action, model_name):
-    from users.models import UserActivityLog
-    from users.signals import get_client_ip
-    from django.utils import timezone
-    
-    UserActivityLog.objects.create(
-        user=request.user,
-        action=action,
-        model_name=model_name,
-        object_id=instance.pk,
-        number=getattr(instance, 'number', ''),
-        timestamp=timezone.now(),
-        ip_address=get_client_ip(request),
-        user_agent=request.META.get("HTTP_USER_AGENT", ""),
-    )
-
-# Usage in views
-def update_order(request, order_id):
-    order = get_object_or_404(Order, pk=order_id)
-    # ... update logic ...
-    log_action(request, order, 'UPDATE', 'طلب')
-```
-
-3. **Logging without an instance** (for general actions):
-```python
-def log_general_action(request, action, model_name, description=''):
-    from users.models import UserActivityLog
-    from users.signals import get_client_ip
-    from django.utils import timezone
-    
-    UserActivityLog.objects.create(
-        user=request.user,
-        action=action,
-        model_name=model_name,
-        object_id=None,
-        number=description,
-        timestamp=timezone.now(),
-        ip_address=get_client_ip(request),
-        user_agent=request.META.get("HTTP_USER_AGENT", ""),
-    )
-
-# Usage
-log_general_action(request, 'CONFIRM', 'نظام', 'تم تأكيد الإعدادات')
-```
+To view logs, navigate to `manage/logs/` or use the Django Admin interface ("حركات السجل").
 
 ## Available URLs
 
-All user management URLs are prefixed with `manage/` as configured. Below is the complete list:
+All user management URLs are prefixed with `manage/` as configured above. Below is the complete list:
 
 | URL Pattern | View/Function | Description |
 |-------------|---------------|-------------|
@@ -215,7 +110,7 @@ All user management URLs are prefixed with `manage/` as configured. Below is the
 | `manage/profile/edit/` | `views.edit_profile` | Edit current profile |
 | `manage/logs/` | `views.UserActivityLogView.as_view()` | View activity logs |
 | `manage/reset_password/<int:pk>/` | `views.reset_password` | Reset user password |
-| `manage/departments/manage/` | `views.manage_departments` | Department Manager (Modal) |
+| `manage/scopes/manage/` | `views.manage_scopes` | Scope Manager (Modal) |
 
 ## Structure
 ```
@@ -224,6 +119,7 @@ users/
 ├── urls.py         # URL routing
 ├── tables.py       # User and Activity Log tables
 ├── signals.py      # Logging signals
+├── middleware.py   # Request capture for signals
 ├── models.py       # User model, permissions, activity logs
 ├── forms.py        # Creation, edit,. etc.
 ├── filter.py       # Search filters
@@ -233,6 +129,27 @@ users/
 ├── templates/      # HTML templates (includes partials)
 ├── static/         # CSS classes
 └── migrations/     # Database migrations
+```
+
+## Customization
+
+### Replacing Login Logo
+To replace the default login logo, simply place your own `login_logo.webp` image in your project's static directory at `static/img/login_logo.webp`.
+
+### Theme Configuration
+You can configure the login page colors by defining `MICRO_USERS_THEME` in your project's `settings.py`. This dictionary overrides the default CSS variables.
+
+```python
+MICRO_USERS_THEME = {
+    'right_bg': '#474745',
+    'left_bg': 'white',
+    'selection_bg': '#dbdbdb',
+    'gradient_start': '#a2a2a7',
+    'gradient_end': '#474745',
+    # Additional keys supported:
+    # 'selection_moz_bg', 'left_shadow', 'right_shadow', 'right_text',
+    # 'label_color', 'input_text', 'submit_color', 'submit_focus', 'submit_active'
+}
 ```
 
 ## Version History
@@ -256,3 +173,5 @@ users/
 | v1.4.0   | • Redesigned Permissions UI (Grouped by App/Action) <br> • Added Global Bulk Permission Selectors <br> • Improved Arabic Localization for Permissions <br> • Optimized printing (hidden forms/buttons) <br> • Fixed various bugs and crashes |
 | v1.4.1   | • Changed "Administrative User" translation to "Responsible User" (مستخدم مسؤول) <br> • Enforced custom sorting order for Permissions (View -> Add -> Change -> Other) |
 | v1.5.0   | • Department Management (Modal-based CRUD)<br> • Department field implementation<br> • Template refactoring (partials/, profile/, users/ for logs)<br> • Verbose names for models |
+| v1.6.0   | • **Automated Activity Logging**: dynamic logging for all CREATE/UPDATE/DELETE actions via Middleware & Signals<br> • **Refactor**: Renamed `Department` model to `Scope` (Scope Management)<br> • Removed manual logging requirement<br> • **Architecture**: Decoupled models, forms, and tables using dynamic imports and `apps.get_model` <br> • **Soft Delete**: Users are now marked as inactive with a timestamp instead of being permanently deleted<br> • **Activity Log**: Deleted users appear with a strikethrough<br> • **CSS Refactor**: Extracted and cleaned up styling with CSS variables<br> • **Login**: Refactored login page with separated JS/CSS and a new modern default logo |
+| v1.6.1   | • **Theme Configuration**: Added `MICRO_USERS_THEME` setting for easy color customization <br> • **Bug Fixes**: Explicitly excluded unwanted columns (id, ip_address, user_agent) from Activity Log table <br> • **UI**: Improved Scope Manager button visibility |

@@ -1,13 +1,13 @@
 {% load crispy_forms_tags %}
 
 <div class="d-flex justify-content-between mb-3">
-    <h5 class="modal-title">{% if department_id %}تعديل قسم{% else %}إضافة قسم جديد{% endif %}</h5>
-    <button class="btn btn-secondary" onclick="loadDepartmentForm('{% url 'manage_departments' %}')">
+    <h5 class="modal-title">{% if scope_id %}تعديل نطاق{% else %}إضافة نطاق جديد{% endif %}</h5>
+    <button class="btn btn-secondary" onclick="loadScopeForm('{% url 'manage_scopes' %}')">
         <i class="bi bi-arrow-right me-1"></i> عودة للقائمة
     </button>
 </div>
 
-<form id="departmentForm" onsubmit="submitDepartmentForm(event, '{% url 'save_department' %}{% if department_id %}/{{ department_id }}{% endif %}')">
+<form id="scopeForm" onsubmit="submitScopeForm(event, '{% url 'save_scope' %}{% if scope_id %}/{{ scope_id }}{% endif %}')">
     {% csrf_token %}
     {% crispy form %}
     

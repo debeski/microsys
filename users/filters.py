@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Field, HTML
 from django.db.models import Q
-from .models import UserActivityLog
+from django.apps import apps  # Import apps
 
 User = get_user_model()  # Use custom user model
 
@@ -39,7 +39,7 @@ class UserFilter(django_filters.FilterSet):
             Q(username__icontains=value) |
             Q(email__icontains=value) |
             Q(phone__icontains=value) |
-            Q(department__name__icontains=value) |
+            Q(scope__name__icontains=value) |
             Q(first_name__icontains=value) |
             Q(last_name__icontains=value)
         )
@@ -57,7 +57,7 @@ class UserActivityLogFilter(django_filters.FilterSet):
         empty_label="السنة",
     )
     class Meta:
-        model = UserActivityLog
+        model = apps.get_model('users', 'UserActivityLog')
         fields = {
             'timestamp': ['gte', 'lte'],
         }
@@ -65,7 +65,7 @@ class UserActivityLogFilter(django_filters.FilterSet):
         super().__init__(*args, **kwargs)
         
         # Fetch distinct years dynamically
-        years = UserActivityLog.objects.dates('timestamp', 'year').distinct()
+        years = self.Meta.model.objects.dates('timestamp', 'year').distinct()
         self.filters['year'].extra['choices'] = [(year.year, year.year) for year in years]
         self.filters['year'].field.widget.attrs.update({
             'onchange': 'this.form.submit();'
@@ -102,6 +102,7 @@ class UserActivityLogFilter(django_filters.FilterSet):
             Q(action__icontains=value) |
             Q(model_name__icontains=value) |
             Q(number__icontains=value) |
+            Q(scope__name__icontains=value) |
             Q(ip_address__icontains=value)
         )
 

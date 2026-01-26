@@ -5,24 +5,29 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings  # Use this to reference the custom user model
 from django.contrib.postgres.fields import JSONField
 
-class Department(models.Model):
-    name = models.CharField(max_length=100, verbose_name="القسم")
+class Scope(models.Model):
+    name = models.CharField(max_length=100, verbose_name="النطاق")
 
     def __str__(self):
         return self.name
 
     class Meta:
-        verbose_name = "قسم"
-        verbose_name_plural = "الأقسام"
+        verbose_name = "نطاق"
+        verbose_name_plural = "النطاقات"
 
 class CustomUser(AbstractUser):
     phone = models.CharField(max_length=15, blank=True, null=True, verbose_name="رقم الهاتف")
-    department = models.ForeignKey('Department', on_delete=models.PROTECT, null=True, blank=True, verbose_name="القسم")
+    scope = models.ForeignKey('Scope', on_delete=models.PROTECT, null=True, blank=True, verbose_name="النطاق")
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الحذف")
 
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
+
+    class Meta:
+        verbose_name = "مستخدم"
+        verbose_name_plural = "المستخدمين"
 
 class UserActivityLog(models.Model):
     ACTION_TYPES = [

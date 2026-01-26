@@ -1,12 +1,23 @@
-::selection {
-  background: #d4c591;
+:root {
+  --selection-bg: #dbdbdb;
+  --selection-moz-bg: #dbdbdb;
+  --left-bg: white;
+  --left-shadow: rgba(0,0,0,0.03);
+  --right-bg: #474745;
+  --right-shadow: rgba(0,0,0,0.07);
+  --right-text: #F1F1F2;
+  --label-color: #c2c2c5;
+  --input-text: #000000;
+  --submit-color: #707075;
+  --submit-focus: #575757;
+  --submit-active: #4d4d4d;
+  --gradient-start: #474745;
+  --gradient-end: #a2a2a7;
 }
-::-webkit-selection {
-  background: #d4c591;
-}
-::-moz-selection {
-  background: #c9aa5e;
-}
+
+::selection { background: var(--selection-bg); }
+::-webkit-selection { background: var(--selection-bg); }
+::-moz-selection { background: var(--selection-moz-bg); }
 
 .page {
   display: flex;
@@ -16,6 +27,7 @@
   place-content: center;
   width: calc(100% - 40px);
 }
+
 @media (max-width: 767px) {
   .page {
     height: auto;
@@ -23,11 +35,13 @@
     padding-bottom: 20px;
   }
 }
+
 .container {
   height: 320px;
   margin: 0 auto;
   width: 640px;
 }
+
 @media (max-width: 767px) {
   .container {
     flex-direction: column;
@@ -35,15 +49,16 @@
     width: 320px;
   }
 }
+
 .left {
-  background: white;
+  background: var(--left-bg);
   height: calc(100% - 40px);
   top: 20px;
   position: relative;
   width: 60%;
-  box-shadow: 0px 0px 10px 4px rgba(0,0,0,0.03);
-
+  box-shadow: 0px 0px 10px 4px var(--left-shadow);
 }
+
 @media (max-width: 767px) {
   .left {
     height: 100%;
@@ -52,23 +67,15 @@
     max-height: 270px;
   }
 }
-/* .login {
-  font-size: 38px;
-  font-weight: 600;
-}
-.eula {
-  color: #adadad;
-  font-size: 14px;
-  line-height: 1.5;
-  margin: 40px;
-} */
+
 .right {
-  background: #cb9447;
-  box-shadow: 0px 0px 20px 8px rgba(0,0,0,0.07);
-  color: #F1F1F2;
+  background: var(--right-bg);
+  box-shadow: 0px 0px 20px 8px var(--right-shadow);
+  color: var(--right-text);
   position: relative;
   width: 58%;
 }
+
 @media (max-width: 767px) {
   .right {
     flex-shrink: 0;
@@ -77,32 +84,37 @@
     max-height: 350px;
   }
 }
+
 svg {
   position: absolute;
   width: 320px;
 }
+
 path {
   fill: none;
-  stroke: url(#linearGradient);;
+  stroke: url(#linearGradient);
   stroke-width: 3;
   stroke-dasharray: 240 1386;
 }
+
 .form {
   margin: 35px 35px 35px 20px;
   position: absolute;
 }
+
 label {
-  color:  #c2c2c5;
+  color: var(--label-color);
   display: block;
   font-size: 14px;
   height: 16px;
   margin-top: 20px;
   margin-bottom: 5px;
 }
+
 input {
   background: transparent;
   border: 0;
-  color: #2d0202;
+  color: var(--input-text);
   font-size: 20px;
   height: 30px;
   line-height: 30px;
@@ -111,24 +123,19 @@ input {
   margin-top: 30px;
   margin-bottom: 10px;
 }
-input::-moz-focus-inner { 
-  border: 0; 
-}
+
+input::-moz-focus-inner { border: 0; }
+
 #submit {
-  color: #707075;
+  color: var(--submit-color);
   margin-top: 40px;
   transition: color 300ms;
 }
-#submit:focus {
-  color: #575757;
-} 
-#submit:active {
-  color: #4d4d4d;
-}
 
-.titlebar {
-  background-color: var(--title);
-  flex-direction: row;
-  height: 7vh;
-  justify-content: center !important
-}
+#submit:focus { color: var(--submit-focus); }
+#submit:active { color: var(--submit-active); }
+
+/* New Utility Classes for specific elements */
+.login-input { font-size: 28px !important; }
+.login-submit { font-size: 25px !important; }
+.logo-img { width: 100%; }

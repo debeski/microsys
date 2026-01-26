@@ -14,7 +14,7 @@ from django.db.models import Q
 
 
 from django.forms.widgets import ChoiceWidget
-from .models import Department
+from django.apps import apps  # Import apps
 
 User = get_user_model()
 
@@ -127,15 +127,15 @@ class CustomUserCreationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ["username", "email", "password1", "password2", "first_name", "last_name", "phone", "department", "is_staff", "permissions", "is_active"]
+        fields = ["username", "email", "password1", "password2", "first_name", "last_name", "phone", "scope", "is_staff", "permissions", "is_active"]
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        if self.user and not self.user.is_superuser and self.user.department:
-            self.fields['department'].initial = self.user.department
-            self.fields['department'].disabled = True
+        if self.user and not self.user.is_superuser and self.user.scope:
+            self.fields['scope'].initial = self.user.scope
+            self.fields['scope'].disabled = True
         
         self.fields["username"].label = "اسم المستخدم"
         self.fields["email"].label = "البريد الإلكتروني"
@@ -169,7 +169,7 @@ class CustomUserCreationForm(UserCreationForm):
             ),
             Div(
                 Div(Field("phone", css_class="col-md-6"), css_class="col-md-6"),
-                Div(Field("department", css_class="col-md-6"), css_class="col-md-6"),
+                Div(Field("scope", css_class="col-md-6"), css_class="col-md-6"),
                 css_class="row"
             ),
             HTML("<hr>"),
@@ -225,15 +225,15 @@ class CustomUserChangeForm(UserChangeForm):
 
     class Meta:
         model = User
-        fields = ["username", "email", "first_name", "last_name", "phone", "department", "is_staff",  "permissions", "is_active"]
+        fields = ["username", "email", "first_name", "last_name", "phone", "scope", "is_staff",  "permissions", "is_active"]
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         user_instance = kwargs.get('instance')
         super().__init__(*args, **kwargs)
 
-        if self.user and not self.user.is_superuser and self.user.department:
-            self.fields['department'].disabled = True
+        if self.user and not self.user.is_superuser and self.user.scope:
+            self.fields['scope'].disabled = True
         
         # Labels
         self.fields["username"].label = "اسم المستخدم"
@@ -266,7 +266,7 @@ class CustomUserChangeForm(UserChangeForm):
             ),
             Div(
                 Div(Field("phone", css_class="col-md-6"), css_class="col-md-6"),
-                Div(Field("department", css_class="col-md-6"), css_class="col-md-6"),
+                Div(Field("scope", css_class="col-md-6"), css_class="col-md-6"),
                 css_class="row"
             ),
             HTML("<hr>"),
@@ -380,14 +380,14 @@ class ArabicPasswordChangeForm(PasswordChangeForm):
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'dir': 'rtl'}),
     )
 
-class DepartmentForm(forms.ModelForm):
+class ScopeForm(forms.ModelForm):
     class Meta:
-        model = Department
+        model = apps.get_model('users', 'Scope')
         fields = ['name']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['name'].label = "اسم القسم"
+        self.fields['name'].label = "اسم النطاق"
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.layout = Layout(

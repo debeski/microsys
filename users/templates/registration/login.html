@@ -3,13 +3,33 @@
 {% block title %}تسجيل الدخول{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/login.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/login.css' %}">
+{% if theme %}
+<style>
+  :root {
+    {% if theme.selection_bg %}--selection-bg: {{ theme.selection_bg }} !important;{% endif %}
+    {% if theme.selection_moz_bg %}--selection-moz-bg: {{ theme.selection_moz_bg }} !important;{% endif %}
+    {% if theme.left_bg %}--left-bg: {{ theme.left_bg }} !important;{% endif %}
+    {% if theme.left_shadow %}--left-shadow: {{ theme.left_shadow }} !important;{% endif %}
+    {% if theme.right_bg %}--right-bg: {{ theme.right_bg }} !important;{% endif %}
+    {% if theme.right_shadow %}--right-shadow: {{ theme.right_shadow }} !important;{% endif %}
+    {% if theme.right_text %}--right-text: {{ theme.right_text }} !important;{% endif %}
+    {% if theme.label_color %}--label-color: {{ theme.label_color }} !important;{% endif %}
+    {% if theme.input_text %}--input-text: {{ theme.input_text }} !important;{% endif %}
+    {% if theme.submit_color %}--submit-color: {{ theme.submit_color }} !important;{% endif %}
+    {% if theme.submit_focus %}--submit-focus: {{ theme.submit_focus }} !important;{% endif %}
+    {% if theme.submit_active %}--submit-active: {{ theme.submit_active }} !important;{% endif %}
+    {% if theme.gradient_start %}--gradient-start: {{ theme.gradient_start }} !important;{% endif %}
+    {% if theme.gradient_end %}--gradient-end: {{ theme.gradient_end }} !important;{% endif %}
+  }
+</style>
+{% endif %}
 
 <div class="page">
     <div class="container d-flex">
-      <div class="right p-2 d-felx align-content-center">
+      <div class="right p-3 align-content-center">
         <div class="">
-          <img src="{% static 'img/pdf_logo.webp' %}" alt="Ministry Logo" class="img-fluid mx-auto d-block "style="width: 75%;">
+          <img src="{% static 'img/login_logo.webp' %}" alt="Login Logo" class="img-fluid mx-auto d-block logo-img">
       </div>
       {% comment %} <div class="login mb-3 text-secondary">تسجيل الدخــول</div> {% endcomment %}
     </div>
@@ -25,11 +45,11 @@
                             y2="193.49992"
                             gradientUnits="userSpaceOnUse">
               <stop
-                    style="stop-color:#c9aa5e;"
+                    style="stop-color:var(--gradient-end);"
                     offset="0"
                     id="stop876" />
               <stop
-                    style="stop-color:#cb9447;"
+                    style="stop-color:var(--gradient-start);"
                     offset="1"
                     id="stop878" />
             </linearGradient>
@@ -39,77 +59,17 @@
         <form action="{% url 'login' %}" method="POST">
             {% csrf_token %}
             <div class="form">
-                <input type="text" style="font-size: 28px;" id="username" name="username" autofocus placeholder="اسم المستخدم" required>
+                <input type="text" class="login-input" id="username" name="username" autofocus placeholder="اسم المستخدم" required>
         
-                <input type="password" style="font-size: 28px;" id="password" name="password" placeholder="كلمة المرور" required>
+                <input type="password" class="login-input" id="password" name="password" placeholder="كلمة المرور" required>
         
-                <input type="submit" style="font-size: 25px;" class="mt-5 pe-3" value="دخول" id="submit">
+                <input type="submit" class="login-submit mt-5 pe-3" value="دخول" id="submit">
             </div>
         </form>
       </div>
     </div>
   </div>
 
-<script nonce="{{ request.csp_nonce }}">
-    var current = null;
-    document.querySelector('#username').addEventListener('focus', function(e) {
-      if (current) current.pause();
-      current = anime({
-        targets: 'path',
-        strokeDashoffset: {
-          value: 0,
-          duration: 700,
-          easing: 'easeOutQuart'
-        },
-        strokeDasharray: {
-          value: '240 1386',
-          duration: 700,
-          easing: 'easeOutQuart'
-        }
-      });
-    });
-    document.querySelector('#password').addEventListener('focus', function(e) {
-      if (current) current.pause();
-      current = anime({
-        targets: 'path',
-        strokeDashoffset: {
-          value: -336,
-          duration: 700,
-          easing: 'easeOutQuart'
-        },
-        strokeDasharray: {
-          value: '240 1386',
-          duration: 700,
-          easing: 'easeOutQuart'
-        }
-      });
-    });
-    document.querySelector('#submit').addEventListener('focus', function(e) {
-      if (current) current.pause();
-      current = anime({
-        targets: 'path',
-        strokeDashoffset: {
-          value: -730,
-          duration: 700,
-          easing: 'easeOutQuart'
-        },
-        strokeDasharray: {
-          value: '530 1386',
-          duration: 700,
-          easing: 'easeOutQuart'
-        }
-      });
-    });
-
-      // New script: Hide the login button in the title bar if present.
-      document.addEventListener("DOMContentLoaded", function() {
-        // Adjust the selector to match the login button in your title bar.
-        var loginTitleButton = document.querySelector(".login-title-btn");
-        if (loginTitleButton) {
-            loginTitleButton.style.display = "none";
-        }
-    });
-</script>
-
 <script src="{% static 'js/anime.min.js' %}"></script>
+<script src="{% static 'users/js/login.js' %}"></script>
 {% endblock %}

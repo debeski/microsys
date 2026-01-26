@@ -5,7 +5,7 @@ from . import views
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('login/', auth_views.LoginView.as_view(), name='login'),
+    path('login/', views.CustomLoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path("users/", views.UserListView.as_view(), name="manage_users"),
     path('users/create/', views.create_user, name='create_user'),
@@ -17,11 +17,11 @@ urlpatterns = [
     path('reset_password/<int:pk>/', views.reset_password, name="reset_password"),
     path("users/<int:pk>/", views.UserDetailView.as_view(), name="user_detail"),
     
-    # Department Management URLs
-    path("departments/manage/", views.manage_departments, name="manage_departments"),
-    path("departments/form/", views.get_department_form, name="get_department_form"),
-    path("departments/form/<int:pk>/", views.get_department_form, name="get_department_form"),
-    path("departments/save/", views.save_department, name="save_department"),
-    path("departments/save/<int:pk>/", views.save_department, name="save_department"),
-    path("departments/delete/<int:pk>/", views.delete_department, name="delete_department"),
+    # Scope Management URLs
+    path("scopes/manage/", views.manage_scopes, name="manage_scopes"),
+    path("scopes/form/", views.get_scope_form, name="get_scope_form"),
+    path("scopes/form/<int:pk>/", views.get_scope_form, name="get_scope_form"),
+    path("scopes/save/", views.save_scope, name="save_scope"),
+    path("scopes/save/<int:pk>/", views.save_scope, name="save_scope"),
+    path("scopes/delete/<int:pk>/", views.delete_scope, name="delete_scope"),
 ]
