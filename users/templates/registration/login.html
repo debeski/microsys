@@ -26,46 +26,31 @@
 {% endif %}
 
 <div class="page">
-    <div class="container d-flex">
-      <div class="right p-3 align-content-center">
-        <div class="">
-          <img src="{% static 'img/login_logo.webp' %}" alt="Login Logo" class="img-fluid mx-auto d-block logo-img">
-      </div>
-      {% comment %} <div class="login mb-3 text-secondary">تسجيل الدخــول</div> {% endcomment %}
-    </div>
+    <div class="container">
       <div class="left">
-        <svg viewBox="0 0 320 300">
-          <defs>
-            <linearGradient
-                            inkscape:collect="always"
-                            id="linearGradient"
-                            x1="13"
-                            y1="193.49992"
-                            x2="307"
-                            y2="193.49992"
-                            gradientUnits="userSpaceOnUse">
-              <stop
-                    style="stop-color:var(--gradient-end);"
-                    offset="0"
-                    id="stop876" />
-              <stop
-                    style="stop-color:var(--gradient-start);"
-                    offset="1"
-                    id="stop878" />
-            </linearGradient>
-          </defs>
-          <path d="m 40,120.00016 239.99984,-3.2e-4 c 0,0 24.99263,0.79932 25.00016,35.00016 0.008,34.20084 -25.00016,35 -25.00016,35 h -239.99984 c 0,-0.0205 -25,4.01348 -25,38.5 0,34.48652 25,38.5 25,38.5 h 215 c 0,0 20,-0.99604 20,-25 0,-24.00396 -20,-25 -20,-25 h -190 c 0,0 -20,1.71033 -20,25 0,24.00396 20,25 20,25 h 168.57143" />
-        </svg>
-        <form action="{% url 'login' %}" method="POST">
+        <div class="text-center mb-4 d-md-none">
+            <img src="{% static 'img/login_logo.webp' %}" alt="Login Logo" class="logo-img">
+        </div>
+        <form action="{% url 'login' %}" method="POST" class="w-100">
             {% csrf_token %}
-            <div class="form">
-                <input type="text" class="login-input" id="username" name="username" autofocus placeholder="اسم المستخدم" required>
+            <div class="form m-0 mx-auto">
+                <div class="mb-4">
+                    <label for="username">اسم المستخدم</label>
+                    <input type="text" class="login-input" id="username" name="username" autofocus required>
+                </div>
         
-                <input type="password" class="login-input" id="password" name="password" placeholder="كلمة المرور" required>
+                <div class="mb-4">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" class="login-input" id="password" name="password" required>
+                </div>
         
-                <input type="submit" class="login-submit mt-5 pe-3" value="دخول" id="submit">
+                <button type="submit" class="w-100 btn btn-lg mt-3" id="submit">دخول</button>
             </div>
         </form>
+      </div>
+      
+      <div class="right d-none d-md-flex">
+          <img src="{% static 'img/login_logo.webp' %}" alt="Login Logo" class="logo-img">
       </div>
     </div>
   </div>

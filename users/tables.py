@@ -24,7 +24,6 @@ class UserTable(tables.Table):
         template_name='users/partials/user_actions.html',
         orderable=False,
         verbose_name='',
-        title='خيارات'
     )
     class Meta:
         model = User
