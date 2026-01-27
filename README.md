@@ -177,3 +177,4 @@ MICRO_USERS_THEME = {
 | v1.6.1   | • **Theme Configuration**: Added `MICRO_USERS_THEME` setting for easy color customization <br> • **Bug Fixes**: Explicitly excluded unwanted columns (id, ip_address, user_agent) from Activity Log table <br> • **UI**: Improved Scope Manager button visibility |
 | v1.6.2   | • **UI**: Improved some tooltips for buttons and descriptions |
 | v1.6.3   | • **Bug Fixes**: Fixed a crash with a table tooltip |
+| v1.7.0   | • **New Theme**: Complete visual overhaul with modern, consistent styling <br> • **Refactor**: Updated Login, Profile, and Detail templates for better UX <br> • **Feature**: Added Scope filter to Activity Logs (superuser only) <br> • **UX**: Clear button in filters now preserves current sort order |
