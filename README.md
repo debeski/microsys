@@ -75,12 +75,12 @@ TEMPLATES = [
 ]
 ```
 
-3. Set custom user model in `settings.py`:
+4. Set custom user model in `settings.py`:
 ```python
 AUTH_USER_MODEL = 'users.CustomUser'
 ```
 
-4. Include URLs in your main project folder `urls.py`:
+5. Include URLs in your main project folder `urls.py`:
 ```python
 urlpatterns = [
     ...
@@ -88,7 +88,7 @@ urlpatterns = [
 ]
 ```
 
-5. Run migrations:
+6. Run migrations:
 ```bash
 python manage.py migrate users
 ```
@@ -151,21 +151,6 @@ users/
 ### Replacing Login Logo
 To replace the default login logo, simply place your own `login_logo.webp` image in your project's static directory at `static/img/login_logo.webp`.
 
-### Theme Configuration
-You can configure the login page colors by defining `MICRO_USERS_THEME` in your project's `settings.py`. This dictionary overrides the default CSS variables.
-
-```python
-MICRO_USERS_THEME = {
-    'right_bg': '#474745',
-    'left_bg': 'white',
-    'selection_bg': '#dbdbdb',
-    'gradient_start': '#a2a2a7',
-    'gradient_end': '#474745',
-    # Additional keys supported:
-    # 'selection_moz_bg', 'left_shadow', 'right_shadow', 'right_text',
-    # 'label_color', 'input_text', 'submit_color', 'submit_focus', 'submit_active'
-}
-```
 
 ## Version History
 
@@ -201,3 +186,4 @@ MICRO_USERS_THEME = {
 | v1.8.4   | • **Strict CSP**: Refactored inline JS event handlers to use Event Listeners, fully resolving CSP violation errors |
 | v1.8.5   | • **Optional Scopes**: Added ability for Superusers to toggle Scope system ON/OFF via User Management interface |
 | v1.8.6   | • **Strict CSP Repair**: Fixed remaining inline event handlers in User Management pages (`manage_users`, `scope_form`) that were violating CSP directives, moving all logic to external `manage_users.js` |
+| v1.8.7   | • Fixed a couple of template title mismatches |
