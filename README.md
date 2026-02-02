@@ -189,3 +189,4 @@ To replace the default login logo, simply place your own `login_logo.webp` image
 | v1.8.7   | • Fixed a couple of template tab title mismatches |
 | v1.8.8   | • Fixed a couple of template content title mismatches and classes |
 | v1.8.9   | • Fixed migrations |
+| v1.9.0   | • **UI Overhaul**: Unified all buttons, and clssses to conform to themes, rounded corners, and improved spacing |

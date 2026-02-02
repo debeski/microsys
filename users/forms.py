@@ -232,7 +232,7 @@ class CustomUserCreationForm(UserCreationForm):
             FormActions(
                 HTML(
                     """
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" class="btn btn-success rounded-pill">
                         <i class="bi bi-person-plus-fill text-light me-1 h4"></i>
                         إضافة
                     </button>
@@ -240,7 +240,7 @@ class CustomUserCreationForm(UserCreationForm):
                 ),
                 HTML(
                     """
-                    <a href="{% url 'manage_users' %}" class="btn btn-danger">
+                    <a href="{% url 'manage_users' %}" class="btn btn-danger rounded-pill">
                         <i class="bi bi-arrow-return-left text-light me-1 h4"></i> إلغـــاء
                     </a>
                     """
@@ -368,7 +368,7 @@ class CustomUserChangeForm(UserChangeForm):
             FormActions(
                 HTML(
                     """
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" class="btn btn-success rounded-pill">
                         <i class="bi bi-person-plus-fill text-light me-1 h4"></i>
                         تحديث
                     </button>
@@ -376,14 +376,14 @@ class CustomUserChangeForm(UserChangeForm):
                 ),
                 HTML(
                     """
-                    <a href="{% url 'manage_users' %}" class="btn btn-danger">
+                    <a href="{% url 'manage_users' %}" class="btn btn-danger rounded-pill">
                         <i class="bi bi-arrow-return-left text-light me-1 h4"></i> إلغـــاء
                     </a>
                     """
                 ),
                 HTML(
                     """
-                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
+                    <button type="button" class="btn btn-warning rounded-pill" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
                         <i class="bi bi-key-fill text-light me-1 h4"></i> إعادة تعيين كلمة المرور
                     </button>
                     """
@@ -418,7 +418,7 @@ class ResetPasswordForm(SetPasswordForm):
                 Field('new_password2', css_class='col-md-12'),
                 css_class='row'
             ),
-            Submit('submit', 'تغيير كلمة المرور', css_class='btn btn-primary'),
+            Submit('submit', 'تغيير كلمة المرور', css_class='btn btn-danger rounded-pill'),
         )
 
     def save(self, commit=True):

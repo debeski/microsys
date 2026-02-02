@@ -34,8 +34,8 @@ class UserFilter(django_filters.FilterSet):
         self.form.helper.layout.append(
             Row(
                 Column(Field('keyword', placeholder="البحث"), css_class='form-group col-auto flex-fill'),
-                Column(HTML('<button type="submit" class="btn btn-secondary w-100"><i class="bi bi-search bi-font text-light me-2"></i>بحـــث</button>'), css_class='col-auto text-center'),
-                Column(HTML(f'{{% if request.GET and request.GET.keys|length > 1 %}} <a href="{clear_url}" class="btn btn-warning bi-font">clear</a> {{% endif %}}'), css_class='form-group col-auto text-center'),
+                Column(HTML('<button type="submit" class="btn btn-secondary rounded-pill w-100"><i class="bi bi-search bi-font text-light me-2"></i>بحـــث</button>'), css_class='col-auto text-center'),
+                Column(HTML(f'{{% if request.GET and request.GET.keys|length > 1 %}} <a href="{clear_url}" class="btn btn-warning rounded-pill bi-font">clear</a> {{% endif %}}'), css_class='form-group col-auto text-center'),
                 css_class='form-row'
             ),
         )
@@ -122,8 +122,8 @@ class UserActivityLogFilter(django_filters.FilterSet):
                 ), 
                 css_class='col-auto flex-fill'
             ),
-            Column(HTML('<button type="submit" class="btn btn-secondary w-100"><i class="bi bi-search bi-font text-light me-2"></i>بحـــث</button>'), css_class='col-auto text-center'),
-            Column(HTML(f'{{% if request.GET and request.GET.keys|length > 1 %}} <a href="{clear_url}" class="btn btn-warning bi-font">clear</a> {{% endif %}}'), css_class='form-group col-auto text-center'),
+            Column(HTML('<button type="submit" class="btn btn-secondary rounded-pill w-100"><i class="bi bi-search bi-font text-light me-2"></i>بحـــث</button>'), css_class='col-auto text-center'),
+            Column(HTML(f'{{% if request.GET and request.GET.keys|length > 1 %}} <a href="{clear_url}" class="btn btn-warning rounded-pill bi-font">clear</a> {{% endif %}}'), css_class='form-group col-auto text-center'),
         ])
 
         self.form.helper.layout.append(Row(*row_fields, css_class='form-row'))

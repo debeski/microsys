@@ -15,7 +15,7 @@
     </div>
 
 
-    <form method="get" class="py-1 g-2 no-print">
+    <form method="get" class="py-2 g-2 no-print">
         {% crispy filter.form %}
     </form>
 
@@ -27,12 +27,12 @@
     </div>
 
     <div class="d-flex align-items-center mt-3">
-        <a href="{% url 'create_user' %}" class="btn btn-primary no-print" title="إضافة مستخدم جديد">
+        <a href="{% url 'create_user' %}" class="btn btn-primary rounded-pill no-print" title="إضافة مستخدم جديد">
             <i class="bi bi-person-plus-fill me-2 h4"></i> إضافة مستخدم جديد
         </a>
     
         {% if scope_enabled and not request.user.scope %}
-        <button type="button" class="btn btn-info no-print ms-2" title="إدارة النطاقات" id="btn-manage-scopes" data-url="{% url 'manage_scopes' %}">
+        <button type="button" class="btn btn-info rounded-pill no-print ms-2" title="إدارة النطاقات" id="btn-manage-scopes" data-url="{% url 'manage_scopes' %}">
             <i class="bi bi-list me-1 h4"></i> إدارة النطاقات
         </button>
         {% endif %}
@@ -66,8 +66,8 @@
                         <p>هل انت متأكد انك تريد حذف العضو <strong><span id="userName"></span></strong>؟</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-danger">نعم، احذف</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-danger rounded-pill">نعم، احذف</button>
+                        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">إلغاء</button>
                     </div>
                 </div>
             </div>
@@ -114,8 +114,8 @@
                     </p>
                 </div>
                 <div class="modal-footer border-top-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="button" class="btn btn-danger" id="confirmScopeActivation">نعم، قم بالتفعيل</button>
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-danger rounded-pill" id="confirmScopeActivation">نعم، قم بالتفعيل</button>
                 </div>
             </div>
         </div>

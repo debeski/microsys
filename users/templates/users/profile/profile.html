@@ -65,17 +65,17 @@
                     <!-- Actions -->
                     <div class="row mt-4 pt-3 border-top border-light">
                         <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
-                            <a class="btn btn-success action-btn" href="{% url 'edit_profile' %}">
+                            <a class="btn btn-success action-btn rounded-pill" href="{% url 'edit_profile' %}">
                                 <i class="bi bi-pencil-square h5 m-0"></i> 
                                 <span>تحديث البيانات</span>
                             </a>
                             
-                            <button type="button" class="btn btn-danger action-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
+                            <button type="button" class="btn btn-danger action-btn rounded-pill" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
                                 <i class="bi bi-shield-lock h5 m-0"></i>
                                 <span>تغيير كلمة المـرور</span>
                             </button>
                             
-                            <a href="{% url 'index' %}" class="btn btn-secondary action">
+                            <a href="{% url 'index' %}" class="btn btn-secondary action rounded-pill">
                                 <i class="bi bi-house-door h5 m-0"></i>
                                 <span>الرئيسية</span>
                             </a>
@@ -102,8 +102,8 @@
                     {% csrf_token %}
                     {{ password_form|crispy }}
                     <div class="d-grid mt-4">
-                        <button type="submit" name="change_password" class="btn btn-success action-btn justify-content-center">
-                            تأكيد التغيير
+                        <button type="submit" name="change_password" class="btn btn-danger action-btn rounded-pill justify-content-center">
+                            تأكيد تغيير كلمة المرور
                         </button>
                     </div>
                 </form>
