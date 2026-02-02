@@ -188,3 +188,4 @@ To replace the default login logo, simply place your own `login_logo.webp` image
 | v1.8.6   | • **Strict CSP Repair**: Fixed remaining inline event handlers in User Management pages (`manage_users`, `scope_form`) that were violating CSP directives, moving all logic to external `manage_users.js` |
 | v1.8.7   | • Fixed a couple of template tab title mismatches |
 | v1.8.8   | • Fixed a couple of template content title mismatches and classes |
+| v1.8.9   | • Fixed migrations |
