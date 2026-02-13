@@ -143,9 +143,18 @@ def microsys_context(request):
     context['sidebar_auto_items'] = sidebar_items
     context['sidebar_extra_groups'] = extra_groups
     
-    # 4. Sidebar State (Collapsed/Expanded)
-    context['sidebar_collapsed'] = request.session.get('sidebarCollapsed', False)
+    # 4. User Preferences (for JS injection & server-side logic)
+    user_prefs = {}
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        user_prefs = request.user.profile.preferences or {}
+    context['user_preferences'] = user_prefs # Injected for JS use
 
+    # 5. Sidebar State (Collapsed/Expanded)
+    # Prioritize DB preference if available, else session, else default
+    session_collapsed = request.session.get('sidebarCollapsed', False)
+    db_collapsed = user_prefs.get('sidebar_collapsed', session_collapsed)
+    context['sidebar_collapsed'] = db_collapsed
+    
     return context
 
 def clear_sidebar_cache():

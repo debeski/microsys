@@ -1,22 +1,47 @@
+// API Helper - Exposed Globally
+window.updatePreferences = function(data) {
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    if (!csrfToken) {
+        console.error("CSRF token not found, cannot save preferences.");
+        return;
+    }
+
+    fetch('/sys/api/preferences/update/', {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data)
+    }).then(response => {
+        if (!response.ok) {
+            console.error("Failed to save preferences:", response.statusText);
+        } else {
+            // Optimistic update of the global object
+            if (window.USER_PREFS) {
+                Object.assign(window.USER_PREFS, data);
+            }
+        }
+    }).catch(error => {
+        console.error("Error updating preferences:", error);
+    });
+};
+
 document.addEventListener("DOMContentLoaded", function () {
     const sidebar = document.getElementById("sidebar");
     const sidebarToggle = document.getElementById("sidebarToggle");
 
-    // Read config from data attribute on sidebar or a global config
-    // Assuming sidebar has data attributes, or we can look for a meta tag
-    const sidebarConfigStr = sidebar.getAttribute('data-sidebar-config');
-    let sidebarConfig = {};
-    if (sidebarConfigStr) {
-        try {
-            sidebarConfig = JSON.parse(sidebarConfigStr.replace(/'/g, '"')); // Simple parse attempt, better to use valid JSON in attribute
-        } catch (e) {
-            console.error("Error parsing sidebar config", e);
-        }
+
+    // 1. Sidebar Collapse State
+    // Initial state from injected USER_PREFS or fallback to dataset/session logic
+    // Note: base sidebar class might be set by server-render, but we enforce JS preference here
+    let isCollapsed = window.USER_PREFS?.sidebar_collapsed;
+    if (isCollapsed === undefined) {
+        // Fallback to old behavior if no pref set yet
+        isCollapsed = sidebar.dataset.sessionCollapsed === "true";
     }
-    
-    const toggleUrl = sidebar.dataset.toggleUrl;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    let isSessionCollapsed = sidebar.dataset.sessionCollapsed === "true";
 
     // Function to handle sidebar collapsing based on window size
     function adjustSidebarForWindowSize() {
@@ -27,12 +52,11 @@ document.addEventListener("DOMContentLoaded", function () {
             sidebar.classList.add("collapsed");
             initializeTooltips();
         } else {
-            // Reset styles for large screens to let CSS take over (sticky)
+            // Large screens: respect user preference
             sidebar.style.top = '';
             sidebar.style.height = '';
 
-            // Use session state for larger screens
-            if (isSessionCollapsed) {
+            if (isCollapsed) {
                 sidebar.classList.add("collapsed");
                 initializeTooltips();
             } else {
@@ -42,48 +66,65 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Adjust sidebar state on load
+    // Apply initial state
     adjustSidebarForWindowSize();
-
-    // Check if sidebar is collapsed on load and initialize tooltips if so
-    if (sidebar.classList.contains("collapsed")) {
-        initializeTooltips();
-    }
 
     // Listen for window resize
     window.addEventListener("resize", adjustSidebarForWindowSize);
 
-    // Toggle sidebar and update session via AJAX
+    // Toggle sidebar
     if (sidebarToggle) {
         sidebarToggle.addEventListener("click", function () {
             sidebar.classList.toggle("collapsed");
-            const isCollapsed = sidebar.classList.contains("collapsed");
+            isCollapsed = sidebar.classList.contains("collapsed");
 
-            // Update tooltips immediately for all screen sizes
             if (isCollapsed) {
                 initializeTooltips();
             } else {
                 deinitializeTooltips();
             }
 
-            // Update session
-            fetch(toggleUrl, {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": csrfToken,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: `collapsed=${isCollapsed}`
-            }).then(response => response.json())
-              .then(data => {
-                  if (data.status === "success") {
-                      isSessionCollapsed = isCollapsed; // Update local state
-                  }
-              }).catch(error => console.error("Error updating sidebar state:", error));
+            // Save preference
+            window.updatePreferences({ sidebar_collapsed: isCollapsed });
+            
+            // Update local state copy
+            if (window.USER_PREFS) window.USER_PREFS.sidebar_collapsed = isCollapsed;
         });
     }
 
+    // 2. Accordion Persistence
+    const accordions = document.querySelectorAll('.sidebar .accordion-collapse');
+    
+    // Load saved state
+    const openAccordions = window.USER_PREFS?.open_accordions || [];
+    openAccordions.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            // Remove 'collapse' class to show, or use Bootstrap API
+            el.classList.add('show');
+            // Update button state
+            const btn = document.querySelector(`[data-bs-target="#${id}"]`);
+            if (btn) {
+                btn.classList.remove('collapsed');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        }
+    });
 
+    // Save state on change
+    accordions.forEach(acc => {
+        acc.addEventListener('shown.bs.collapse', saveAccordionState);
+        acc.addEventListener('hidden.bs.collapse', saveAccordionState);
+    });
+
+    function saveAccordionState() {
+        const openItems = Array.from(document.querySelectorAll('.sidebar .accordion-collapse.show'))
+            .map(el => el.id)
+            .filter(id => id); // Filter out empty IDs
+        
+        window.updatePreferences({ open_accordions: openItems });
+        if (window.USER_PREFS) window.USER_PREFS.open_accordions = openItems;
+    }
 });
 
 // Close sidebar when clicking outside (only for small screens)
@@ -95,20 +136,6 @@ document.addEventListener("click", function (event) {
     if (sidebar && sidebarToggle && screenWidth < 1100 && !sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
         if (!sidebar.classList.contains("collapsed")) {
             sidebar.classList.add("collapsed");
-            
-            const toggleUrl = sidebar.dataset.toggleUrl;
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-            fetch(toggleUrl, {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": csrfToken,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: "collapsed=true"
-            }).then(response => response.json())
-              .catch(error => console.error("Error updating sidebar state:", error));
-
             initializeTooltips();
         }
     }
@@ -134,7 +161,7 @@ function deinitializeTooltips() {
     sidebarItems.forEach(item => {
         if (item._tooltip) {
             item._tooltip.dispose();
-            delete item._tooltip;
+            item._tooltip = null;
         }
     });
 }

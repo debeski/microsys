@@ -336,10 +336,22 @@ You can extend this template in your own views to maintain consistent layout and
 - **Customization**:
   - Use standard Bootstrap classes (`btn-primary`, `text-success`, etc.).
   - Dark mode is supported out of the box. If you encounter issues, you can override styles via `extra_head` or report them.
+### Unified User Preferences (DB-Backed)
+The system now centralizes user UI settings in the database instead of relying on `localStorage` or server sessions. This ensures that a user's chosen theme, sidebar state, and item ordering are consistent across all their devices.
+
+- **Storage**: Preferences are stored in a `JSONField` named `preferences` within the `Profile` model.
+- **Syncing**: An API endpoint (`/sys/api/preferences/update/`) handles real-time updates from the frontend.
+- **Persistence**:
+  - **Sidebar**: Collapsed/Expanded state and open accordion groups are persisted.
+  - **Reordering**: Drag-and-drop order of sidebar items is saved globally.
+  - **Theme**: Selected UI theme (Light, Dark, Royal, etc.) is synced.
+
+> [!IMPORTANT]
+> To enable this feature, ensure you have applied migrations (`makemigrations microsys` and `migrate microsys`).
 
 ---
 
-## Custom Head & Scripts (Injection)
+## 🎨 Customizing Head & Scripts (Injection)
 
 You can inject custom HTML, CSS, or JavaScript into the `microsys` base template globally without overriding the entire template.
 This is useful for adding analytics scripts, global styles, or meta tags.
@@ -357,7 +369,14 @@ Create the following files in your project's `templates/` directory:
 
 > **Note**: Because these are templates (not static files), you can use template tags like `{% static %}` or `{% url %}` inside them, in addition to conditional logic!
 
----
+### Dashboard Activity Chart
+The dashboard now includes a built-in activity chart powered by **Plotly.js**:
+- **Visualizes**: System activity for the last 24 hours.
+- **Design**: Seamless, transparent, lightweight line chart with no axis labels for a clean look.
+- **Data Source**: Aggregates `UserActivityLog` entries.
+- **Responsive**: Automatically resizes with the window and sidebar toggles using `ResizeObserver`.
+
+----
 
 ## File Structure
 
@@ -400,3 +419,4 @@ microsys/
 | v1.5.1   | • Fixed Readme file and added detailed instructions |
 | v1.5.2   | • Optimized form and filters auto generation and layout |
 | v1.5.3   | • Added global head and scripts injection |
+| v1.5.4   | • Switch to Database JSON attached to user profile for consistent prefrences accross devices |

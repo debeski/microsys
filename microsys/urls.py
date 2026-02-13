@@ -48,5 +48,6 @@ urlpatterns = [
     # Autofill API
     path('sys/api/last-entry/<str:app_label>/<str:model_name>/', api.get_last_entry, name='api_get_last_entry'),
     path('sys/api/details/<str:app_label>/<str:model_name>/<int:pk>/', api.get_model_details, name='api_get_model_details'),
+    path('sys/api/preferences/update/', views.update_preferences, name='update_preferences'),
 ]
 

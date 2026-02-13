@@ -196,7 +196,23 @@
         try {
             localStorage.setItem(storageKey, JSON.stringify(order));
         } catch (e) {
-            console.warn('Could not save sidebar order:', e);
+            console.warn('Could not save sidebar order (localStorage):', e);
+        }
+
+        // Save to DB via global API
+        if (window.updatePreferences) {
+            const currentOrder = window.USER_PREFS?.sidebar_order || {};
+            const newSidebarOrder = Object.assign({}, currentOrder);
+            newSidebarOrder[storageKey] = order;
+            
+            window.updatePreferences({ 
+                sidebar_order: newSidebarOrder 
+            });
+            
+            // Re-update local USER_PREFS immediately for UI consistency
+            if (window.USER_PREFS) {
+                window.USER_PREFS.sidebar_order = newSidebarOrder;
+            }
         }
     }
 
@@ -225,11 +241,16 @@
     function restoreContainerOrder(container, storageKey) {
         let savedOrder;
         try {
-            const saved = localStorage.getItem(storageKey);
-            if (!saved) return; // No saved order, use default
-            savedOrder = JSON.parse(saved);
+            // Try USER_PREFS first
+            if (window.USER_PREFS?.sidebar_order?.[storageKey]) {
+                savedOrder = window.USER_PREFS.sidebar_order[storageKey];
+            } else {
+                // Fallback to localStorage
+                const saved = localStorage.getItem(storageKey);
+                if (saved) savedOrder = JSON.parse(saved);
+            }
         } catch (e) {
-            return; // Invalid JSON, use default
+            return; // Invalid, use default
         }
         
         if (!Array.isArray(savedOrder) || savedOrder.length === 0) return;

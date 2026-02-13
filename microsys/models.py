@@ -76,6 +76,7 @@ class Profile(ScopedModel):
     phone = models.CharField(max_length=15, blank=True, null=True, verbose_name="رقم الهاتف")
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الحذف")
+    preferences = models.JSONField(default=dict, blank=True, verbose_name="تفضيلات المستخدم")
 
     @property
     def full_name(self):

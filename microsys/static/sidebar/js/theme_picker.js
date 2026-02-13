@@ -34,6 +34,12 @@
                     popup.classList.remove('show');
                     indicator.classList.remove('open');
                     if (arrow) arrow.classList.remove('visible');
+                    
+                    // Save to API
+                    if (window.updatePreferences) {
+                        window.updatePreferences({ theme: theme });
+                        if (window.USER_PREFS) window.USER_PREFS.theme = theme;
+                    }
                 }
             });
         });
@@ -52,7 +58,8 @@
         }
 
         // Initialize indicator color
-        const savedTheme = localStorage.getItem('appTheme') || 'light';
+        const savedTheme = window.USER_PREFS?.theme || localStorage.getItem('appTheme') || 'light';
         updateCurrentThemeIndicator(savedTheme);
     });
 })();
+

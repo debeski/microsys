@@ -5,15 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ APP_CONFIG.name|default:"microSYS" }} - {% block title %}{% endblock %}</title>
     
+    {{ user_preferences|json_script:"user-prefs-data" }}
     <script nonce="{{ request.csp_nonce }}">
         (function() {
-            const savedTheme = localStorage.getItem('appTheme');
-            const savedAcc = localStorage.getItem('accessibilityMode');
+            try {
+                window.USER_PREFS = JSON.parse(document.getElementById('user-prefs-data').textContent) || {};
+            } catch (e) {
+                window.USER_PREFS = {};
+            }
+
+            const savedTheme = window.USER_PREFS.theme || localStorage.getItem('appTheme');
+            const savedAcc = window.USER_PREFS.accessibility || localStorage.getItem('accessibilityMode');
+            
             if (savedTheme) document.documentElement.classList.add(`theme-${savedTheme}`);
+            
             if (savedAcc) {
                 let modes = [];
                 try {
-                    modes = savedAcc.trim().startsWith('[') ? JSON.parse(savedAcc) : [savedAcc];
+                    // Check if it's already an array (from JSONField) or string (localStorage)
+                    modes = Array.isArray(savedAcc) ? savedAcc : (savedAcc.trim().startsWith('[') ? JSON.parse(savedAcc) : [savedAcc]);
                 } catch (e) {
                     modes = [savedAcc];
                 }

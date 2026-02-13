@@ -1,11 +1,12 @@
 # Fundemental imports
 ######################################################
+import json
 from django.utils import timezone
 from django.contrib import messages
-from django.contrib.auth import get_user_model, update_session_auth_hash
+from django.contrib.auth import get_user_model, update_session_auth_hash, login, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django_tables2 import RequestConfig, SingleTableView, SingleTableMixin
 from django_filters.views import FilterView
@@ -28,7 +29,8 @@ from django.urls import reverse
 from django import forms
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models as dj_models
-from django.db.models import ManyToManyField
+from django.db.models import ManyToManyField, Count
+from django.db.models.functions import TruncHour
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
 
@@ -156,8 +158,26 @@ def dashboard(request):
     """
     Dashboard/Landing page that reflects dynamic branding.
     """
+    # Prepare Activity Chart Data
+    UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
+    now = timezone.now()
+    
+    # 1. Last 24 Hours (Group by Hour)
+    last_24h = now - timezone.timedelta(hours=24)
+    activity_24h = UserActivityLog.objects.filter(timestamp__gte=last_24h) \
+        .annotate(hour=TruncHour('timestamp')) \
+        .values('hour') \
+        .annotate(count=Count('id')) \
+        .order_by('hour')
+    
+    data_24h_labels = [entry['hour'].strftime('%H:00') for entry in activity_24h]
+    data_24h_values = [entry['count'] for entry in activity_24h]
+
     context = {
-        'current_time': timezone.now(),
+        'current_time': now,
+        'chart_data': {
+            'last_24h': json.dumps({'labels': data_24h_labels, 'values': data_24h_values}),
+        }
     }
     return render(request, 'microsys/dashboard.html', context)
 
@@ -428,6 +448,66 @@ def reset_password(request, pk):
             return redirect("edit_user", pk=pk)
     
     return redirect("manage_users")  # Fallback redirect
+
+
+# API for updating user preferences
+@login_required
+def update_preferences(request):
+    if request.method == "POST":
+        import json
+        try:
+             # Support both JSON body and Form data
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+            else:
+                data = request.POST
+
+            # 1. Get or create profile
+            Profile = apps.get_model('microsys', 'Profile')
+            profile, created = Profile.all_objects.get_or_create(user=request.user)
+
+            # 2. Get existing prefs safely
+            current_prefs = profile.preferences
+            if not isinstance(current_prefs, dict):
+                if isinstance(current_prefs, str) and current_prefs.strip():
+                    try:
+                        current_prefs = json.loads(current_prefs)
+                    except:
+                        current_prefs = {}
+                else:
+                    current_prefs = {}
+            
+            # Start with a clean dict for merging
+            prefs = dict(current_prefs)
+            
+            # 3. Update with new data
+            import logging
+            logger = logging.getLogger('microsys')
+            
+            for key, value in data.items():
+                if key != 'csrfmiddlewaretoken':
+                    prefs[key] = value
+                    
+                    # Sync sidebar state to session for server-side consistency
+                    if key == 'sidebar_collapsed':
+                         val = value
+                         if isinstance(val, str):
+                             val = val.lower() == 'true'
+                         request.session['sidebarCollapsed'] = val
+
+            # 4. Save
+            profile.preferences = prefs
+            profile.save()
+            request.session.modified = True
+            
+            logger.debug(f"Preferences updated for {request.user.username}: {prefs}")
+            return JsonResponse({'status': 'success', 'preferences': profile.preferences})
+        except Exception as e:
+            import logging
+            error_msg = f"Error updating preferences for {request.user.username}: {str(e)}"
+            logging.getLogger('microsys').error(error_msg)
+            return JsonResponse({'status': 'error', 'message': error_msg}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
 
 
 # Function for the user profile

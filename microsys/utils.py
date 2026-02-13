@@ -656,6 +656,29 @@ def get_class_from_string(class_path):
 def toggle_sidebar(request):
     if request.method == "POST" and request.user.is_authenticated:
         collapsed = request.POST.get("collapsed") == "true"
+        
+        # 1. Update Session
         request.session["sidebarCollapsed"] = collapsed
+        
+        # 2. Update Profile Preferences if profile exists
+        if hasattr(request.user, 'profile'):
+            profile = request.user.profile
+            if not profile.preferences:
+                profile.preferences = {}
+            
+            # Ensure it's a dict
+            if isinstance(profile.preferences, str):
+                import json
+                try:
+                    profile.preferences = json.loads(profile.preferences)
+                except:
+                    profile.preferences = {}
+            
+            # Use a copy to ensure Django detects changes
+            prefs = dict(profile.preferences)
+            prefs['sidebar_collapsed'] = collapsed
+            profile.preferences = prefs
+            profile.save()
+
         return JsonResponse({"status": "success"})
     return JsonResponse({"status": "error"}, status=400)

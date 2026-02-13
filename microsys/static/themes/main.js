@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const themes = ['light', 'blue', 'gold', 'green', 'red', 'dark'];
 
     // Load saved theme
-    const savedTheme = localStorage.getItem('appTheme');
+    const savedTheme = (window.USER_PREFS && window.USER_PREFS.theme) || localStorage.getItem('appTheme');
     if (savedTheme && themes.includes(savedTheme)) {
         root.classList.add(`theme-${savedTheme}`);
     }

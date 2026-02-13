@@ -3,22 +3,23 @@
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'main/css/index_cards.css' %}">
+    <link rel="stylesheet" href="{% static 'main/css/charts.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="text-center mb-5">
-        <img src="{{ APP_CONFIG.logo_url|default:'/static/img/base_logo.webp' }}" alt="Logo" class="mb-4" style="max-height: 120px;">
+<div class="container-fluid py-3">
+    <div class="text-center mb-3">
+        <img src="{{ APP_CONFIG.logo_url|default:'/static/img/base_logo.webp' }}" alt="Logo" style="max-height: 120px;">
         <h1 class="display-4 fw-bold">{{ APP_CONFIG.name|default:"microSYS" }}</h1>
         {% if APP_CONFIG.description %}
             <p class="lead text-muted">{{ APP_CONFIG.description }}</p>
         {% else %}
-            <p class="lead text-muted">مرحباً بك في نظام إدارة الموارد المتكامل</p>
+            <p class="lead text-muted">مرحباً بك في النظام المتكامل لإدارة الموارد العامة.</p>
         {% endif %}
         
-        {% if user.scope %}
+        {% if user.profile.scope %}
             <div class="mt-3">
-                <span class="badge bg-primary fs-6">نطاق العمل: {{ user.scope.name }}</span>
+                <span class="badge bg-primary fs-6">نطاق العمل: {{ user.profile.scope.name }}</span>
             </div>
         {% endif %}
     </div>
@@ -79,5 +80,76 @@
             </div>
         </div>
     </div>
+
+    <!-- Activity Chart Section -->
+    <div class="row justify-content-center mt-5">
+        <div class="col-12 px-0">
+            <div id="activityChart24h" style="width:100%; height:300px;"></div>
+        </div>
+    </div>
 </div>
+
+<script src="{% static 'plotly/plotly.min.js' %}"></script>
+<script src="{% static 'plotly/plotly-locale-ar.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}">
+    document.addEventListener("DOMContentLoaded", function () {
+        const data24h = JSON.parse('{{ chart_data.last_24h|escapejs }}');
+
+        const commonLayout = {
+            autosize: true,
+            margin: { t: 20, r: 10, l: 10, b: 0 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            showlegend: false,
+            title: {
+                text: 'النشاط (آخر 24 ساعة)',
+                font: { family: 'inherit', size: 16, color: '#6c757d' },
+                x: 0.5,
+                y: 0.95
+            },
+            font: { family: 'inherit', color: '#6c757d' },
+            xaxis: {
+                showgrid: false,
+                zeroline: false,
+                showticklabels: false,
+            },
+            yaxis: {
+                showgrid: false,
+                gridcolor: 'rgba(0,0,0,0.05)',
+                zeroline: false,
+                showticklabels: false,
+            }
+        };
+
+        const config = {
+            responsive: false,
+            displayModeBar: false,
+            locale: 'ar'
+        };
+
+        // 24h Chart
+        Plotly.newPlot('activityChart24h', [{
+            x: data24h.labels,
+            y: data24h.values,
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: { shape: 'spline', width: 3, color: '#0d6efd' },
+            marker: { size: 6, color: '#0d6efd' },
+            fill: 'tozeroy',
+            fillcolor: 'rgba(13, 110, 253, 0.1)'
+        }], commonLayout, config);
+
+        // Resize Observer to handle sidebar toggle and window resize
+        const chartElement = document.getElementById('activityChart24h');
+        const resizeObserver = new ResizeObserver(() => {
+            Plotly.Plots.resize(chartElement);
+        });
+        
+        // Observe the main content area (or the chart container itself)
+        // Observing the chart's parent container is usually safest for flex layouts
+        if (chartElement.parentElement) {
+            resizeObserver.observe(chartElement.parentElement);
+        }
+    });
+</script>
 {% endblock %}
