@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/django-microsys.svg)](https://pypi.org/project/django-microsys/)
 
 <p align="center">
-  <img src="https://github.com/debeski/django-microsys/blob/2e3b7007f07d7265b9e70a44bd388bddf137f811/microsys/static/img/login_logo.webp" alt="microSys Logo" width="450"/>
+  <img src="https://raw.githubusercontent.com/debeski/django-microsys/main/microsys/static/img/login_logo.webp" alt="microSys Logo" width="450"/>
 </p>
 
 **Arabic** lightweight, reusable Django app providing comprehensive system integration services, including user management, profile extension, permissions, localization, dynamic sidebar, automated activity logging and more.
@@ -263,7 +263,7 @@ Built-in support for:
 Microsys offers a powerful "Zero-Boilerplate" CRUD interface for managing auxiliary data models (like Departments, Categories, etc.).
 
 ### How It Works
-1. **Mark Your Model**: Add `is_section = True` to your model (or Meta class).
+1. **Mark Your Model**: Add `is_section = True` to your model attrs.
    ```python
    class Department(ScopedModel):
        name = models.CharField(...)
@@ -339,6 +339,26 @@ You can extend this template in your own views to maintain consistent layout and
 
 ---
 
+## Custom Head & Scripts (Injection)
+
+You can inject custom HTML, CSS, or JavaScript into the `microsys` base template globally without overriding the entire template.
+This is useful for adding analytics scripts, global styles, or meta tags.
+
+### How to use:
+Create the following files in your project's `templates/` directory:
+
+1.  **Head Content (Meta, CSS)**: `microsys/includes/custom_head.html`
+    - Renders in `<head>`, **before** `{% block extra_head %}`.
+    - Ideal for global CSS overrides or meta tags.
+
+2.  **Scripts**: `microsys/includes/custom_scripts.html`
+    - Renders just before `</body>`.
+    - Ideal for global JS libraries or analytics.
+
+> **Note**: Because these are templates (not static files), you can use template tags like `{% static %}` or `{% url %}` inside them, in addition to conditional logic!
+
+---
+
 ## File Structure
 
 ```
@@ -379,3 +399,4 @@ microsys/
 | v1.5.0   | • Auto-generated section filters now include date range pickers (from/to) with flatpickr integration • Added clarifying inline comments to complex view logic • Fixed login Enter key submission • Pypi Release |
 | v1.5.1   | • Fixed Readme file and added detailed instructions |
 | v1.5.2   | • Optimized form and filters auto generation and layout |
+| v1.5.3   | • Added global head and scripts injection |
