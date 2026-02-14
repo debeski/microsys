@@ -539,18 +539,18 @@ microsys/
 | Version  | Changes |
 |----------|---------|
 | v1.0.0   | • Initial release as pip package |
-| v1.1.0   | • URL restructure: auth at `/accounts/`, system at `/sys/` • Added `microsys_setup` and `microsys_check` management commands • Runtime configuration validation |
-| v1.2.0   | • Name changed to `django-microsys` • Section model discovery hardened (dynamic app resolution, generic forms/tables/filters) • Scope fields now hide automatically when scopes are disabled • System sidebar group ships by default (configurable) • `is_staff` moved into the permissions UI |
-| v1.3.0   | • Fixed subsection display: subsections now show correctly regardless of user scope • Fixed SessionInterrupted error: reduced session writes in section management • Scope toggle now accepts explicit target state to prevent race conditions • Improved error messaging in Arabic for scope operations |
-| v1.4.0   | • Section table context menu: right-click on table rows for Edit/Delete actions • View Subsections modal: sections with M2M subsections show linked items • AJAX-based section deletion with related-record protection • Auto-generated tables now include row data attributes for JS binding |
-| v1.5.0   | • Auto-generated section filters now include date range pickers (from/to) with flatpickr integration • Added clarifying inline comments to complex view logic • Fixed login Enter key submission • Pypi Release |
-| v1.5.1   | • Fixed Readme file and added detailed instructions |
-| v1.5.2   | • Optimized form and filters auto generation and layout |
-| v1.5.3   | • Added global head and scripts injection |
-| v1.5.4   | • Switch to Database JSON attached to user profile for consistent prefrences accross devices |
-| v1.5.5   | • Fixed theme picker popup positioning in LTR mode (CSS logical properties) • Comprehensive i18n: table headers, filter labels/placeholders, and template strings now resolved from `translations.py` per user language • Tables, filters, and templates (`manage_users`, `user_activity_log`, `manage_sections`) fully translated |
-| v1.6.0   | • Reset Defaults now purges sidebar reordering from DB and localStorage • Reset UI redesigned to match other options (inline Confirm/Cancel animation) • Fixed activity log actions always showing in Arabic regardless of language (duplicate `get_table_kwargs`) • Fixed hardcoded Arabic model name 'مصادقة' in login/logout signals — now uses translatable key |
-| v1.6.1   | • Translation related fixes and UI enhancements |
-| v1.7.0   | • Global Dynamic Autofill Feature: Automatically fill forms from related ForeignKeys (e.g. User Profile data) with smart clearing and toggle controls |
-| v1.7.1   | • Autofill fixes: Resolved 500/404 errors during clearing, refined toggle behavior, and standardized console logging |
-| v.1.7.2  | • Completely Restructured README for a clearer understanding of the system and its setup |
+| v1.1.0   | • **Application Complete Restructure** with moudular files, templates, static, etc. <br> • URL restructure: auth at `/accounts/`, system at `/sys/` <br> • Added `microsys_setup` and `microsys_check` management commands <br> • Runtime configuration validation |
+| v1.2.0   | • **Dynamic Section Management** New Powerful Zero-Boilerplate Section management mode <br> • Name changed to `django-microsys` <br> • Scope fields now hide automatically when scopes are disabled <br> • System sidebar group ships by default (configurable) <br> • `is_staff` moved into the permissions UI |
+| v1.2.1   | • Fixed subsection display: subsections now show correctly regardless of user scope <br> • Fixed SessionInterrupted error: reduced session writes in section management <br> • Scope toggle now accepts explicit target state to prevent race conditions <br> • Improved error messaging in Arabic for scope operations |
+| v1.3.0   | • **Section table context menu**: right-click on table rows for Edit/Delete actions <br> • **View Subsections modal**: sections with M2M subsections show linked items in a modal <br> • AJAX-based section deletion with related-record protection <br> • Auto-generated tables now include row data attributes for JS binding |
+| v1.3.1   | • Auto-generated section filters now include date range pickers (from/to) with flatpickr integration <br> • Added clarifying inline comments to complex view logic <br> • Fixed login Enter key submission <br> • Pypi Release |
+| v1.3.2   | • Fixed Readme file and added detailed instructions |
+| v1.3.3   | • Optimized form and filters auto generation and layout |
+| v1.3.4   | • Added global head and scripts injection |
+| v1.3.5   | • Switch to Database JSON attached to user profile for consistent prefrences accross devices |
+| v1.3.6   | • Fixed theme picker popup positioning in LTR mode (CSS logical properties) |
+| v1.4.0   | • **Comprehensive Translation Framework**: table headers, filter labels/placeholders, and template strings now resolved from `translations.py` per user language <br> • Tables, filters, and templates (`manage_users`, `user_activity_log`, `manage_sections`) fully translated <br> • Reset Defaults now purges sidebar reordering from DB and localStorage <br> • Reset UI redesigned to match other options (inline Confirm/Cancel animation) <br> • Fixed activity log actions always showing in Arabic regardless of language (duplicate `get_table_kwargs`) |
+| v1.4.1   | • Translation related fixes and UI enhancements |
+| v1.5.0   | • **Global Dynamic Autofill Feature**: Automatically fill forms from related ForeignKeys (e.g. User Profile data) with smart clearing and toggle controls |
+| v1.5.1   | • Autofill fixes: Resolved 500/404 errors during clearing, refined toggle behavior, and standardized console logging |
+| v1.5.2  | • Completely Restructured README for a clearer understanding of the system and its setup |
