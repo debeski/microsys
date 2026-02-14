@@ -7,8 +7,21 @@ from crispy_forms.layout import Layout, Row, Column, Field, HTML, Hidden
 from django.db.models import Q
 from django.apps import apps
 from microsys.utils import is_scope_enabled
+from microsys.translations import get_strings
+from django.conf import settings as django_settings
 
 User = get_user_model()
+
+
+def _get_filter_strings(request=None):
+    """Get translation strings for filter labels/placeholders."""
+    ms_config = getattr(django_settings, 'MICROSYS_CONFIG', {})
+    lang = ms_config.get('default_language', 'ar')
+    if request and request.user.is_authenticated and hasattr(request.user, 'profile'):
+        prefs = request.user.profile.preferences or {}
+        lang = prefs.get('language', lang)
+    overrides = ms_config.get('translations', None)
+    return get_strings(lang, overrides=overrides)
 
 class UserFilter(django_filters.FilterSet):
     keyword = django_filters.CharFilter(
@@ -20,6 +33,7 @@ class UserFilter(django_filters.FilterSet):
         fields = []
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        s = _get_filter_strings(getattr(self, 'request', None))
         self.form.helper = FormHelper()
         self.form.helper.form_method = 'GET'
         self.form.helper.form_class = 'form-inline'
@@ -55,7 +69,7 @@ class UserFilter(django_filters.FilterSet):
 
         self.form.helper.layout.append(
             Row(
-                Column(Field('keyword', placeholder="البحث", css_class='form-control glass-input h-100'), css_class='form-group col-auto flex-fill'),
+                Column(Field('keyword', placeholder=s.get('filter_search', 'البحث'), css_class='form-control glass-input h-100'), css_class='form-group col-auto flex-fill'),
                 *buttons_html,
                 css_class='form-row align-items-stretch'
             ),
@@ -96,6 +110,12 @@ class UserActivityLogFilter(django_filters.FilterSet):
         }
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        s = _get_filter_strings(getattr(self, 'request', None))
+
+        # Update labels from translations
+        self.filters['year'].extra['empty_label'] = s.get('filter_year', 'السنة')
+        self.filters['scope'].extra['empty_label'] = s.get('filter_all', 'الكل')
+        self.filters['scope'].label = s.get('filter_scope', 'النطاق')
         
         years = self.Meta.model.objects.dates('timestamp', 'year').distinct()
         self.filters['year'].extra['choices'] = [(year.year, year.year) for year in years]
@@ -119,12 +139,12 @@ class UserActivityLogFilter(django_filters.FilterSet):
             self.form.helper.layout.append(Hidden('sort', self.data['sort']))
             
         row_fields = [
-            Column(Field('keyword', placeholder="البحث"), css_class='form-group col-auto flex-fill'),
+            Column(Field('keyword', placeholder=s.get('filter_search', 'البحث')), css_class='form-group col-auto flex-fill'),
         ]
         if is_scope_enabled():
             # Check profile for scope
             if not (self.request and hasattr(self.request.user, 'profile') and self.request.user.profile.scope):
-                row_fields.append(Column(Field('scope', placeholder="النطاق", dir="rtl"), css_class='form-group col-auto'))
+                row_fields.append(Column(Field('scope', placeholder=s.get('filter_scope', 'النطاق'), dir="rtl"), css_class='form-group col-auto'))
 
         clear_url = '{% url "user_activity_log" %}'
         query_params = []
@@ -149,11 +169,11 @@ class UserActivityLogFilter(django_filters.FilterSet):
             ]
         
         row_fields.extend([
-            Column(Field('year', placeholder="السنة", dir="rtl"), css_class='form-group col-auto'),
+            Column(Field('year', placeholder=s.get('filter_year', 'السنة'), dir="rtl"), css_class='form-group col-auto'),
             Column(
                 Row(
-                    Column(Field('timestamp__gte', css_class='flatpickr', placeholder="من "), css_class='col-6'),
-                    Column(Field('timestamp__lte', css_class='flatpickr', placeholder="إلى "), css_class='col-6'),
+                    Column(Field('timestamp__gte', css_class='flatpickr', placeholder=s.get('filter_from', 'من ')), css_class='col-6'),
+                    Column(Field('timestamp__lte', css_class='flatpickr', placeholder=s.get('filter_to', 'إلى ')), css_class='col-6'),
                 ), 
                 css_class='col-auto flex-fill'
             ),

@@ -16,14 +16,11 @@
     </div>
         <!-- The Login Button -->
     <div class="pe-2 d-flex align-items-center">
-        <!-- Extra Titlebar Controls (passed via context variable) -->
-        {% if show_autofill_toggle %}
-            {% include 'includes/autofill_toggle.html' %}
-        {% endif %}
+        <!-- Extra Titlebar Controls (Dynamically injected by autofill.js) -->
         <!-- Tutorial Trigger -->
             {% if user.is_authenticated %}
-        <button id="start-tour" class="btn btn-sm btn-light me-2 text-primary" title="جولة تعريفية">
-            <i class="bi bi-question-circle-fill"></i> <span class="d-none d-sm-inline">مساعدة</span>
+        <button id="start-tour" class="btn btn-sm btn-light me-2 text-primary" title="{{ MS_TRANS.tour_title }}">
+            <i class="bi bi-question-circle-fill"></i> <span class="d-none d-sm-inline">{{ MS_TRANS.help }}</span>
         </button>
         {% endif %}
 
@@ -36,7 +33,7 @@
             <ul class="dropdown-menu dropdown-menu-start" aria-labelledby="userDropdown">
                 <li>
                     <a class="dropdown-item" href="{% url 'user_profile' %}">
-                        <span>الملف الشخصي</span>
+                        <span>{{ MS_TRANS.profile }}</span>
                         <i class="bi bi-person-lines-fill"></i>
                     </a>
                 </li>
@@ -45,7 +42,7 @@
                     <form method="POST" action="{% url 'logout' %}">
                         {% csrf_token %}
                         <button type="submit" class="dropdown-item text-danger">
-                            <span>تسجيل الخروج</span>
+                            <span>{{ MS_TRANS.logout }}</span>
                             <i class="bi bi-box-arrow-left"></i>
                         </button>
                     </form>
@@ -56,7 +53,7 @@
         <!-- Login Button for Unauthenticated Users (hidden on login page) -->
         {% if request.resolver_match.url_name != 'login' %}
         <a href="{% url 'login' %}" class="btn btn-sm btn-light login-title-btn me-2">
-            <span class="d-none d-sm-inline">تسجيل الدخول</span> &nbsp; <i class="bi bi-box-arrow-in-right"></i>
+            <span class="d-none d-sm-inline">{{ MS_TRANS.login }}</span> &nbsp; <i class="bi bi-box-arrow-in-right"></i>
         </a>
         {% endif %}
     {% endif %}

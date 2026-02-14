@@ -10,33 +10,42 @@ from django.conf import settings
 from difflib import get_close_matches
 
 
-def get_sidebar_config():
+def get_sidebar_config(lang_code=None):
     """Get sidebar configuration from Django settings with defaults."""
+    from .translations import get_strings
+
+    # Resolve language for sidebar labels
+    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
+    if lang_code is None:
+        lang_code = ms_config.get('default_language', 'ar')
+    project_overrides = ms_config.get('translations', None)
+    strings = get_strings(lang_code, overrides=project_overrides)
+
     system_group = {
-        'name': 'إدارة النظام',
+        'name': strings.get('sidebar_system', 'إدارة النظام'),
         'icon': 'bi-sliders',
         'items': [
             {
                 'url_name': 'manage_sections',
-                'label': 'إدارة الاقسام',
+                'label': strings.get('manage_sections', 'إدارة الاقسام'),
                 'icon': 'bi-diagram-3',
                 'permission': ['is_staff', 'microsys.manage_sections', 'microsys.view_sections'],
             },
             {
                 'url_name': 'manage_users',
-                'label': 'إدارة المستخدمين',
+                'label': strings.get('manage_users', 'إدارة المستخدمين'),
                 'icon': 'bi-people',
                 'permission': 'is_staff',
             },
             {
                 'url_name': 'user_activity_log',
-                'label': 'سجل النشاط',
+                'label': strings.get('activity_log', 'سجل النشاط'),
                 'icon': 'bi-clock-history',
                 'permission': 'microsys.view_activity_log',
             },
             {
                 'url_name': 'options_view',
-                'label': 'خيارات التطبيق',
+                'label': strings.get('options_title', 'خيارات التطبيق'),
                 'icon': 'bi-gear',
             },
         ],
@@ -93,7 +102,7 @@ def get_sidebar_config():
 
 
 
-def discover_list_urls():
+def discover_list_urls(lang_code=None):
     """
     Scan all URL patterns for names containing configured keywords.
     Match them to Django models and extract verbose_name_plural.
@@ -101,7 +110,7 @@ def discover_list_urls():
     Returns:
         List of sidebar item dictionaries sorted by order.
     """
-    config = get_sidebar_config()
+    config = get_sidebar_config(lang_code=lang_code)
     
     if not config['ENABLED']:
         return []

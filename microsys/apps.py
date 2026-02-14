@@ -41,15 +41,23 @@ class MicrosysConfig(AppConfig):
         except Exception:
             pass
         
-        # Set Arabic verbose names for Auth app and Permission model
+        # Set verbose names for Auth app and Permission model based on active language
         try:
             from django.contrib.auth.models import Permission
+            from .translations import get_strings
+            
+            # Determine default language from config
+            ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
+            default_lang = ms_config.get('default_language', 'ar')
+            project_overrides = ms_config.get('translations', None)
+            strings = get_strings(default_lang, overrides=project_overrides)
+            
             auth_config = apps.get_app_config('auth')
-            auth_config.verbose_name = "نظام المصادقة" # "Auth" -> Identity/Authentication
+            auth_config.verbose_name = strings.get('auth_system', "نظام المصادقة")
             
             Permission.add_to_class("__str__", custom_permission_str)
-            Permission._meta.verbose_name = "ادارة الصلاحيات"
-            Permission._meta.verbose_name_plural = "الصلاحيات"
+            Permission._meta.verbose_name = strings.get('permission_manage', "ادارة الصلاحيات")
+            Permission._meta.verbose_name_plural = strings.get('permissions', "الصلاحيات")
         except (LookupError, AttributeError):
             pass
 

@@ -1,0 +1,49 @@
+/* microsys/static/main/css/language.css
+ * ======================================
+ * Styles for the language picker on the options page
+ * and any LTR/RTL override utilities.
+ */
+
+/* ─── Language Picker ─── */
+.lang-option {
+    transition: all 0.2s ease;
+    background: var(--bs-light, #f8f9fa);
+    border: 2px solid transparent !important;
+}
+
+.lang-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+    border-color: var(--bs-primary, #0d6efd) !important;
+}
+
+.lang-option.lang-active {
+    border-color: var(--bs-primary, #0d6efd) !important;
+    background: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.08);
+    box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb, 13, 110, 253), 0.15);
+}
+
+/* ─── Direction Utilities ─── */
+/* Use these to force direction on specific elements regardless of page dir */
+.dir-ltr {
+    direction: ltr;
+    text-align: left;
+}
+
+.dir-rtl {
+    direction: rtl;
+    text-align: right;
+}
+
+/* ─── LTR-specific adjustments ─── */
+/* Fix any custom CSS that uses physical properties instead of logical ones */
+[dir="ltr"] .sidebar-toggle {
+    margin-left: 0;
+    margin-right: 0.5rem;
+}
+
+[dir="ltr"] .dropdown-menu-start {
+    /* Bootstrap handles this via RTL/LTR CSS, but just in case */
+    right: auto;
+    left: 0;
+}

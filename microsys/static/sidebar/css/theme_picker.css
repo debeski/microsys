@@ -18,7 +18,7 @@
 .theme-arrow {
     position: absolute;
     bottom: 36px; /* Space above indicator */
-    left: 50%;
+    inset-inline-start: 50%;
     transform: translateX(-50%);
     color: var(--primal);
     font-size: 1.3rem; /* Even bigger arrow */
@@ -36,7 +36,7 @@
 
 .sidebar.collapsed .theme-arrow {
     bottom: 36px;
-    left: 50%;
+    inset-inline-start: 50%;
     transform: translateX(-50%);
 }
 
@@ -54,7 +54,7 @@
     display: none;
     position: absolute;
     bottom: 45px;
-    left: 10px; /* Fixed to left in RTL too for specific bottom-left request */
+    inset-inline-end: 10px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
@@ -67,8 +67,8 @@
 }
 
 .sidebar.collapsed .theme-popup {
-    left: 5px;
-    right: 5px;
+    inset-inline-start: 5px;
+    inset-inline-end: 5px;
     bottom: 65px; /* More space to accommodate larger arrow and breathing room */
     min-width: auto;
     width: auto;

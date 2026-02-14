@@ -100,7 +100,26 @@ def resolve_form_class_for_model(model):
             _resolve_model_class(model, "get_form_class")
             or _resolve_model_class(model, "get_form_class_path")
         )
-    if not form_class:
+
+    # Prepare widgets with autofill attributes for ForeignKeys (Global)
+    widgets = {}
+    for field in model._meta.get_fields():
+        if field.is_relation and (field.many_to_one or field.one_to_one) and field.related_model:
+            # Provide the "app_label.model_name" as source
+            source = f"{field.related_model._meta.app_label}.{field.related_model._meta.model_name}"
+            from django.forms import Select
+            widgets[field.name] = Select(attrs={'data-autofill-source': source})
+
+    if form_class:
+        # Wrap custom form to inject widgets
+        # We explicitly pass fields=None to let it infer from the base form
+        try:
+            form_class = modelform_factory(model, form=form_class, widgets=widgets)
+        except Exception:
+            # Fallback for edge cases (e.g. already processed or incompatible)
+            pass
+    else:
+        # Generate generic form
         raw_exclude = getattr(model, "form_exclude", None)
         if raw_exclude is None:
             raw_exclude = []
@@ -118,12 +137,12 @@ def resolve_form_class_for_model(model):
             exclude = ["scope", *raw_exclude]
             # Remove duplicates while preserving order
             exclude = list(dict.fromkeys(exclude))
-            form_class = modelform_factory(model, exclude=exclude)
+            form_class = modelform_factory(model, exclude=exclude, widgets=widgets)
         elif raw_exclude:
             exclude = list(dict.fromkeys(raw_exclude))
-            form_class = modelform_factory(model, exclude=exclude)
+            form_class = modelform_factory(model, exclude=exclude, widgets=widgets)
         else:
-            form_class = modelform_factory(model, fields='__all__')
+            form_class = modelform_factory(model, fields='__all__', widgets=widgets)
     return form_class
 
 

@@ -14,12 +14,12 @@
         {% if APP_CONFIG.description %}
             <p class="lead text-muted">{{ APP_CONFIG.description }}</p>
         {% else %}
-            <p class="lead text-muted">مرحباً بك في النظام المتكامل لإدارة الموارد العامة.</p>
+            <p class="lead text-muted">{{ MS_TRANS.dashboard_welcome }}</p>
         {% endif %}
         
         {% if user.profile.scope %}
             <div class="mt-3">
-                <span class="badge bg-primary fs-6">نطاق العمل: {{ user.profile.scope.name }}</span>
+                <span class="badge bg-primary fs-6">{{ MS_TRANS.work_scope }}: {{ user.profile.scope.name }}</span>
             </div>
         {% endif %}
     </div>
@@ -32,9 +32,9 @@
                     <div class="feature-icon bg-primary bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
                         <i class="bi bi-people"></i>
                     </div>
-                    <h5 class="card-title">إدارة المستخدمين</h5>
-                    <p class="card-text text-muted small">إدارة حسابات المستخدمين والصلاحيات.</p>
-                    <a href="{% url 'manage_users' %}" class="btn btn-outline-primary rounded-pill px-4">الذهاب</a>
+                    <h5 class="card-title">{{ MS_TRANS.manage_users }}</h5>
+                    <p class="card-text text-muted small">{{ MS_TRANS.manage_users_desc }}</p>
+                    <a href="{% url 'manage_users' %}" class="btn btn-outline-primary rounded-pill px-4">{{ MS_TRANS.go }}</a>
                 </div>
             </div>
         </div>
@@ -45,9 +45,9 @@
                     <div class="feature-icon bg-success bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
                         <i class="bi bi-diagram-3"></i>
                     </div>
-                    <h5 class="card-title">إدارة الأقسام</h5>
-                    <p class="card-text text-muted small">هيكلة الأقسام والجهات والوحدات الإدارية.</p>
-                    <a href="{% url 'manage_sections' %}" class="btn btn-outline-success rounded-pill px-4">الذهاب</a>
+                    <h5 class="card-title">{{ MS_TRANS.manage_sections }}</h5>
+                    <p class="card-text text-muted small">{{ MS_TRANS.manage_sections_desc }}</p>
+                    <a href="{% url 'manage_sections' %}" class="btn btn-outline-success rounded-pill px-4">{{ MS_TRANS.go }}</a>
                 </div>
             </div>
         </div>
@@ -59,9 +59,9 @@
                     <div class="feature-icon bg-info bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
                         <i class="bi bi-clock-history"></i>
                     </div>
-                    <h5 class="card-title">سجل النشاط</h5>
-                    <p class="card-text text-muted small">متابعة نشاطات المستخدمين والتغييرات.</p>
-                    <a href="{% url 'user_activity_log' %}" class="btn btn-outline-info rounded-pill px-4">الذهاب</a>
+                    <h5 class="card-title">{{ MS_TRANS.activity_log }}</h5>
+                    <p class="card-text text-muted small">{{ MS_TRANS.activity_log_desc }}</p>
+                    <a href="{% url 'user_activity_log' %}" class="btn btn-outline-info rounded-pill px-4">{{ MS_TRANS.go }}</a>
                 </div>
             </div>
         </div>
@@ -73,9 +73,9 @@
                     <div class="feature-icon bg-secondary bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
                         <i class="bi bi-gear"></i>
                     </div>
-                    <h5 class="card-title">الإعدادات</h5>
-                    <p class="card-text text-muted small">خيارات النظام ومعلومات النسخة.</p>
-                    <a href="{% url 'options_view' %}" class="btn btn-outline-secondary rounded-pill px-4">الذهاب</a>
+                    <h5 class="card-title">{{ MS_TRANS.settings }}</h5>
+                    <p class="card-text text-muted small">{{ MS_TRANS.settings_desc }}</p>
+                    <a href="{% url 'options_view' %}" class="btn btn-outline-secondary rounded-pill px-4">{{ MS_TRANS.go }}</a>
                 </div>
             </div>
         </div>
@@ -90,7 +90,9 @@
 </div>
 
 <script src="{% static 'plotly/plotly.min.js' %}"></script>
+{% if CURRENT_LANG == 'ar' %}
 <script src="{% static 'plotly/plotly-locale-ar.js' %}"></script>
+{% endif %}
 <script nonce="{{ request.csp_nonce }}">
     document.addEventListener("DOMContentLoaded", function () {
         const data24h = JSON.parse('{{ chart_data.last_24h|escapejs }}');
@@ -102,7 +104,7 @@
             plot_bgcolor: 'rgba(0,0,0,0)',
             showlegend: false,
             title: {
-                text: 'النشاط (آخر 24 ساعة)',
+                text: '{{ MS_TRANS.activity_24h }}',
                 font: { family: 'inherit', size: 16, color: '#6c757d' },
                 x: 0.5,
                 y: 0.95
@@ -124,7 +126,7 @@
         const config = {
             responsive: false,
             displayModeBar: false,
-            locale: 'ar'
+            locale: '{{ CURRENT_LANG|default:"ar" }}'
         };
 
         // 24h Chart

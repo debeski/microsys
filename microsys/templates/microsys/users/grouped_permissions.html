@@ -16,14 +16,14 @@
                 <div class="d-flex align-items-center">
                     <div class="form-check me-3 prevent-toggle">
                         <input class="form-check-input app-master-checkbox" type="checkbox" id="master_{{ app_label }}">
-                        <label class="form-check-label d-none" for="master_{{ app_label }}">تحديد الكل</label>
+                        <label class="form-check-label d-none" for="master_{{ app_label }}">{{ MS_TRANS.select_all }}</label>
                     </div>
                     <h5 class="app-title">{{ app_data.name|title }}</h5>
                 </div>
                 
                 <div class="d-flex align-items-center">
                     <span class="badge bg-soft-primary text-primary border-primary me-3 px-2 py-1">
-                        {{ app_data.models|length }} وحدة
+                        {{ app_data.models|length }} {{ MS_TRANS.unit_items }}
                     </span>
                     <i class="bi bi-chevron-down toggle-icon"></i>
                 </div>
@@ -39,7 +39,7 @@
                                 <div class="model-header">
                                     <div class="form-check me-2">
                                         <input class="form-check-input model-master-checkbox" type="checkbox" id="master_{{ app_label }}_{{ model_name }}">
-                                        <label class="form-check-label d-none" for="master_{{ app_label }}_{{ model_name }}">تحديد الكل</label>
+                                        <label class="form-check-label d-none" for="master_{{ app_label }}_{{ model_name }}">{{ MS_TRANS.select_all }}</label>
                                     </div>
                                     <h6 class="model-title">{{ model_data.name }}</h6>
                                 </div>

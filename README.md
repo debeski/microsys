@@ -26,7 +26,7 @@
 - **Dynamic Sidebar**: Auto-discovery of list views and customizable menu items.
 - **Permissions**: Custom grouped permission UI (App/Model/Action).
 - **Automated Logging**: Full activity tracking (CRUD, Login/Logout) via Signals.
-- **Localization**: Native Arabic support for all interfaces.
+- **Localization**: Native Arabic support with dynamic language switching (RTL/LTR).
 - **Theming & Accessibility**: Built-in dark/light modes and accessibility tools (High Contrast, Zoom, etc.).
 - **Security**: CSP compliance, role-based access control (RBAC).
 
@@ -175,6 +175,18 @@ MICROSYS_CONFIG = {
     'home_url': '/sys/',                 # Titlebar home link (default: /sys/)
     
     # ... branding fields only
+
+    # Language switching (optional, Arabic-only by default)
+    'languages': {
+        'ar': {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'},
+        'en': {'name': 'English', 'dir': 'ltr', 'flag': '🇬🇧'},
+    },
+    'default_language': 'ar',  # Fallback language
+
+    # Override or extend built-in translation strings (optional)
+    # 'translations': {
+    #     'en': {'dashboard_welcome': 'Welcome to My Custom System.'},
+    # },
 }
 
 # Auth redirects (defaults are set by microsys if not provided)
@@ -216,6 +228,37 @@ SIDEBAR_AUTO = {
     }
 }
 ```
+
+## Language Switching
+
+microsys ships with Arabic and English translations. Add more languages via `MICROSYS_CONFIG['languages']`.
+
+**How it works:**
+- Language is resolved: **user preference** → **`default_language`** → **`'ar'`**
+- Templates use `{{ MS_TRANS.key }}` for all UI strings
+- The `<html>` tag gets dynamic `lang`/`dir` attributes
+- Bootstrap CSS auto-switches between RTL and LTR variants
+- Users switch languages from the Options page; a page reload applies translated strings
+
+**Template variables available:**
+| Variable | Type | Description |
+|---|---|---|
+| `CURRENT_LANG` | `str` | Active language code (e.g. `'ar'`, `'en'`) |
+| `CURRENT_DIR` | `str` | Active direction (`'rtl'` or `'ltr'`) |
+| `LANGUAGES` | `dict` | All configured languages |
+| `MS_TRANS` | `dict` | Translated strings for the active language |
+
+**Adding custom strings:**
+```python
+# In microsys/translations.py or via MICROSYS_CONFIG['translations']
+MICROSYS_CONFIG = {
+    'translations': {
+        'ar': {'my_key': 'قيمة مخصصة'},
+        'en': {'my_key': 'Custom Value'},
+    },
+}
+```
+Then in templates: `{{ MS_TRANS.my_key }}`
 
 ## Core Components Usage
 
@@ -420,3 +463,5 @@ microsys/
 | v1.5.2   | • Optimized form and filters auto generation and layout |
 | v1.5.3   | • Added global head and scripts injection |
 | v1.5.4   | • Switch to Database JSON attached to user profile for consistent prefrences accross devices |
+| v1.5.5   | • Fixed theme picker popup positioning in LTR mode (CSS logical properties) • Comprehensive i18n: table headers, filter labels/placeholders, and template strings now resolved from `translations.py` per user language • Tables, filters, and templates (`manage_users`, `user_activity_log`, `manage_sections`) fully translated |
+| v1.5.6   | • Reset Defaults now purges sidebar reordering from DB and localStorage • Reset UI redesigned to match other options (inline Confirm/Cancel animation) • Fixed activity log actions always showing in Arabic regardless of language (duplicate `get_table_kwargs`) • Fixed hardcoded Arabic model name 'مصادقة' in login/logout signals — now uses translatable key |

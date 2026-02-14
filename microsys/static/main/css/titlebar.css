@@ -53,6 +53,6 @@
     width: auto;
     padding: 4px;
     border-radius: 8px;
-    margin-left: 10px;
+    margin-inline-end: 10px;
     transition: all 0.3s;
 }

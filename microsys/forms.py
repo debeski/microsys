@@ -13,8 +13,21 @@ from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
 from django.apps import apps
 from django.forms.widgets import ChoiceWidget
+from django.conf import settings
+from .translations import get_strings
 
 User = get_user_model()
+
+
+def _get_form_strings(user=None):
+    """Get translation strings for forms."""
+    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
+    lang = ms_config.get('default_language', 'ar')
+    if user and user.is_authenticated and hasattr(user, 'profile'):
+        prefs = user.profile.preferences or {}
+        lang = prefs.get('language', lang)
+    overrides = ms_config.get('translations', None)
+    return get_strings(lang, overrides=overrides)
 
 def _attach_is_staff_permission(form, widget_id=None):
     perm_field = form.fields.get('permissions')
@@ -41,10 +54,13 @@ def _attach_is_staff_permission(form, widget_id=None):
     field_id = widget_id or 'id_permissions'
     option_id = f"{field_id}_is_staff"
 
+    # helper to check translations on widget
+    s = getattr(perm_field.widget, 'translations', _get_form_strings())
+
     option = {
         'name': 'is_staff',
         'value': 'on',
-        'label': staff_field.label or "مسؤول",
+        'label': staff_field.label or s.get('form_is_staff', "مسؤول"),
         'selected': current_value,
         'help_text': staff_field.help_text,
         'attrs': {
@@ -59,7 +75,7 @@ def _attach_is_staff_permission(form, widget_id=None):
         app_label='microsys',
         app_name=app_name,
         model_key='staff_access',
-        model_name='صلاحيات الإدارة',
+        model_name=s.get('perm_staff_access', 'صلاحيات الإدارة'),
         option=option,
     )
 
@@ -83,6 +99,7 @@ class GroupedPermissionWidget(ChoiceWidget):
 
     def get_context(self, name, value, attrs):
         context = super().get_context(name, value, attrs)
+        s = getattr(self, 'translations', _get_form_strings())
         
         # Get current selected values (as strings/ints)
         if value is None:
@@ -116,22 +133,31 @@ class GroupedPermissionWidget(ChoiceWidget):
             # -------------------------------------------------
             # Use real verbose name from model class if available
             if app_label == 'microsys' and model_name == 'profile':
-                model_verbose_name = "إدارة المستخدمين"
+                model_verbose_name = s.get('perm_manage_users', "إدارة المستخدمين")
             # elif app_label == 'auth' and model_name == 'section':
             #     model_verbose_name = "إدارة الأقسام الفرعية"
             # else:
             model_class = perm.content_type.model_class()
             if model_class:
-                model_verbose_name = str(model_class._meta.verbose_name)
+                # prefer plural verbose name if possible, or just verbose name
+                # But here we want to use our translation keys if available
+                default_verbose = str(model_class._meta.verbose_name)
             else:
-                model_verbose_name = perm.content_type.name
+                default_verbose = perm.content_type.name
+            
+            # Try translation key 'model_modelname' (e.g. model_user)
+            # Override for specific known models if needed, though they should be in translations now
+            model_verbose_name = s.get(f"model_{model_name}", default_verbose)
             
             # Fetch verbose app name
             try:
                 app_config = apps.get_app_config(app_label)
-                app_verbose_name = app_config.verbose_name
+                default_app_verbose = app_config.verbose_name
             except LookupError:
-                app_verbose_name = app_label.title()
+                default_app_verbose = app_label.title()
+            
+            # Try translation key 'app_applabel' (e.g. app_microsys)
+            app_verbose_name = s.get(f"app_{app_label}", default_app_verbose)
 
             action = 'other'
             codename = perm.codename
@@ -143,10 +169,15 @@ class GroupedPermissionWidget(ChoiceWidget):
             # Build option dict
             current_id = attrs.get('id', 'id_permissions') if attrs else 'id_permissions'
 
+            # Translate permission label if possible
+            # perm.name is the DB field, str(perm) is 'app | model | name'
+            # We want just the name part, but translated.
+            perm_label = s.get(f"perm_{codename}", perm.name)
+
             option = {
                 'name': name,
                 'value': perm.pk,
-                'label': str(perm),
+                'label': perm_label,
                 'codename': codename,
                 'selected': str(perm.pk) in str_values,
                 'attrs': {
@@ -188,7 +219,12 @@ class GroupedPermissionWidget(ChoiceWidget):
 
                 target_app = grouped_perms[app_label]
                 if app_data.get('name'):
-                    target_app['name'] = app_data['name']
+                    # Check for translation override to prevent overwriting with hardcoded AppConfig name
+                    translated_app = s.get(f"app_{app_label}")
+                    if translated_app:
+                        target_app['name'] = translated_app
+                    else:
+                        target_app['name'] = app_data['name']
 
                 for model_name, model_data in app_data.get('models', {}).items():
                     target_model = target_app['models'].setdefault(
@@ -206,6 +242,7 @@ class GroupedPermissionWidget(ChoiceWidget):
                         target_model['permissions'].append(option)
             
         context['widget']['grouped_perms'] = grouped_perms
+        context['MS_TRANS'] = s  # Pass translations to template
         return context
 
     def render(self, name, value, attrs=None, renderer=None):
@@ -285,23 +322,40 @@ class CustomUserCreationForm(UserCreationForm):
                 self.fields['is_staff'].initial = False
                 self.fields['is_staff'].help_text = "ليس لديك صلاحية لتعيين هذا المستخدم كمسؤول."
 
-        self.fields["username"].label = "اسم المستخدم"
-        self.fields["email"].label = "البريد الإلكتروني"
-        self.fields["first_name"].label = "الاسم"
-        self.fields["last_name"].label = "اللقب"
-        self.fields["is_staff"].label = "صلاحيات انشاء و تعديل المستخدمين"
-        self.fields["password1"].label = "كلمة المرور"
-        self.fields["password2"].label = "تأكيد كلمة المرور"
-        self.fields["is_active"].label = "تفعيل الحساب"
+        # Load translations
+        s = _get_form_strings(self.user_context)
+        
+        # Inject translations into widget
+        self.fields['permissions'].widget.translations = s
+
+        self.fields["username"].label = s.get('form_username', "اسم المستخدم")
+        self.fields["email"].label = s.get('form_email', "البريد الإلكتروني")
+        self.fields["first_name"].label = s.get('form_firstname', "الاسم")
+        self.fields["last_name"].label = s.get('form_lastname', "اللقب")
+        self.fields["is_staff"].label = s.get('form_is_staff', "صلاحيات انشاء و تعديل المستخدمين")
+        self.fields["password1"].label = s.get('form_password', "كلمة المرور")
+        self.fields["password2"].label = s.get('form_password_confirm', "تأكيد كلمة المرور")
+        self.fields["is_active"].label = s.get('form_is_active', "تفعيل الحساب")
+        self.fields["phone"].label = s.get('form_phone', "رقم الهاتف")
+        self.fields["scope"].label = s.get('form_scope', "النطاق")
+        self.fields["permissions"].label = s.get('form_permissions', "الصلاحيات")
 
         # Help Texts
-        self.fields["username"].help_text = "اسم المستخدم يجب أن يكون فريدًا، 20 حرفًا أو أقل. فقط حروف، أرقام و @ . + - _"
-        self.fields["email"].help_text = "أدخل عنوان البريد الإلكتروني الصحيح (اختياري)"
-        self.fields["is_active"].help_text = "يحدد ما إذا كان يجب اعتبار هذا الحساب نشطًا."
-        self.fields["password1"].help_text = "كلمة المرور يجب ألا تكون مشابهة لمعلوماتك الشخصية، وأن تحتوي على 8 أحرف على الأقل، وألا تكون شائعة أو رقمية بالكامل.."
-        self.fields["password2"].help_text = "أدخل نفس كلمة المرور السابقة للتحقق."
+        self.fields["username"].help_text = s.get('help_username', "اسم المستخدم يجب أن يكون فريدًا...")
+        self.fields["email"].help_text = s.get('help_email', "أدخل عنوان البريد الإلكتروني الصحيح (اختياري)")
+        self.fields["is_active"].help_text = s.get('help_is_active', "يحدد ما إذا كان يجب اعتبار هذا الحساب نشطًا.")
+        self.fields["password1"].help_text = s.get('help_password_common', "كلمة المرور يجب ألا تكون مشابهة...")
+        self.fields["password2"].help_text = s.get('help_password_match', "أدخل نفس كلمة المرور السابقة للتحقق.")
+        self.fields["phone"].help_text = s.get('help_phone', "أدخل رقم الهاتف الصحيح...")
+
+        # can_manage_staff logic message update
+        if self.user_context and not self.user_context.is_superuser:
+            if not self.user_context.has_perm('microsys.manage_staff'):
+                 # ... existing disabled logic ...
+                 self.fields['is_staff'].help_text = s.get('help_is_staff_no_perm', "ليس لديك صلاحية لتعيين هذا المستخدم كمسؤول.")
 
         _attach_is_staff_permission(self, self.fields['permissions'].widget.attrs.get('id'))
+
 
         self.helper = FormHelper()
         layout_blocks = [
@@ -328,17 +382,17 @@ class CustomUserCreationForm(UserCreationForm):
             "is_active",
             FormActions(
                 HTML(
-                    """
+                    f"""
                     <button type="submit" class="btn btn-success rounded-pill">
                         <i class="bi bi-person-plus-fill text-light me-1 h4"></i>
-                        إضافة
+                        {s.get('btn_add', 'إضافة')}
                     </button>
                     """
                 ),
                 HTML(
-                    """
-                    <a href="{% url 'manage_users' %}" class="btn btn-danger rounded-pill">
-                        <i class="bi bi-arrow-return-left text-light me-1 h4"></i> إلغـــاء
+                    f"""
+                    <a href="{{% url 'manage_users' %}}" class="btn btn-danger rounded-pill">
+                        <i class="bi bi-arrow-return-left text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
                     </a>
                     """
                 )
@@ -414,17 +468,25 @@ class CustomUserChangeForm(UserChangeForm):
             self.fields['scope'].initial = user_instance.profile.scope
 
         # Labels
-        self.fields["username"].label = "اسم المستخدم"
-        self.fields["email"].label = "البريد الإلكتروني"
-        self.fields["first_name"].label = "الاسم الاول"
-        self.fields["last_name"].label = "اللقب"
-        self.fields["is_staff"].label = "صلاحيات انشاء و تعديل المستخدمين"
-        self.fields["is_active"].label = "الحساب مفعل"
+        s = _get_form_strings(self.user_context)
+        self.fields['permissions'].widget.translations = s
+
+        self.fields["username"].label = s.get('form_username', "اسم المستخدم")
+        self.fields["email"].label = s.get('form_email', "البريد الإلكتروني")
+        self.fields["first_name"].label = s.get('form_firstname', "الاسم الاول")
+        self.fields["last_name"].label = s.get('form_lastname', "اللقب")
+        self.fields["is_staff"].label = s.get('form_is_staff', "صلاحيات انشاء و تعديل المستخدمين")
+        self.fields["is_active"].label = s.get('form_is_active', "الحساب مفعل")
+        self.fields["phone"].label = s.get('form_phone', "رقم الهاتف")
+        self.fields["scope"].label = s.get('form_scope', "النطاق")
+        self.fields["permissions"].label = s.get('form_permissions', "الصلاحيات")
         
         # Help Texts
-        self.fields["username"].help_text = "اسم المستخدم يجب أن يكون فريدًا، 20 حرفًا أو أقل. فقط حروف، أرقام و @ . + - _"
-        self.fields["email"].help_text = "أدخل عنوان البريد الإلكتروني الصحيح (اختياري)"
-        self.fields["is_active"].help_text = "يحدد ما إذا كان يجب اعتبار هذا الحساب نشطًا. قم بإلغاء تحديد هذا الخيار بدلاً من الحذف."
+        # Help Texts
+        self.fields["username"].help_text = s.get('help_username', "اسم المستخدم يجب أن يكون فريدًا...")
+        self.fields["email"].help_text = s.get('help_email', "أدخل عنوان البريد الإلكتروني الصحيح (اختياري)")
+        self.fields["is_active"].help_text = s.get('help_is_active', "يحدد ما إذا كان يجب اعتبار هذا الحساب نشطًا.")
+        self.fields["scope"].help_text = ""
 
         if user_instance:
             self.fields["permissions"].initial = user_instance.user_permissions.all()
@@ -454,7 +516,7 @@ class CustomUserChangeForm(UserChangeForm):
                     self.fields['scope'].disabled = True
                     self.fields['is_staff'].disabled = True
                     self.fields['is_active'].disabled = True
-                    self.fields['scope'].help_text = "لا يمكنك تغيير نطاقك الخاص لمنع تجريد نفسك من صلاحيات المدير العام."
+                    self.fields['scope'].help_text = s.get('help_scope_self', "لا يمكنك تغيير نطاقك الخاص لمنع تجريد نفسك من صلاحيات المدير العام.")
                     self.fields['permissions'].queryset = self.fields['permissions'].queryset.exclude(codename='manage_staff')
             
         # 2. Scope Manager Restrictions
@@ -468,7 +530,7 @@ class CustomUserChangeForm(UserChangeForm):
         if self.user_context and not self.user_context.is_superuser:
             if not self.user_context.has_perm('microsys.manage_staff'):
                 self.fields['is_staff'].disabled = True
-                self.fields['is_staff'].help_text = "ليس لديك صلاحية لتغيير وضع هذا المستخدم لمسؤول ."
+                self.fields['is_staff'].help_text = s.get('help_is_staff_no_perm', "ليس لديك صلاحية لتغيير وضع هذا المستخدم لمسؤول .")
 
         _attach_is_staff_permission(self, self.fields['permissions'].widget.attrs.get('id'))
 
@@ -499,24 +561,24 @@ class CustomUserChangeForm(UserChangeForm):
             "is_active",
             FormActions(
                 HTML(
-                    """
+                    f"""
                     <button type="submit" class="btn btn-success rounded-pill">
                         <i class="bi bi-person-plus-fill text-light me-1 h4"></i>
-                        تحديث
+                        {s.get('btn_update', 'تحديث')}
                     </button>
                     """
                 ),
                 HTML(
-                    """
-                    <a href="{% url 'manage_users' %}" class="btn btn-danger rounded-pill">
-                        <i class="bi bi-arrow-return-left text-light me-1 h4"></i> إلغـــاء
+                    f"""
+                    <a href="{{% url 'manage_users' %}}" class="btn btn-danger rounded-pill">
+                        <i class="bi bi-arrow-return-left text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
                     </a>
                     """
                 ),
                 HTML(
-                    """
+                    f"""
                     <button type="button" class="btn btn-warning rounded-pill" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
-                        <i class="bi bi-key-fill text-light me-1 h4"></i> إعادة تعيين كلمة المرور
+                        <i class="bi bi-key-fill text-light me-1 h4"></i> {s.get('reset_password', 'إعادة تعيين كلمة المرور')}
                     </button>
                     """
                 )
@@ -550,10 +612,13 @@ class ResetPasswordForm(SetPasswordForm):
 
     def __init__(self, user, *args, **kwargs):
         super().__init__(user, *args, **kwargs)
+        s = _get_form_strings(user)
         self.fields['username'].initial = user.username
+        self.fields['username'].label = s.get('form_username', "اسم المستخدم")
+        
         self.helper = FormHelper()
-        self.fields["new_password1"].label = "كلمة المرور الجديدة"
-        self.fields["new_password2"].label = "تأكيد كلمة المرور"
+        self.fields["new_password1"].label = s.get('form_new_password', "كلمة المرور الجديدة")
+        self.fields["new_password2"].label = s.get('form_confirm_new_password', "تأكيد كلمة المرور")
         self.helper.layout = Layout(
             Div(
                 Field('username', css_class='col-md-12'),
@@ -561,7 +626,7 @@ class ResetPasswordForm(SetPasswordForm):
                 Field('new_password2', css_class='col-md-12'),
                 css_class='row'
             ),
-            Submit('submit', 'تغيير كلمة المرور', css_class='btn btn-danger rounded-pill'),
+            Submit('submit', s.get('btn_change_password', 'تغيير كلمة المرور'), css_class='btn btn-danger rounded-pill'),
         )
 
     def save(self, commit=True):
@@ -584,14 +649,20 @@ class UserProfileEditForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         user_instance = kwargs.get('instance')
+        s = _get_form_strings(user_instance)
+
         if user_instance and hasattr(user_instance, 'profile'):
             self.fields['phone'].initial = user_instance.profile.phone
             self.fields['profile_picture'].initial = user_instance.profile.profile_picture
 
         self.fields['username'].disabled = True
-        self.fields['first_name'].label = "الاسم الاول"
-        self.fields['last_name'].label = "اللقب"
-        self.fields['email'].label = "البريد الالكتروني"
+        self.fields['username'].label = s.get('form_username', "اسم المستخدم")
+        self.fields['first_name'].label = s.get('form_firstname', "الاسم الاول")
+        self.fields['last_name'].label = s.get('form_lastname', "اللقب")
+        self.fields['email'].label = s.get('form_email', "البريد الالكتروني")
+        self.fields['phone'].label = s.get('form_phone', "رقم الهاتف")
+        self.fields['profile_picture'].label = s.get('form_profile_pic', "الصورة الشخصية")
+
         
         self.fields["email"].required = False
 
@@ -646,7 +717,11 @@ class ScopeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['name'].label = "اسم النطاق"
+        s = _get_form_strings() # Scope form usually admin only, maybe pass user?
+        # But scope form often used in modals?
+        # If we have request in kwargs we can use it, but typically ModelForms don't get request.
+        # Fallback to default is okay for now or we can inject request if needed.
+        self.fields['name'].label = s.get('form_scope_name', "اسم النطاق")
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.layout = Layout(

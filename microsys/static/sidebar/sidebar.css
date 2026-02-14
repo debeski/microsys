@@ -8,7 +8,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     height: calc(100vh - var(--header-height, 60px));
-    border-left: 1px solid #f1f3f5;
+    border-inline-start: 1px solid #f1f3f5;
     scrollbar-width: thin;
     scrollbar-color: rgba(0,0,0,0.1) transparent;
     
@@ -76,7 +76,7 @@
     .sidebar {
         position: fixed;
         top: var(--header-height, 60px);
-        right: 0;
+        inset-inline-end: 0;
         width: 250px;
         transition: width 0.15s ease-in-out;
         height: calc(100vh - var(--header-height, 60px));
@@ -88,7 +88,7 @@
         width: 0 !important; /* Completely hide when collapsed on mobile */
         border: none !important;
         overflow: hidden !important;
-        right: 0; 
+        inset-inline-end: 0; 
         position: fixed; 
     }
 }
@@ -112,7 +112,7 @@
 .sidebar .list-group-item:hover {
     background-color: transparent !important;
     color: var(--primal) !important;
-    transform: translateX(-4px); /* Tactile slide for RTL */
+    transform: translateX(calc(var(--hover-shift, -1) * 4px)); /* RTL: -4px, LTR: +4px */
 }
 
 .sidebar .list-group-item.active {
@@ -121,7 +121,7 @@
     color: var(--primal) !important;
     font-weight: 700 !important;
     box-shadow: 0 4px 12px rgba(35, 99, 195, 0.08) !important;
-    transform: translateX(-4px);
+    transform: translateX(calc(var(--hover-shift, -1) * 4px));
 }
 
 .sidebar .list-group-item i,
@@ -176,7 +176,7 @@
 .sidebar .accordion-button:hover {
     color: var(--primal) !important;
     background-color: transparent !important;
-    transform: translateX(-4px);
+    transform: translateX(calc(var(--hover-shift, -1) * 4px));
 }
 
 .sidebar .accordion-item {
@@ -223,10 +223,14 @@
     padding: 10px;
     position: absolute;
     bottom: 0;
-    left: 0;
+    inset-inline-start: 0;
     width: 100%;
     background: transparent;
     pointer-events: none; /* Let clicks pass through to content if needed, but we override for items */
     display: flex;
     justify-content: flex-end
 }
+
+/* Direction-aware hover shift variable */
+[dir="rtl"] .sidebar { --hover-shift: -1; }
+[dir="ltr"] .sidebar { --hover-shift: 1; }

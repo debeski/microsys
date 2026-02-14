@@ -12,16 +12,16 @@ class Scope(models.Model):
         return self.name
 
     class Meta:
-        verbose_name = "نطاق"
-        verbose_name_plural = "النطاقات"
+        verbose_name = "Scope"
+        verbose_name_plural = "Scopes"
 
 
 class ScopeSettings(models.Model):
     is_enabled = models.BooleanField(default=False, verbose_name="تفعيل النطاقات")
 
     class Meta:
-        verbose_name = "إعدادات النطاق"
-        verbose_name_plural = "إعدادات النطاق"
+        verbose_name = "Scope Settings"
+        verbose_name_plural = "Scope Settings"
 
     def save(self, *args, **kwargs):
         self.pk = 1
@@ -86,10 +86,10 @@ class Profile(ScopedModel):
         return self.user.username
 
     class Meta:
-        verbose_name = "ملف المستخدم"
-        verbose_name_plural = "ملفات المستخدمين"
+        verbose_name = "Profile"
+        verbose_name_plural = "Profiles"
         permissions = [
-            ("manage_staff", "صلاحيات مستخدم مسؤول"),
+            ("manage_staff", "Can manage staff"),
         ]
 
 
@@ -120,10 +120,10 @@ class UserActivityLog(ScopedModel):
         return f"{self.user} {self.action} {self.model_name or 'General'} at {self.timestamp}"
 
     class Meta:
-        verbose_name = "حركة سجل"
-        verbose_name_plural = "حركات السجل"
+        verbose_name = "Activity Log"
+        verbose_name_plural = "Activity Logs"
         permissions = [
-            ("view_activity_log", "عرض سجل النشاط"),
+            ("view_activity_log", "View activity log"),
         ]
 
 class Section(models.Model):
@@ -132,6 +132,6 @@ class Section(models.Model):
         managed = False
         default_permissions = ()
         permissions = [
-            ("view_sections", "عرض الاقسام"),
-            ("manage_sections", "إدارة الاقسام"),
+            ("view_sections", "View sections"),
+            ("manage_sections", "Manage sections"),
         ]

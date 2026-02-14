@@ -63,17 +63,4 @@
     } else {
         initAccessibilityUI();
     }
-
-    // Placeholder for Theme selection
-    window.setThemeColor = function(color) {
-        console.log("Theme color selected:", color);
-        // This will be implemented when themes are fully defined
-        alert("سيم تفعيل تغيير الألوان في تحديث قادم.");
-    };
-
-    // Placeholder for Language selection
-    window.setLanguage = function(lang) {
-        console.log("Language selected:", lang);
-        alert("سيم تفعيل تغيير اللغة في تحديث قادم.");
-    };
 })();

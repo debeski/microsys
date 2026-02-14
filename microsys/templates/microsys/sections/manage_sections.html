@@ -7,7 +7,7 @@
 
     <div class="row">
         <div class="col-12">
-            <h2 class="page-title"><i class="bi bi-diagram-3 me-2"></i> إدارة {% if active_model %} {{ ar_names }} {% endif %}</h2>
+            <h2 class="page-title"><i class="bi bi-diagram-3 me-2"></i> {{ MS_TRANS.manage_label }} {% if active_model %} {{ ar_names }} {% endif %}</h2>
         </div>
     </div>
 
@@ -39,9 +39,9 @@
         <!-- <div class="card-header text-center">
             <h4 class="me-5">
                 {% if form.instance.id %}
-                    تعديل بيانات {{ form.instance.name }}
+                    {{ MS_TRANS.edit_label }} {{ form.instance.name }}
                 {% else %}
-                    اضافة {{ ar_name }} جديد
+                    {{ MS_TRANS.add_label }} {{ ar_name }}
                 {% endif %}
             </h4>
         </div> -->
@@ -57,12 +57,12 @@
                 {% if not form_has_submit %}
                     {% if show_cancel and cancel_url %}
                     <div class="d-flex mt-3">
-                        <button type="submit" class="btn btn-primary rounded-start-pill rounded-end-0">حفظ</button>
-                        <a href="{{ cancel_url }}" class="btn btn-outline-warning rounded-end-pill rounded-start-0">إلغاء</a>
+                        <button type="submit" class="btn btn-primary rounded-start-pill rounded-end-0">{{ MS_TRANS.save }}</button>
+                        <a href="{{ cancel_url }}" class="btn btn-outline-warning rounded-end-pill rounded-start-0">{{ MS_TRANS.cancel }}</a>
                     </div>
                     {% else %}
                     <div class="mt-3">
-                        <button type="submit" class="btn btn-primary rounded-pill">حفظ</button>
+                        <button type="submit" class="btn btn-primary rounded-pill">{{ MS_TRANS.save }}</button>
                     </div>
                     {% endif %}
                 {% endif %}
@@ -73,7 +73,7 @@
 
     <div class="row">
         <div class="col-12">
-            <h2 class="page-title"><i class="bi bi-text-paragraph me-2"></i> قائمة {% if active_model %} {{ ar_names }} {% endif %}</h2>
+            <h2 class="page-title"><i class="bi bi-text-paragraph me-2"></i> {{ MS_TRANS.list_label }} {% if active_model %} {{ ar_names }} {% endif %}</h2>
         </div>
     </div>
 
@@ -81,7 +81,7 @@
     {% if table %}
     <div class="card border-light shadow-sm pt-2">
         <!-- <div class="card-header text-center">
-            <h4 class="me-5">قائمة {{ ar_names }}</h4>
+            <h4 class="me-5">{{ MS_TRANS.list_label }} {{ ar_names }}</h4>
         </div> -->
         <div class="card-body mt-2">
             {% if filter %}
@@ -95,7 +95,7 @@
         </div>
     </div>
     {% elif not error %}
-        <h3 class="mt-4">حدث خطأ ما!</h3>
+        <h3 class="mt-4">{{ MS_TRANS.error_generic }}</h3>
     {% endif %}
 
     {# Dynamic Subsection Modals #}
@@ -104,7 +104,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="addSubsectionModalLabel_{{ subsection.name }}">إضافة {{ subsection.verbose_name }}</h5>
+            <h5 class="modal-title" id="addSubsectionModalLabel_{{ subsection.name }}">{{ MS_TRANS.add_label }} {{ subsection.verbose_name }}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
@@ -123,16 +123,16 @@
     {# Section Context Menu (for table rows) #}
     <div id="sectionContextMenu" class="context-menu" style="display:none">
         <button type="button" class="context-menu-item" data-action="edit">
-            <i class="bi bi-pencil"></i> تعديل
+            <i class="bi bi-pencil"></i> {{ MS_TRANS.edit_label }}
         </button>
         {% if has_subsections %}
         <button type="button" class="context-menu-item" data-action="view-subsections">
-            <i class="bi bi-diagram-3"></i> عرض الأقسام الفرعية
+            <i class="bi bi-diagram-3"></i> {{ MS_TRANS.view_subsections }}
         </button>
         {% endif %}
         <div class="context-menu-divider"></div>
         <button type="button" class="context-menu-item text-danger" data-action="delete">
-            <i class="bi bi-trash"></i> حذف
+            <i class="bi bi-trash"></i> {{ MS_TRANS.delete_label }}
         </button>
     </div>
 
@@ -142,13 +142,13 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">الأقسام الفرعية</h5>
+                    <h5 class="modal-title">{{ MS_TRANS.subsections }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="viewSubsectionsModalBody">
                     <div class="text-center py-3">
                         <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">جاري التحميل...</span>
+                            <span class="visually-hidden">{{ MS_TRANS.loading }}</span>
                         </div>
                     </div>
                 </div>

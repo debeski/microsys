@@ -108,16 +108,50 @@ def microsys_context(request):
     # We add this boolean so templates know if the scope feature is ON globally
     context['scope_settings'] = {'is_enabled': is_scope_enabled()}
 
+    # 3. User Preferences (for JS injection & server-side logic)
+    user_prefs = {}
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        user_prefs = request.user.profile.preferences or {}
+    context['user_preferences'] = user_prefs # Injected for JS use
 
-    # 3. Sidebar Context
-    # Sidebar logic logic
-    config = get_sidebar_config()
-    # Include config hash in cache key so settings changes invalidate cache
-    cache_key = f'sidebar_auto_items_{_get_config_hash(config)}'
+    # 4. Language / i18n (resolved BEFORE sidebar so labels can be translated)
+    from .translations import get_strings
+
+    # Available languages from config (default: Arabic only)
+    default_languages = {
+        'ar': {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'},
+    }
+    languages = final_config.get('languages', default_languages)
+
+    # Resolve active language: user pref → config default → 'ar'
+    default_lang = final_config.get('default_language', 'ar')
+    current_lang = user_prefs.get('language', default_lang)
+
+    # Validate the resolved language exists in available languages
+    if current_lang not in languages:
+        current_lang = default_lang if default_lang in languages else 'ar'
+
+    lang_config = languages.get(current_lang, {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'})
+    current_dir = lang_config.get('dir', 'rtl')
+
+    # Get translated strings (with project-level overrides from config)
+    project_overrides = final_config.get('translations', None)
+    ms_trans = get_strings(current_lang, overrides=project_overrides)
+
+    context['CURRENT_LANG'] = current_lang
+    context['CURRENT_DIR'] = current_dir
+    context['LANGUAGES'] = languages
+    context['LANG_CONFIG'] = lang_config
+    context['MS_TRANS'] = ms_trans
+
+    # 5. Sidebar Context (uses current_lang for translated labels)
+    config = get_sidebar_config(lang_code=current_lang)
+    # Include config hash + lang in cache key so language changes get fresh items
+    cache_key = f'sidebar_auto_items_{current_lang}_{_get_config_hash(config)}'
     items = cache.get(cache_key)
     
     if items is None:
-        items = discover_list_urls()
+        items = discover_list_urls(lang_code=current_lang)
         cache.set(cache_key, items, timeout=config['CACHE_TIMEOUT'])
     
     # Filter by user permissions
@@ -142,19 +176,13 @@ def microsys_context(request):
     
     context['sidebar_auto_items'] = sidebar_items
     context['sidebar_extra_groups'] = extra_groups
-    
-    # 4. User Preferences (for JS injection & server-side logic)
-    user_prefs = {}
-    if request.user.is_authenticated and hasattr(request.user, 'profile'):
-        user_prefs = request.user.profile.preferences or {}
-    context['user_preferences'] = user_prefs # Injected for JS use
 
-    # 5. Sidebar State (Collapsed/Expanded)
+    # 6. Sidebar State (Collapsed/Expanded)
     # Prioritize DB preference if available, else session, else default
     session_collapsed = request.session.get('sidebarCollapsed', False)
     db_collapsed = user_prefs.get('sidebar_collapsed', session_collapsed)
     context['sidebar_collapsed'] = db_collapsed
-    
+
     return context
 
 def clear_sidebar_cache():

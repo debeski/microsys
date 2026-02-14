@@ -3,7 +3,6 @@
 * {
     box-sizing: border-box;
     font-family: 'Shabwa', sans-serif !important;
-    direction: rtl;
 }
 
 :root {
@@ -88,7 +87,7 @@ select.glass-input,
     appearance: none !important;
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
-    padding-right: 0.8rem !important; /* Reset padding reserved for arrow */
+    padding-inline-end: 0.8rem !important; /* Reset padding reserved for arrow */
 }
 
 .bg-primary {
@@ -150,13 +149,13 @@ input[dir="rtl"]::placeholder {
     color: #484848;
 }
 
-input[type="number"] {
+[dir="rtl"] input[type="number"] {
     text-align: right !important;
     direction: rtl !important;
     unicode-bidi: plaintext !important;
 }
 
-input[type="email"] {
+[dir="rtl"] input[type="email"] {
     text-align: right !important;
     direction: rtl !important;
     unicode-bidi: plaintext !important;

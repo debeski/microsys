@@ -47,7 +47,9 @@ urlpatterns = [
 
     # Autofill API
     path('sys/api/last-entry/<str:app_label>/<str:model_name>/', api.get_last_entry, name='api_get_last_entry'),
+    path('sys/api/details/<str:app_label>/<str:model_name>/empty_schema/', api.get_model_details, {'pk': 'empty_schema'}, name='api_get_empty_schema'),
     path('sys/api/details/<str:app_label>/<str:model_name>/<int:pk>/', api.get_model_details, name='api_get_model_details'),
     path('sys/api/preferences/update/', views.update_preferences, name='update_preferences'),
+    path('sys/api/preferences/reset/', views.reset_preferences, name='reset_preferences'),
 ]
 

@@ -42,8 +42,21 @@ from .tables import UserTable
 from .forms import CustomUserCreationForm, CustomUserChangeForm, ArabicPasswordChangeForm, ResetPasswordForm, UserProfileEditForm
 from .filters import UserFilter
 from .utils import is_scope_enabled, discover_section_models, resolve_model_by_name, resolve_form_class_for_model, has_related_records
+from .translations import get_strings
 
 User = get_user_model() # Use custom user model
+
+
+def _get_request_translations(request):
+    """Resolve the current user's language and return translation strings."""
+    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
+    default_lang = ms_config.get('default_language', 'ar')
+    user_prefs = {}
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        user_prefs = request.user.profile.preferences or {}
+    lang = user_prefs.get('language', default_lang)
+    overrides = ms_config.get('translations', None)
+    return get_strings(lang, overrides=overrides)
 
 def _get_m2m_through_defaults(model, field_name, request):
     """
@@ -227,6 +240,11 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, FilterView, SingleTa
                 qs = qs.filter(profile__scope=self.request.user.profile.scope)
         return qs
 
+    def get_table_kwargs(self):
+        kwargs = super().get_table_kwargs()
+        kwargs['translations'] = _get_request_translations(self.request)
+        return kwargs
+
     def get_table(self, **kwargs):
         table = super().get_table(**kwargs)
         # Hide scope column when scopes are off, or when user is already scoped
@@ -388,6 +406,11 @@ class UserActivityLogView(LoginRequiredMixin, UserPassesTestMixin, SingleTableMi
             table.exclude = ('scope',)
         return table
 
+    def get_table_kwargs(self):
+        kwargs = super().get_table_kwargs()
+        kwargs['translations'] = _get_request_translations(self.request)
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Handle the filter object
@@ -412,7 +435,7 @@ class UserDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         
         # Create table manually
         UserActivityLogTableNoUser = import_string('microsys.tables.UserActivityLogTableNoUser')
-        table = UserActivityLogTableNoUser(logs_qs)
+        table = UserActivityLogTableNoUser(logs_qs, translations=_get_request_translations(self.request))
         RequestConfig(self.request, paginate={'per_page': 10}).configure(table)
         
         context['table'] = table
@@ -441,7 +464,7 @@ def reset_password(request, pk):
         form = ResetPasswordForm(user=user, data=request.POST)  # ✅ Correct usage with SetPasswordForm
         if form.is_valid():
             form.save()
-            log_user_action(request, user, "RESET", "رمز سري")
+            log_user_action(request, user, "RESET", "password")
             return redirect("manage_users")
         else:
             print("Form errors:", form.errors)
@@ -519,7 +542,7 @@ def user_profile(request):
         password_form = ArabicPasswordChangeForm(user, request.POST)
         if password_form.is_valid():
             password_form.save()
-            log_user_action(request, user, "UPDATE", "رمز سري")
+            log_user_action(request, user, "UPDATE", "password")
             update_session_auth_hash(request, password_form.user)  # Prevent user from being logged out
             messages.success(request, 'تم تغيير كلمة المرور بنجاح!')
             return redirect('user_profile')
@@ -541,7 +564,7 @@ def edit_profile(request):
         form = UserProfileEditForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             user = form.save()
-            log_user_action(request, user, "UPDATE", "بيانات شخصية")
+            log_user_action(request, user, "UPDATE", "profile")
             messages.success(request, 'تم حفظ التغييرات بنجاح')
             return redirect('user_profile')
         else:
@@ -655,7 +678,7 @@ def toggle_scopes(request):
         
         settings.is_enabled = target_enabled
         settings.save()
-        log_user_action(request, request.user, "UPDATE", f"Scope Settings: {'Enabled' if settings.is_enabled else 'Disabled'}")
+        log_user_action(request, request.user, "UPDATE", "scope_settings")
         return JsonResponse({'success': True, 'is_enabled': settings.is_enabled})
     return JsonResponse({'success': False}, status=400)
 
@@ -1367,3 +1390,31 @@ def options_view(request):
         'disk_percent': disk_percent,
     }
     return render(request, 'microsys/options.html', context)
+@login_required
+def reset_preferences(request):
+    """
+    Reset all user preferences to default.
+    Clears Profile.preferences and session keys.
+    """
+    if request.method == "POST":
+        try:
+            # 1. Clear Profile preferences
+            Profile = apps.get_model('microsys', 'Profile')
+            profile, created = Profile.all_objects.get_or_create(user=request.user)
+            profile.preferences = {}
+            profile.save()
+            
+            # 2. Clear Session keys related to preferences
+            session_keys_to_clear = ['django_language', 'sidebarCollapsed', 'enable_prefill']
+            for key in session_keys_to_clear:
+                if key in request.session:
+                    del request.session[key]
+            
+            # Log action
+            log_user_action(request, request.user, "RESET", "preferences")
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False}, status=400)

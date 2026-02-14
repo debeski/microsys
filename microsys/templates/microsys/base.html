@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ CURRENT_LANG|default:'ar' }}" dir="{{ CURRENT_DIR|default:'rtl' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +13,9 @@
             } catch (e) {
                 window.USER_PREFS = {};
             }
+            // Inject server-resolved language info for client-side use
+            window.USER_PREFS._lang = '{{ CURRENT_LANG|default:"ar" }}';
+            window.USER_PREFS._dir = '{{ CURRENT_DIR|default:"rtl" }}';
 
             const savedTheme = window.USER_PREFS.theme || localStorage.getItem('appTheme');
             const savedAcc = window.USER_PREFS.accessibility || localStorage.getItem('accessibilityMode');
@@ -35,9 +38,13 @@
     </script>
     {% load static %}
 
-    <!-- Include CSS -->
-    <link rel="stylesheet" href="{% static 'bootstrap5/bootstrap.rtl.min.css' %}">
-    <link rel="stylesheet" href="{% static 'bootstrap5/bootstrap-icons.css' %}">
+    <!-- Include CSS (direction-aware bootstrap) -->
+    {% if CURRENT_DIR == 'ltr' %}
+    <link rel="stylesheet" href="{% static 'bootstrap/bootstrap.min.css' %}" id="bootstrap-css">
+    {% else %}
+    <link rel="stylesheet" href="{% static 'bootstrap/bootstrap.rtl.min.css' %}" id="bootstrap-css">
+    {% endif %}
+    <link rel="stylesheet" href="{% static 'bootstrap/bootstrap-icons.css' %}">
     <link rel="stylesheet" href="{% static 'main/css/main.css' %}">
     <link rel="stylesheet" href="{% static 'main/css/buttons.css' %}">
     <link rel="stylesheet" href="{% static 'main/css/titlebar.css' %}">
@@ -46,9 +53,10 @@
     <link rel="stylesheet" href="{% static 'main/css/pagination.css' %}">
     <link rel="stylesheet" href="{% static 'themes/main.css' %}">
     <link rel="stylesheet" href="{% static 'main/css/accessibility.css' %}">
+    <link rel="stylesheet" href="{% static 'main/css/language.css' %}">
     <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
-    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192x192.png' %}">
-    <link rel="icon" type="image/png" sizes="512x512" href="{% static 'icons/icon-512x512.png' %}">
+    <!-- <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192x192.png' %}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{% static 'icons/icon-512x512.png' %}"> -->
     <meta name="csrf-token" content="{{ csrf_token }}">
     <!-- Driver.js moved to tutorial.html -->
     {% load microsys_tags %}
@@ -57,6 +65,8 @@
 
     <script src="{% static 'themes/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'main/js/accessibility.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+    <script src="{% static 'main/js/language.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+    <script src="{% static 'main/js/autofill.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 
 </head>
 <body>
@@ -90,21 +100,24 @@
     {% block scripts %}{% endblock %}
 
     <!-- Include Bootstrap JS -->
-    <script src="{% static 'bootstrap5/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'bootstrap/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <link rel="stylesheet" href="{% static 'flatpickr/flatpickr.min.css' %}">
     <script src="{% static 'flatpickr/flatpickr.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    {% if CURRENT_LANG == 'ar' %}
     <script src="{% static 'flatpickr/locale/ar.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    {% endif %}
 
     <script nonce="{{ request.csp_nonce }}">
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize Flatpickr on all elements with the class 'flatpickr'
-            flatpickr('.flatpickr', {
-                dateFormat: "Y-m-d", // Set the desired date format
+            const fpOpts = {
+                dateFormat: "Y-m-d",
                 position: "auto",
-                locale: "ar",
-                altFormat: "d F Y", // Display format
-                allowInput: true, // Allow typing directly into the input field
-            });
+                altFormat: "d F Y",
+                allowInput: true,
+            };
+            {% if CURRENT_LANG == 'ar' %}fpOpts.locale = 'ar';{% endif %}
+            flatpickr('.flatpickr', fpOpts);
         });
     </script>
 
