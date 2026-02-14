@@ -8,6 +8,8 @@
 
 <center>**Multilingual** lightweight, dynamic Django app providing a comprehensive, highly customizable system integration service, including user management, profile extension, permissions, language switching, dynamic sidebar, automated activity logging, dynamic auxiliary model detection, global autofill feature and more.</center>
 
+---
+
 ## 📋 Requirements
 - Python 3.11+
 - Django 5.1.4+
@@ -106,9 +108,11 @@ pip install django-microsys
    ```
    This will create migrations, apply them, and validate your configuration.
 
+---
+
 ### 🛠️ Management Commands
 
-#### `microsys_setup`
+- `microsys_setup`
 Initial setup command that handles migrations and configuration validation.
 
 ```bash
@@ -122,7 +126,7 @@ python manage.py microsys_setup --skip-check
 python manage.py microsys_setup --no-migrate
 ```
 
-#### `microsys_check`
+- `microsys_check`
 Validates your Django settings and shows exact code snippets for any missing configuration.
 
 ```bash
@@ -152,6 +156,8 @@ MIDDLEWARE = [
 ```
 
 > **Note:** microsys also validates your configuration at runtime and will emit warnings if required middleware or context processors are missing.
+
+---
 
 ### 🖥️ App Configuration
 
@@ -208,9 +214,11 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 - **Tutorial**: Built-in help/tutorial for microSYS views and features.
 - **Security**: CSP compliance, role-based access control (RBAC), Backend A&A enforcement.
 
+---
+
 ### 👤 User Management
 
-#### 1. Profile Access
+1. Profile Access
 `microsys` automatically creates a `Profile` for every user via signals.
 ```python
 # Accessing profile data
@@ -218,17 +226,19 @@ phone = user.profile.phone
 scope = user.profile.scope
 ```
 
-#### 2. Grouped Permissions
+2. Grouped Permissions
 Microsys provides a custom, intuitive UI for managing permissions. Permissions are automatically grouped by **Application**, **Model**, and **Action** (View, Add, Change, Delete), making it easy to manage complex access controls.
 
-#### 3. Automated Activity Logging
+3. Automated Activity Logging
 Every action (CRUD, Login/Logout, etc.) is automatically recorded in the `UserActivityLog`.
 - **Global Middleware**: Tracks IP address and User Agent.
 - **Signal-Based**: Captures changes even from the Django Admin.
 - **Searchable**: View and filter activity logs directly from the system dashboard.
 
-#### 4. Unified Preferences
+4. Unified Preferences
 User UI settings (Theme, Language, Sidebar State, Autofill status) are persisted in the database (`Profile.preferences`), ensuring a consistent experience across different browsers and devices.
+
+---
 
 ### 🏗️ Core Integration (ScopedModel)
 
@@ -247,11 +257,13 @@ class MyModel(ScopedModel):
 - **Soft-Delete**: Deleting a record sets a `deleted_at` timestamp instead of removing the row, allowing for easy recovery and audit trails.
 - **Deep Integration**: `ScopedModel` allows the system to automatically handle complex relationships, section discovery, and subsection management flawlessly.
 
+---
+
 ### 📂 Dynamic Section Mode
 
 Microsys offers a powerful "Zero-Boilerplate" CRUD interface for managing auxiliary data models (like Departments, Categories, etc.).
 
-#### How It Works
+- **How It Works**
 1. **Mark Your Model**: Add `is_section = True` to your model attrs.
    ```python
    class Department(ScopedModel):
@@ -272,7 +284,7 @@ Microsys offers a powerful "Zero-Boilerplate" CRUD interface for managing auxili
    >     table_exclude = ['internal_notes', 'created_at']
    > ```
 
-#### Auto Subsections (Parent-Child Relations)
+- **Auto Subsections (Parent-Child Relations)**
 If a Section model has a `ManyToManyField` to another model that is **not** a standalone section (i.e. a "child" model), the system automatically nests it:
 
 ```python
@@ -293,11 +305,13 @@ Notes:
 - These attributes apply only to the auto-generated form/table.
 - If you provide a custom Form/Table class, it takes full precedence.
 
+---
+
 ### ⚡ Global Autofill
 
 `microsys` includes a powerful client-side autofill engine designed to eliminate repetitive data entry.
 
-#### Features
+- **Features**
 1.  **Smart FK Autofill**:
     -   Selecting a ForeignKey (e.g., `User`, `Employee`) automatically populates related fields in the form (like `email`, `phone`, `department`).
     -   **Recursive Data Fetching**: It intelligently fetches data from related `OneToOne` models (e.g., `User.profile.phone`) without extra configuration.
@@ -311,14 +325,14 @@ Notes:
     -   A toggle switch automatically appears in the top-right title bar whenever autofill is available on the page.
     -   The state (ON/OFF) is saved in your browser's local storage.
 
-#### How to Use
+- **How to Use**
 
-##### 1. Foreign Key Autofill (Zero Config)
+1. **Foreign Key Autofill (Zero Config)**
 The system automatically detects standard Django ForeignKey widgets and injects the necessary `data-autofill-source` attributes. **It works out of the box.**
 
 > **Note**: Only works for fields that have a corresponding input in the form with a matching name (e.g., `User.email` -> `<input name="email">`).
 
-##### 2. Enable Sticky Forms
+2. **Enable Sticky Forms**
 To enable the "Clone Last Entry" feature for a specific form, simply add the `data-model-name` attribute to your HTML form tag:
 
 ```html
@@ -327,11 +341,13 @@ To enable the "Clone Last Entry" feature for a specific form, simply add the `da
 </form>
 ```
 
+---
+
 ### ↔️ Interactive Sidebar 
 
 The sidebar is a dynamic, highly customizable navigation hub that supports both auto-discovery and manual configuration.
 
-#### Auto-Discovery Mode
+- **Auto-Discovery Mode**
 Microsys can automatically introspect your project's URL patterns and Models to generate navigation items. By default, it looks for URLs containing `_list`.
 
 ```python
@@ -345,7 +361,7 @@ SIDEBAR_AUTO = {
 }
 ```
 
-#### Advanced Customization
+- **Advanced Customization**
 Fine-tune the sidebar behavior using `SIDEBAR_AUTO` settings in your `settings.py`:
 
 - **Reordering**: Users with `is_staff` or specific permissions can toggle **Reorder Mode** from the sidebar toolbar. Drag and drop items to customize the layout; the new order is persisted to the database preferences.
@@ -377,10 +393,12 @@ SIDEBAR_AUTO = {
 }
 ```
 
-#### Template Tags
+- Template Tags
 If you are building a custom sidebar template, you can use these tags:
 - `{% auto_sidebar %}`: Renders all auto-discovered items.
 - `{% extra_sidebar %}`: Renders the groups and items defined in `EXTRA_ITEMS`.
+
+---
 
 ### 🌍 Translation Framework
 
@@ -413,9 +431,11 @@ MICROSYS_CONFIG = {
 ```
 Then in templates: `{{ MS_TRANS.my_key }}`
 
+---
+
 ### 🎨 Templates & Theming
 
-#### Base Template
+- **Base Template**
 The system provides a robust base template located at `microsys/templates/microsys/base.html`.
 You can extend this template in your own views to maintain consistent layout and functionality:
 
@@ -437,12 +457,12 @@ You can extend this template in your own views to maintain consistent layout and
 
 > **Note:** The base template automatically handles the sidebar, title bar, messages, and theme loading. Replacing it entirely will break core system functionality.
 
-#### Customizing Base Template (Injection)
+- **Customizing Base Template (Injection)**
 
 You can inject custom HTML, CSS, or JavaScript into the `microsys` base template globally without overriding the entire template.
 This is useful for adding analytics scripts, global styles, or meta tags.
 
-##### How to use:
+**How to use:**
 Create the following files in your project's `templates/` directory:
 
 1.  **Head Content (Meta, CSS)**: `microsys/includes/custom_head.html`
@@ -455,14 +475,14 @@ Create the following files in your project's `templates/` directory:
 
 > **Note**: Because these are templates (not static files), you can use template tags like `{% static %}` or `{% url %}` inside them, in addition to conditional logic!
 
-#### Theming
+- **Theming**
 - **Framework**: Built on **Bootstrap 5**.
 - **Colors**: The `primary` color automatically adapts to the selected theme. Secondary/Success/Danger colors are slightly desaturated for better visual ergonomics.
 - **Customization**:
   - Use standard Bootstrap classes (`btn-primary`, `text-success`, etc.).
   - Dark mode is supported out of the box. If you encounter issues, you can override styles via `extra_head` or report them.
 
-#### Unified User Preferences (DB-Backed)
+- **Unified User Preferences (DB-Backed)**
 The system now centralizes user UI settings in the database instead of relying on `localStorage` or server sessions. This ensures that a user's chosen theme, sidebar state, and item ordering are consistent across all their devices.
 
 - **Storage**: Preferences are stored in a `JSONField` named `preferences` within the `Profile` model.
@@ -477,7 +497,7 @@ The system now centralizes user UI settings in the database instead of relying o
 > [!IMPORTANT]
 > To enable this feature, ensure you have applied migrations (`makemigrations microsys` and `migrate microsys`).
 
-#### Dashboard Activity Chart
+- **Dashboard Activity Chart**
 The dashboard now includes a built-in activity chart powered by **Plotly.js**:
 - **Visualizes**: System activity for the last 24 hours.
 - **Design**: Seamless, transparent, lightweight line chart with no axis labels for a clean look.
