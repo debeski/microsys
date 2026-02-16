@@ -41,6 +41,14 @@ urlpatterns = [
     path('sys/subsection/delete/<int:pk>/', views.delete_subsection, name='delete_subsection'),
     path('sys/section/delete/', views.delete_section, name='delete_section'),
     path('sys/section/details/', views.get_section_details, name='get_section_details'),
+    
+    # 2FA URLs
+    path('sys/2fa/verify/login/', views.verify_otp_view, {'intent': 'login'}, name='verify_otp_login'),
+    path('sys/2fa/verify/enable/', views.verify_otp_view, {'intent': 'enable'}, name='verify_otp_enable'),
+    path('sys/2fa/enable/', views.enable_2fa, name='enable_2fa'),
+    path('sys/2fa/disable/', views.disable_2fa, name='disable_2fa'),
+    path('sys/2fa/resend/login/', views.resend_otp, {'intent': 'login'}, name='resend_otp_login'),
+    path('sys/2fa/resend/enable/', views.resend_otp, {'intent': 'enable'}, name='resend_otp_enable'),
 
     # Sidebar Toggle URL
     path('sys/toggle-sidebar/', utils.toggle_sidebar, name='toggle_sidebar'),

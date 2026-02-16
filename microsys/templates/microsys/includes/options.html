@@ -284,6 +284,10 @@
                         const theme = this.getAttribute('data-theme');
                         if (window.setTheme) {
                             window.setTheme(theme);
+                            // Also save preference to backend if available
+                            if (window.updatePreferences) {
+                                window.updatePreferences({ theme: theme });
+                            }
                         }
                     });
                 });

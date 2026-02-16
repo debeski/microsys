@@ -550,3 +550,71 @@
     background-color: rgba(127, 29, 29, 0.35) !important;
     color: #fca5a5 !important;
 }
+
+
+/* 22. Profile View Dark Mode Overrides */
+:root.theme-dark .glass-profile,
+:root.theme-dark .glass-card {
+    background: rgba(30, 30, 30, 0.65) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+:root.theme-dark .profile-img-container {
+    border: 4px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+:root.theme-dark .stats-card {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+:root.theme-dark .stats-card:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+:root.theme-dark .stats-value {
+    color: #e9ecef !important;
+}
+
+:root.theme-dark .stats-label {
+    color: #adb5bd !important;
+}
+
+:root.theme-dark .info-value {
+    color: #f8f9fa !important;
+}
+
+:root.theme-dark .timeline-content {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+:root.theme-dark .timeline-title {
+    color: #f8f9fa !important;
+}
+
+:root.theme-dark .timeline-dot {
+    border-color: #2c2c2c !important; /* match dark bg */
+    box-shadow: 0 0 0 2px #495057 !important;
+}
+
+:root.theme-dark .completeness-container {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+:root.theme-dark .completeness-label {
+    color: #e9ecef !important;
+}
+
+:root.theme-dark .activity-timeline {
+    border-color: #495057 !important;
+}
+/* RTL */
+html[dir="rtl"] :root.theme-dark .activity-timeline {
+    border-color: #495057 !important;
+}
+
+:root.theme-dark .info-label {
+    color: #adb5bd !important;
+}

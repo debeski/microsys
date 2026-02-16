@@ -77,6 +77,7 @@ class Profile(ScopedModel):
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الحذف")
     preferences = models.JSONField(default=dict, blank=True, verbose_name="تفضيلات المستخدم")
+    is_2fa_enabled = models.BooleanField(default=False, verbose_name="تفعيل المصادقة الثنائية")
 
     @property
     def full_name(self):
@@ -88,6 +89,7 @@ class Profile(ScopedModel):
     class Meta:
         verbose_name = "Profile"
         verbose_name_plural = "Profiles"
+        default_permissions = ()
         permissions = [
             ("manage_staff", "Can manage staff"),
         ]
@@ -109,6 +111,7 @@ class UserActivityLog(ScopedModel):
     class Meta:
         verbose_name = "Activity Log"
         verbose_name_plural = "Activity Logs"
+        default_permissions = ()
         permissions = [
             ("view_activity_log", "View activity log"),
         ]

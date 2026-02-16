@@ -211,7 +211,7 @@ MICROSYS_STRINGS = {
         # User form Help Text
         'help_username': 'اسم المستخدم يجب أن يكون فريدًا، 20 حرفًا أو أقل. فقط حروف، أرقام و @ . + - _',
         'help_email': 'أدخل عنوان البريد الإلكتروني الصحيح (اختياري)',
-        'help_phone': 'أدخل رقم الهاتف الصحيح بالصيغة الاتية 09XXXXXXXX (اختياري)',
+        'help_phone': 'أدخل رقم الهاتف الصحيح (اختياري)',
         'help_password_common': """
         <ul class="mb-0 ps-3"><li>كلمة المرور يجب ألا تكون مشابهة لمعلوماتك الشخصية.</li>
         <li>كلمة المرور يجب ان تحتوي على 8 حروف وارقام على الاقل.</li>
@@ -219,6 +219,7 @@ MICROSYS_STRINGS = {
         """,
         'help_password_match': 'أدخل نفس كلمة المرور مجددا للتحقق.',
         'help_is_active': 'يحدد ما إذا كان يجب اعتبار هذا الحساب نشطًا. قم بإلغاء تحديد هذا الخيار بدلاً من الحذف.',
+        'help_is_staff': 'يحدد ما إذا كان يمكن للمستخدم عرض وادارة المستخدمين.',
         'help_is_staff_no_perm': 'ليس لديك صلاحية لتعيين هذا المستخدم كمسؤول.',
         'help_scope_self': 'لا يمكنك تغيير نطاقك الخاص لمنع تجريد نفسك من صلاحيات المدير العام.',
         
@@ -231,8 +232,10 @@ MICROSYS_STRINGS = {
         # Permissions UI
         'perm_staff_access': 'صلاحيات الإدارة',
         'perm_manage_users': 'إدارة المستخدمين',
-        'perm_manage_sections': 'إدارة الأقسام الفرعية',
+        'perm_view_sections': 'عرض الأقسام',
+        'perm_manage_sections': 'إدارة الأقسام',
         'perm_manage_staff': 'صلاحيات مستخدم مسؤول',
+        'help_perm_manage_staff': 'يمنح المستخدم صلاحية تعيين مستخدمين آخرين كمسؤولين.',
         'perm_view_activity_log': 'عرض سجل النشاط',
 
         # Activity Log Actions
@@ -271,8 +274,40 @@ MICROSYS_STRINGS = {
         'account_inactive_tooltip': 'حساب معطل',
         'staff_permissions_tooltip': 'لديه صلاحيات إدارية',
         'role_type': 'نوع الصلاحيات',
-        'date_joined': 'تاريخ الإنشاء',
+        'date_joined': 'تاريخ الانضمام',
         'back_to_users': 'العودة إلى إدارة المستخدمين',
+
+        # Profile Enhancements
+        'stats_total_actions': 'إجمالي العمليات',
+        'stats_docs_created': 'مستندات تم إنشاؤها',
+        'stats_recent_activity': 'آخر النشاطات',
+        'stats_system_interactions': 'تفاعلات النظام',
+        'profile_completeness': 'اكتمل الملف الشخصي',
+        'account_health': 'حالة الحساب',
+        'account_health_good': 'جيد',
+        'account_health_attention': 'يحتاج انتباه',
+        'badge_verified': 'موثق',
+        'badge_admin': 'مسؤول',
+        'badge_staff': 'موظف',
+        'timeline_empty': 'لا يوجد نشاط حديث',
+
+        # 2FA
+        '2fa_title': 'المصادقة الثنائية',
+        '2fa_desc': 'قم بتأمين حسابك باستخدام رمز تحقق يتم إرساله إلى بريدك الإلكتروني.',
+        '2fa_enable': 'تفعيل المصادقة الثنائية',
+        '2fa_disable': 'تعطيل المصادقة الثنائية',
+        '2fa_enabled_msg': 'تم تفعيل المصادقة الثنائية بنجاح.',
+        '2fa_disabled_msg': 'تم تعطيل المصادقة الثنائية.',
+        '2fa_verify_title': 'تحقق من هويتك',
+        '2fa_verify_desc': 'لقد أرسلنا رمز تحقق إلى بريدك الإلكتروني. الرجاء إدخاله أدناه.',
+        '2fa_code': 'رمز التحقق',
+        '2fa_verify_btn': 'تحقق',
+        '2fa_resend_btn': 'إعادة إرسال الرمز',
+        '2fa_code_sent': 'تم إرسال رمز جديد إلى بريدك الإلكتروني.',
+        '2fa_invalid_code': 'رمز غير صحيح أو منتهي الصلاحية.',
+        '2fa_setup_email_subject': 'رمز تفعيل المصادقة الثنائية - microsys',
+        '2fa_login_email_subject': 'رمز الدخول - microsys',
+        '2fa_email_body': 'رمز التحقق الخاص بك هو: {code}. صلاحية الرمز 5 دقائق.',
     },
 
     # ───────────────────────────── English ─────────────────────────────
@@ -476,7 +511,7 @@ MICROSYS_STRINGS = {
         # User form Help Text
         'help_username': 'Username must be unique, 20 characters or fewer. Letters, digits and @/./+/-/_ only.',
         'help_email': 'Enter a valid email address (optional).',
-        'help_phone': 'Enter a valid phone number in format 09XXXXXXXX (optional).',
+        'help_phone': 'Enter a valid phone number (optional).',
         'help_password_common': """
         <ul class="mb-0 ps-3"><li>Password must be at least 8 characters long.</li>
         <li>Password can’t be too similar to your other personal information.</li>
@@ -484,6 +519,7 @@ MICROSYS_STRINGS = {
         """,
         'help_password_match': 'Enter the same password again, for verification.',
         'help_is_active': 'Designates whether this user should be treated as active. Unselect this instead of deleting accounts.',
+        'help_is_staff': 'Designates whether the user can view and manage users.',
         'help_is_staff_no_perm': 'You do not have permission to assign this user as staff.',
         'help_scope_self': 'You cannot change your own scope to prevent removing yourself from admin privileges.',
         
@@ -496,8 +532,10 @@ MICROSYS_STRINGS = {
         # Permissions UI
         'perm_staff_access': 'Management Access',
         'perm_manage_users': 'User Management',
-        'perm_manage_sections': 'Subsection Management',
+        'perm_view_sections': 'View Sections',
+        'perm_manage_sections': 'Sections Management',
         'perm_manage_staff': 'Can manage staff',
+        'help_perm_manage_staff': 'Grants the user permission to assign other users as staff.',
         'perm_view_activity_log': 'View activity log',
 
         # Activity Log Actions
@@ -538,6 +576,38 @@ MICROSYS_STRINGS = {
         'role_type': 'Role Type',
         'date_joined': 'Date Joined',
         'back_to_users': 'Back to User Management',
+
+        # Profile Enhancements
+        'stats_total_actions': 'Total Actions',
+        'stats_docs_created': 'Documents Created',
+        'stats_recent_activity': 'Recent Activity',
+        'stats_system_interactions': 'System Interactions',
+        'profile_completeness': 'Profile Completeness',
+        'account_health': 'Account Health',
+        'account_health_good': 'Good',
+        'account_health_attention': 'Needs Attention',
+        'badge_verified': 'Verified',
+        'badge_admin': 'Admin',
+        'badge_staff': 'Staff',
+        'timeline_empty': 'No recent activity',
+
+        # 2FA
+        '2fa_title': 'Two-Factor Authentication',
+        '2fa_desc': 'Secure your account with a verification code sent to your email.',
+        '2fa_enable': 'Enable 2FA',
+        '2fa_disable': 'Disable 2FA',
+        '2fa_enabled_msg': 'Two-Factor Authentication enabled successfully.',
+        '2fa_disabled_msg': 'Two-Factor Authentication disabled.',
+        '2fa_verify_title': 'Verify Your Identity',
+        '2fa_verify_desc': 'We sent a verification code to your email. Please enter it below.',
+        '2fa_code': 'Verification Code',
+        '2fa_verify_btn': 'Verify',
+        '2fa_resend_btn': 'Resend Code',
+        '2fa_code_sent': 'A new code has been sent to your email.',
+        '2fa_invalid_code': 'Invalid or expired code.',
+        '2fa_setup_email_subject': '2FA Activation Code - microsys',
+        '2fa_login_email_subject': 'Login Code - microsys',
+        '2fa_email_body': 'Your verification code is: {code}. Valid for 5 minutes.',
     },
 }
 

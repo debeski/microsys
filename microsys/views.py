@@ -141,6 +141,70 @@ def _create_minimal_instance_from_post(model, data, request):
     return instance, []
 
 # Helper Function to log actions
+# -------------------------------------------------------------------------
+import random
+import string
+from django.core.cache import cache
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
+def send_otp(request, user, intent='login'):
+    """
+    Generates a 6-digit OTP, stores it in cache, and sends it via email.
+    intent: 'login' or 'enable'
+    """
+    code = ''.join(random.choices(string.digits, k=6))
+    cache_key = f"otp_{user.pk}_{intent}"
+    # Store code for 5 minutes (300 seconds)
+    cache.set(cache_key, {'code': code, 'attempts': 0}, timeout=300)
+    
+    s = _get_request_translations(request)
+    subject_key = '2fa_login_email_subject' if intent == 'login' else '2fa_setup_email_subject'
+    subject = s.get(subject_key, 'Authentication Code')
+    
+    # Simple text body for now
+    body = s.get('2fa_email_body', 'Your code is {code}').format(code=code)
+    
+    try:
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        print(f"DEBUG: OTP for {user.email} is {code}") # Local Debugging
+        return True
+    except Exception as e:
+        print(f"Error sending OTP: {e}")
+        return False
+
+def verify_otp_logic(user, code, intent='login'):
+    """
+    Verifies the OTP from cache.
+    Returns: (True, None) or (False, error_message_key)
+    """
+    cache_key = f"otp_{user.pk}_{intent}"
+    data = cache.get(cache_key)
+    
+    if not data:
+        return False, '2fa_invalid_code'
+        
+    if str(data['code']) == str(code):
+        cache.delete(cache_key)
+        return True, None
+        
+    # Increment attempts
+    data['attempts'] += 1
+    if data['attempts'] >= 3:
+        cache.delete(cache_key)
+        return False, '2fa_invalid_code' # Max attempts reached
+        
+    cache.set(cache_key, data, timeout=300) # Reset timeout or keep original? keeping simple for now
+    return False, '2fa_invalid_code'
+
+
 def log_user_action(request, instance, action, model_name):
     UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
     UserActivityLog.objects.create(
@@ -188,6 +252,26 @@ def dashboard(request):
 # Custom Login View with Theme Injection
 class CustomLoginView(LoginView):
     redirect_authenticated_user = True  # Automatically redirect logged-in users
+
+    def form_valid(self, form):
+        """
+        Intercept login. If 2FA enabled, redirect to OTP verification.
+        """
+        user = form.get_user()
+        
+        # Check if 2FA is enabled for this user's profile
+        if hasattr(user, 'profile') and user.profile.is_2fa_enabled:
+            # 1. Send OTP
+            send_otp(self.request, user, intent='login')
+            
+            # 2. Store user ID in session (partially authenticated)
+            self.request.session['pre_2fa_user_id'] = user.pk
+            
+            # 3. Redirect to verification page
+            return redirect('verify_otp_login')
+            
+        # Standard Login
+        return super().form_valid(form)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -224,17 +308,133 @@ class CustomLoginView(LoginView):
              
              if home_url:
                  from django.shortcuts import resolve_url
+             if home_url:
+                 from django.shortcuts import resolve_url
                  try:
                      return resolve_url(home_url)
                  except:
                      return home_url
 
-             # Fallback to default dashboard
-             from django.urls import reverse_lazy
-             return reverse_lazy('sys_dashboard')
+        # Fallback to default dashboard
+        return project_redirect
+
+# -------------------------------------------------------------------------
+# 2FA Views
+# -------------------------------------------------------------------------
+
+from django.http import JsonResponse
+
+def verify_otp_view(request, intent='login'):
+    """
+    Handles OTP verification for both Login and Enabling 2FA.
+    intent: 'login' or 'enable'
+    """
+    s = _get_request_translations(request)
+    error_message = None
+    
+    # Identify the user based on intent
+    user = None
+    if intent == 'login':
+        user_id = request.session.get('pre_2fa_user_id')
+        if not user_id:
+            return redirect('login')
+        user = User.objects.get(pk=user_id)
+    else:
+        # Enable intent requires logged-in user
+        if not request.user.is_authenticated:
+            # Check for AJAX
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=403)
+            return redirect('login')
+        user = request.user
+
+    if request.method == 'POST':
+        code = request.POST.get('otp_code', '').strip()
+        is_valid, error_key = verify_otp_logic(user, code, intent=intent)
         
-        # 3. Otherwise use the project setting
-        return super().get_success_url()
+        if is_valid:
+            if intent == 'login':
+                # Complete Login
+                login(request, user)
+                del request.session['pre_2fa_user_id']
+                return redirect('sys_dashboard') # or Use get_success_url logic
+            elif intent == 'enable':
+                # Complete Enable
+                user.profile.is_2fa_enabled = True
+                user.profile.save()
+                
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'success'})
+                    
+                messages.success(request, s.get('2fa_enabled_msg', '2FA Enabled'))
+                return redirect('user_profile')
+        else:
+            error_msg = s.get(error_key, 'Invalid Code')
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': error_msg})
+            error_message = error_msg
+
+    return render(request, 'microsys/2fa/verify.html', {
+        'intent': intent,
+        'error_message': error_message,
+        'MS_TRANS': s
+    })
+
+@login_required
+def enable_2fa(request):
+    """
+    Initiates 2FA setup: sends OTP.
+    Supports AJAX for Modal flow.
+    """
+    if request.user.profile.is_2fa_enabled:
+        if request.GET.get('ajax'):
+             return JsonResponse({'status': 'error', 'message': 'Already enabled'})
+        return redirect('user_profile')
+        
+    if send_otp(request, request.user, intent='enable'):
+        if request.GET.get('ajax'):
+             return JsonResponse({'status': 'success'})
+        return redirect('verify_otp_enable')
+    
+    if request.GET.get('ajax'):
+         return JsonResponse({'status': 'error', 'message': 'Failed to send OTP'})
+         
+    messages.error(request, "Failed to send OTP. Check email configuration.")
+    return redirect('user_profile')
+
+@login_required
+def disable_2fa(request):
+    """
+    Disables 2FA instantly (could add password check for extra security).
+    """
+    request.user.profile.is_2fa_enabled = False
+    request.user.profile.save()
+    
+    s = _get_request_translations(request)
+    messages.success(request, s.get('2fa_disabled_msg', '2FA Disabled'))
+    return redirect('user_profile')
+
+def resend_otp(request, intent='login'):
+    """
+    Resends the OTP.
+    """
+    user = None
+    if intent == 'login':
+        user_id = request.session.get('pre_2fa_user_id')
+        if user_id:
+            user = User.objects.get(pk=user_id)
+    elif request.user.is_authenticated:
+        user = request.user
+        
+    if user:
+        send_otp(request, user, intent=intent)
+        s = _get_request_translations(request)
+        messages.success(request, s.get('2fa_code_sent', 'Code Sent'))
+        
+    if intent == 'login':
+        return redirect('verify_otp_login')
+        
+    return redirect('verify_otp_enable')
 
 
 # Function to recognize staff
@@ -623,9 +823,57 @@ def user_profile(request):
             messages.error(request, s.get('msg_form_error', "There was an error with the submitted data"))
             print(password_form.errors)
 
+    # --- Profile Stats & Activity ---
+    UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
+    
+    # 1. Stats
+    total_actions = UserActivityLog.objects.filter(user=user).count()
+    docs_created = UserActivityLog.objects.filter(user=user, action='CREATE').count()
+    
+    # 2. Activity Feeds
+    recent_activity = UserActivityLog.objects.filter(user=user).order_by('-timestamp')[:10]
+    
+    from django.db.models import Q
+    system_interactions = UserActivityLog.objects.filter(
+        user=user
+    ).filter(
+        Q(action__in=['LOGIN', 'LOGOUT', 'RESET', 'UPDATE']) & 
+        (Q(model_name__in=['auth', 'profile', 'password', 'user', 'preferences']) | Q(action__in=['LOGIN', 'LOGOUT']))
+    ).order_by('-timestamp')[:5]
+
+    # 3. Completeness
+    completeness = 0
+    if user.first_name and user.last_name:
+        completeness += 25
+    if user.email:
+        completeness += 25
+        
+    # Check profile fields safely
+    user_phone = None
+    user_pic = None
+    if hasattr(user, 'profile'):
+        user_phone = user.profile.phone
+        user_pic = user.profile.profile_picture
+        
+    if user_phone:
+        completeness += 25
+    if user_pic:
+        completeness += 25
+        
+    # 4. Health
+    account_health = 'good' if user.is_active else 'attention'
+
     return render(request, 'microsys/profile/profile.html', {
         'user': user,
-        'password_form': password_form
+        'password_form': password_form,
+        'stats': {
+            'total_actions': total_actions,
+            'docs_created': docs_created,
+            'completeness': completeness,
+            'health': account_health,
+        },
+        'recent_activity': recent_activity,
+        'system_interactions': system_interactions,
     })
 
 

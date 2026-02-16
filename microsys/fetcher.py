@@ -1,288 +1,339 @@
 # Fundemental imports
 #####################################################################
-from django.shortcuts import get_object_or_404
-from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.db.models.query import QuerySet
 from django.contrib import messages
+from django.db.models import FileField
 from io import BytesIO
 import mimetypes
 import openpyxl
 import zipfile
-from django.apps import apps
 
 # Universal Downloader
 #####################################################################
-# Function to download a single specified file
-def download_single_file(request, model_name, record_id, file_type):
+def fetch_file(request, data, file_type=None):
     """
-    A broker function to download files for a given model and record ID.
-    
-    Args:
-    - model_name: The name of the model (e.g., 'Decree', 'Publication').
-    - record_id: The ID of the record in the model.
-    
-    Returns:
-    - A response with the file to download.
-    """
-    if file_type:
-        file_type=file_type
-    else:
-        file_type='all'
-    # Step 1: Get the model class dynamically using model_name
-    try:
-        model_class = apps.get_model('documents', model_name)  # <-- your app label
-    except LookupError:
-        return JsonResponse({'error': 'Invalid model name'}, status=400)
-
-    # Step 2: Retrieve the record
-    record = get_object_or_404(model_class, id=record_id)
-
-    if not request.user.has_perm(f'documents.view_{model_name.lower()}'):
-        messages.error(request, "ليس لديك صلاحية لتحميل هذا الملف.")
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
-
-    # Step 3: Now that we have the record, pass it to your file download logic
-    return downloader(request, record, file_type=file_type)
-
-# Function that gathers info for the files for renaming purposes
-def gather_file_info(request, records, file_type=None):
-    """
-    Gathers necessary file information from the given records.
-    
-    Args:
-    - records: List of model instances (e.g., Decree, Publication).
-    
-    Returns:
-    - A list of dictionaries containing 'model_name', 'number', 'date', and 'file' for each record.
-    """
-    files_data = []
-    
-    for record in records:
-        model_name = record.__class__.__name__
-        number = getattr(record, 'number', 'unknown')
-
-        # Try to get the date from different possible fields
-        date = getattr(record, 'date', None) or \
-               getattr(record, 'created_at', None) or \
-               getattr(record, 'date_applied', None)
-
-        # If only the year is present, treat it as a full date (e.g., 2022 becomes 2022-01-01)
-        if not date:
-            year = getattr(record, 'year', None)
-            if year:
-                date_str = f"{year}-01-01"
-            else:
-                date_str = 'unknown_date'
-        else:
-            # If we have a valid date, format it
-            date_str = date.strftime('%Y-%m-%d') if date else 'unknown_date'
-
-        file_fields = ["pdf_file", "attach", "receipt_file", "word_file", "response_file"]
-        if not file_type:
-            file_type='all'
-        for field in file_fields:
-            file_obj = getattr(record, field, None)
-            if file_obj:
-                # If file_type is None or matches the field, include it
-                if file_type == "all" or field == file_type:
-                    files_data.append({
-                        "model_name": model_name,
-                        "number": number,
-                        "date": date_str,
-                        "file": file_obj,
-                        "field_name": field
-                    })
-
-    return files_data
-
-# Main downloader function
-def downloader(request, records, file_type=None):
-    """
-    Generalized function to download one or multiple files.
+    Universal downloader for single objects, lists, or querysets.
     
     Args:
     - request: Django request object.
-    - files_data (list of dict): Each dict should contain:
-        - 'model_name': Model name as a string (e.g., "Decree", "Publication").
-        - 'number': Identifier (if applicable, else None).
-        - 'date': Date string (formatted as YYYY-MM-DD or 'unknown_date').
-        - 'file': File object (Django FileField or ImageField).
+    - data: A single Model instance, a List of instances, or a QuerySet.
+    - file_type: Optional specific field name to download (e.g., 'pdf_file'). 
+                 If None or 'all', downloads all found non-empty FileFields.
     
     Returns:
-    - A single file download (PDF, Word, Image).
-    - A ZIP download if multiple files are passed.
+    - FileResponse (single file) or Zip Response (multiple files).
     """
-    if isinstance(records, QuerySet):
-        records = list(records)
-
-    # If a single record is passed, wrap it in a list for uniform processing
-    if isinstance(records, dict):
-        files_data = gather_file_info(request, [records], file_type)
-    elif isinstance(records, list):
-        files_data = gather_file_info(request, records, file_type)
+    
+    # 1. Normalize input to a list of instances
+    records = []
+    if isinstance(data, QuerySet):
+        records = list(data)
+    elif isinstance(data, list):
+        records = data
     else:
-        # If it's not a list or dict, treat it as a single record and wrap it in a list
-        files_data = gather_file_info(request, [records], file_type)
+        # Assume single model instance
+        records = [data]
+        
+    if not records:
+         messages.error(request, "لا توجد سجلات للتحميل.")
+         return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
-    # Validate input
-    if not files_data or not isinstance(files_data, list):
-        messages.error(request, "لا توجد اي ملفات متاحة للتحميـل.")
+    # 2. Collect Files
+    files_to_download = []
+    
+    for record in records:
+        # Smart Introspection for Metadata
+        meta_info = _get_record_metadata(record)
+        number = meta_info['identifier']
+        date_str = meta_info['date_str']
+        model_name = meta_info['model_name']
+            
+        # Introspect for FileFields
+        model_file_fields = [
+            f.name for f in record._meta.get_fields() 
+            if isinstance(f, FileField)
+        ]
+        
+        for field_name in model_file_fields:
+            # Filter by requested file_type
+            if file_type and file_type != 'all' and field_name != file_type:
+                continue
+                
+            file_obj = getattr(record, field_name, None)
+            if file_obj and file_obj.name:
+                # Construct clean partial filename
+                ext = file_obj.name.split('.')[-1]
+                
+                # Format: ModelName_Identifier_Date_Field.ext
+                filename = f"{model_name}_{number}_{date_str}_{field_name}.{ext}"
+                filename = _sanitize_filename(filename)
+                
+                files_to_download.append({
+                    'filename': filename,
+                    'file': file_obj
+                })
+
+    # 3. Decision: Error, Single File, or Zip
+    if not files_to_download:
+        messages.error(request, "لا توجد ملفات صالحة للتحميل في السجلات المختارة.")
         return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+        
+    if len(files_to_download) == 1:
+        # Serve Single File
+        target = files_to_download[0]
+        return _serve_file(target['file'], target['filename'])
+    else:
+        # Serve Zip
+        # Name zip based on first record's model and range
+        first_rec_meta = _get_record_metadata(records[0])
+        last_rec_meta = _get_record_metadata(records[-1])
+        
+        model_name = first_rec_meta['model_name']
+        first_num = first_rec_meta['identifier']
+        last_num = last_rec_meta['identifier']
+        
+        zip_name = f"{model_name}_{first_num}-{last_num}.zip"
+        zip_name = _sanitize_filename(zip_name)
+        return _serve_zip(files_to_download, zip_name)
 
-    # If only one matching file exists, serve it directly
-    if len(files_data) == 1:
-        return serve_single_file(files_data[0])
 
-    # If multiple files match, create a ZIP archive
-    return serve_zip_file(files_data)
-
-# Sub Function in charge of serving a single file to the client
-def serve_single_file(file_info):
-    """Serves a single file with the correct Content-Disposition header."""
-
-    file_obj = file_info.get("file")
-    if not file_obj or not file_obj.name:
-        return JsonResponse({'error': 'File not found'}, status=404)
-
-    # Generate proper filename
-    model_name = file_info.get("model_name", "document")
-    number = file_info.get("number", "unknown")
-    date_str = file_info.get("date", "unknown_date")
+def _get_record_metadata(record):
+    """
+    Introspects a model instance to find the best Identifier and Date.
+    Returns dict: {'identifier': str, 'date_str': str, 'model_name': str}
+    """
+    meta = record._meta
+    fields = meta.get_fields()
     
-    ext = file_obj.name.split('.')[-1]
-    filename = f"{model_name}_{number}_{date_str}.{ext}"
-
-    # Determine content type
-    content_type, _ = mimetypes.guess_type(file_obj.name) or ('application/octet-stream',)
+    # 1. Identifier Strategy
+    # Priority: 'number' > 'code' > 'serial' > 'reference' > pk
+    identifier = None
+    candidates = ['number', 'code', 'serial', 'reference', 'ref']
     
-    # Create response
+    # Check candidates by name
+    for name in candidates:
+        if hasattr(record, name):
+            val = getattr(record, name, None)
+            if val:
+                identifier = str(val)
+                break
+    
+    if not identifier:
+        identifier = str(record.pk)
+
+    # 2. Date Strategy
+    # Priority: 
+    #   1. Field named exactly 'date' (if Date/DateTime type)
+    #   2. Any DateField (preferring those without auto_now)
+    #   3. Any DateTimeField
+    
+    from django.db.models import DateField, DateTimeField
+    
+    best_date = None
+    
+    # Check for explicit 'date' field
+    try:
+        date_field = meta.get_field('date')
+        if isinstance(date_field, (DateField, DateTimeField)):
+            best_date = getattr(record, 'date', None)
+    except Exception:
+        pass
+        
+    if not best_date:
+        # Look for DateField (Business Date)
+        for f in fields:
+            if isinstance(f, DateField) and not isinstance(f, DateTimeField):
+                val = getattr(record, f.name, None)
+                if val:
+                    best_date = val
+                    break
+    
+    if not best_date:
+        # Look for DateTimeField (System Timestamp)
+        for f in fields:
+            if isinstance(f, DateTimeField):
+                 # Prefer created_at / date_joined types
+                 if 'created' in f.name or 'joined' in f.name or 'applied' in f.name:
+                     val = getattr(record, f.name, None)
+                     if val:
+                         best_date = val
+                         break
+        
+        # If still nothing, take any DateTimeField
+        if not best_date:
+            for f in fields:
+                if isinstance(f, DateTimeField):
+                    val = getattr(record, f.name, None)
+                    if val:
+                        best_date = val
+                        break
+
+    date_str = best_date.strftime('%Y-%m-%d') if best_date else 'unknown_date'
+    
+    return {
+        'identifier': identifier,
+        'date_str': date_str,
+        'model_name': meta.model_name
+    }
+
+
+def _sanitize_filename(filename):
+    """Remove unsafe characters from filename."""
+    return filename.replace('/', '_').replace('\\', '_').replace(':', '-').replace(' ', '_')
+
+
+def _serve_file(file_obj, filename):
+    """Helper: Serve a single file with correct content type."""
+    try:
+        content_type, _ = mimetypes.guess_type(file_obj.name)
+    except Exception:
+        content_type = 'application/octet-stream'
+        
+    if not content_type:
+        content_type = 'application/octet-stream'
+        
     response = HttpResponse(content_type=content_type)
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-    # Serve file
+    
     with file_obj.open('rb') as f:
         response.write(f.read())
-
+        
     return response
 
-# Sub Function in charge of serving a zip file to the client
-def serve_zip_file(files_data):
-    """Zips multiple files and serves as a downloadable response."""
-    
-    # Assume all files are from the same model
-    model_name = files_data[0].get("model_name", "documents")
-    
-    numbers = [file_info.get("number", 0) for file_info in files_data]
-    
-    # Sort the numbers to find the first and last
-    first_number = min(numbers)
-    last_number = max(numbers)
-    
+
+def _serve_zip(files_list, zip_filename):
+    """Helper: Create and serve a zip file from list of file objects."""
     zip_buffer = BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        for file_info in files_data:
-            file_obj = file_info.get("file")
-            if file_obj and file_obj.name:
-                number = file_info.get("number", "unknown")
-                date_str = file_info.get("date", "unknown_date")
-                ext = file_obj.name.split('.')[-1]
-                filename = f"{model_name}_{number}_{date_str}.{ext}"
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        seen_names = set()
+        for item in files_list:
+            fname = item['filename']
+            # Ensure uniqueness in zip
+            if fname in seen_names:
+                base, ext = fname.rsplit('.', 1)
+                fname = f"{base}_{len(seen_names)}.{ext}"
+            
+            seen_names.add(fname)
+            
+            try:
+                with item['file'].open('rb') as f:
+                    zf.writestr(fname, f.read())
+            except Exception:
+                # If a file fails to open types (e.g. missing on disk), skip it and continue
+                continue
                 
-                with file_obj.open('rb') as f:
-                    zip_file.writestr(filename, f.read())
-
-    # Create the zip file name using first_number-last_number
-    zip_filename = f"{model_name}_{first_number}-{last_number}.zip"
-
-    # Serve ZIP file
     zip_buffer.seek(0)
     response = HttpResponse(zip_buffer.getvalue(), content_type="application/zip")
-    response["Content-Disposition"] = f'attachment; filename="{zip_filename}"'
+    response['Content-Disposition'] = f'attachment; filename="{zip_filename}"'
     return response
+
 
 # Excel Exporter
 #####################################################################
-# Function to export any list of documents to Excel
-def export_to_excel(request, queryset, headers_map, sheet_title="Documents"):
+def fetch_excel(request, queryset, exclude_fields=None, hidden_fields=None, sheet_title="Excel"):
     """
-    Generic function to export any document queryset to Excel.
-
-    :param request: Django request object
-    :param queryset: queryset or list of model instances
-    :param headers_map: list of tuples (Excel Header, attribute_name)
-    :param sheet_title: Name of Excel sheet
-    :return: HttpResponse with Excel file
+    Export a queryset to Excel with Smart Hiding.
+    
+    Args:
+    - queryset: Data to export.
+    - exclude_fields: List of field names to completely omit.
+    - hidden_fields: List of field names to include but hide the column.
+                     (FileFields and Auto-Timestamps are automatically hidden).
+    - sheet_title: Title of the worksheet.
     """
+    if not queryset:
+        messages.error(request, "لا توجد بيانات للتصدير.")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
-    if isinstance(queryset, list):
-        first_item = queryset[0] if queryset else None
-        last_item = queryset[-1] if queryset else None
-    else:
-        first_item = queryset.first()
-        last_item = queryset.last()
+    # Normalize to iterable if list passed
+    data_list = queryset
+    model = None
+    if isinstance(queryset, QuerySet):
+        model = queryset.model
+    elif isinstance(queryset, list) and queryset:
+        model = queryset[0].__class__
+        
+    if not model:
+         messages.error(request, "تعذر تحديد نموذج البيانات.")
+         return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
-    # Create workbook and sheet
+    from openpyxl.utils import get_column_letter
+    from django.db.models import FileField, DateTimeField
+
+    # Prepare Field Lists
+    exclude_fields = set(exclude_fields or [])
+    user_hidden_fields = set(hidden_fields or [])
+    
+    final_fields = [] # List of (field_name, verbose_name, is_hidden)
+    
+    for field in model._meta.fields:
+        if field.name in exclude_fields:
+            continue
+            
+        is_hidden = False
+        
+        # 1. User specified hidden
+        if field.name in user_hidden_fields:
+            is_hidden = True
+        
+        # 2. Auto-Hide FileFields/ImageFields
+        elif isinstance(field, FileField):
+            is_hidden = True
+            
+        # 3. Auto-Hide System Timestamps
+        elif isinstance(field, DateTimeField):
+            if field.auto_now or field.auto_now_add:
+                is_hidden = True
+        
+        final_fields.append({
+            'name': field.name,
+            'verbose': field.verbose_name.title(),
+            'hidden': is_hidden
+        })
+
+    # Create Workbook
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = sheet_title
+    ws.title = sheet_title or "Export"
 
-    # Add headers
-    headers = [h for h, _ in headers_map]
-    ws.append(headers)
+    # Write Header Row
+    ws.append([f['verbose'] for f in final_fields])
 
-    # Add rows
-    for obj in queryset:
+    # Write Data Rows
+    for obj in data_list:
         row = []
-        for _, attr in headers_map:
-            value = getattr(obj, attr, "")
-            # If attribute is a ForeignKey or Object
-            if value:
-                if hasattr(value, "name"):
-                    value = value.name
-                else:
-                    value = str(value)
-            row.append(value if value is not None else "")
+        for field_info in final_fields:
+            name = field_info['name']
+            
+            # Simple attribute access
+            val = getattr(obj, name, "")
+            
+            # Handle FileField (use url or name)
+            if hasattr(val, 'url'):
+                val = val.name # or val.url if you prefer full path
+            
+            # Convert Model Instances / Enums / Dates to string
+            if val is not None:
+                row.append(str(val))
+            else:
+                row.append("")
         ws.append(row)
 
-    # Filename
-    first_number = getattr(first_item, "number", "0")
-    last_number = getattr(last_item, "number", "0")
-    filename = f"{first_number}-{last_number}.xlsx"
+    # Apply Hidden Columns
+    # openpyxl columns are 1-indexed (A=1, B=2...)
+    for idx, field_info in enumerate(final_fields, start=1):
+        if field_info['hidden']:
+            col_letter = get_column_letter(idx)
+            ws.column_dimensions[col_letter].hidden = True
 
-    # Prepare response
+    # Filename generation
+    obj_count = len(data_list)
+    filename = f"{model._meta.model_name}_export_{obj_count}.xlsx"
+
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
-
-# Headers for export_to_excel function
-decree_headers = [
-    ("رقم القرار", "number"),
-    ("تاريخ القرار", "date"),
-    ("الحكومة", "government"),
-    ("الوزير", "minister"),
-    ("العنوان", "title"),
-    ("التفاصيل", "keywords"),
-    ("النوع", "type"),
-    ("التصنيف", "category"),
-    ("ملاحظات", "notes"),
-]
-other_decree_headers = [
-    ("رقم القرار", "number"),
-    ("تاريخ القرار", "date"),
-    ("الجهة", "affiliate"),
-    ("العنوان", "title"),
-    ("التفاصيل", "keywords"),
-    ("النوع", "type"),
-    ("التصنيف", "category"),
-    ("ملاحظات", "notes"),
-]
-other_headers = [
-    ("رقم المستند", "number"),
-    ("التاريخ", "date"),
-    ("العنوان", "title"),
-    ("التفاصيل", "keywords"),
-    ("ملاحظات", "notes"),
-]

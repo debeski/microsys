@@ -123,17 +123,16 @@ class GroupedPermissionWidget(ChoiceWidget):
             model_name = perm.content_type.model
             codename = perm.codename
 
-            # --- Mapping manage_staff to auth.Permission UI ---
-            # if app_label == 'microsys' and codename == 'manage_staff':
-            #     app_label = 'auth'
-            #     model_name = 'permission'
-            # # --- Mapping manage_sections to auth.Permission UI ---
-            # if app_label == 'microsys' and codename == 'manage_sections':
-            #     app_label = 'auth'
-            #     model_name = 'section'
-            # -------------------------------------------------
+            # --- Mapping manage_staff and view_activity_log to is_staff UI ---
+            if app_label == 'microsys' and codename in ['manage_staff', 'view_activity_log']:
+                model_name = 'staff_access'
+                # Force model_verbose_name to match what _attach_is_staff_permission uses
+                # "perm_staff_access" string usually "صلاحيات الإدارة"
+                
             # Use real verbose name from model class if available
-            if app_label == 'microsys' and model_name == 'profile':
+            if app_label == 'microsys' and model_name == 'staff_access':
+                model_verbose_name = s.get('perm_staff_access', "صلاحيات الإدارة")
+            elif app_label == 'microsys' and model_name == 'profile':
                 model_verbose_name = s.get('perm_manage_users', "إدارة المستخدمين")
             # elif app_label == 'auth' and model_name == 'section':
             #     model_verbose_name = "إدارة الأقسام الفرعية"
@@ -175,12 +174,18 @@ class GroupedPermissionWidget(ChoiceWidget):
             # We want just the name part, but translated.
             perm_label = s.get(f"perm_{codename}", perm.name)
 
+            # Special Help Text for manage_staff
+            help_text = ""
+            if codename == 'manage_staff':
+                 help_text = s.get('help_perm_manage_staff', "Grants the user permission to assign other users as staff.")
+
             option = {
                 'name': name,
                 'value': perm.pk,
                 'label': perm_label,
                 'codename': codename,
                 'selected': str(perm.pk) in str_values,
+                'help_text': help_text,
                 'attrs': {
                     'id': f"{current_id}_{perm.pk}",
                     'data_action': action,
@@ -257,7 +262,7 @@ class GroupedPermissionWidget(ChoiceWidget):
 # Custom User Creation form layout
 class CustomUserCreationForm(UserCreationForm):
     # Added fields from Profile
-    phone = forms.CharField(max_length=10, required=False, label="رقم الهاتف", help_text="أدخل رقم الهاتف الصحيح بالصيغة الاتية 09XXXXXXXX (اختياري)")
+    phone = forms.CharField(max_length=15, required=False)
     scope = forms.ModelChoiceField(queryset=None, required=False, label="النطاق")
     
     permissions = forms.ModelMultipleChoiceField(
@@ -269,7 +274,7 @@ class CustomUserCreationForm(UserCreationForm):
                 'sessions',
                 'django_celery_beat',
             ]) |
-            (Q(content_type__app_label='microsys') & ~Q(codename='manage_staff')) |
+            (Q(content_type__app_label='microsys') & ~Q(codename='manage_staff') & ~Q(codename='view_activity_log') & ~Q(content_type__model='section')) |
             Q(content_type__app_label='auth', content_type__model__in=['group', 'user', 'permission'])
         ),
         required=False,
@@ -345,6 +350,7 @@ class CustomUserCreationForm(UserCreationForm):
         self.fields["username"].help_text = s.get('help_username', "اسم المستخدم يجب أن يكون فريدًا...")
         self.fields["email"].help_text = s.get('help_email', "أدخل عنوان البريد الإلكتروني الصحيح (اختياري)")
         self.fields["is_active"].help_text = s.get('help_is_active', "يحدد ما إذا كان يجب اعتبار هذا الحساب نشطًا.")
+        self.fields["is_staff"].help_text = s.get('help_is_staff', "يحدد ما إذا كان يمكن للمستخدم تسجيل الدخول إلى هذا الموقع الإداري.")
         self.fields["password1"].help_text = s.get('help_password_common', "كلمة المرور يجب ألا تكون مشابهة...")
         self.fields["password2"].help_text = s.get('help_password_match', "أدخل نفس كلمة المرور السابقة للتحقق.")
         self.fields["phone"].help_text = s.get('help_phone', "أدخل رقم الهاتف الصحيح...")
@@ -426,7 +432,7 @@ class CustomUserCreationForm(UserCreationForm):
 
 # Custom User Editing form layout
 class CustomUserChangeForm(UserChangeForm):
-    phone = forms.CharField(max_length=10, required=False, label="رقم الهاتف", help_text="أدخل رقم الهاتف الصحيح بالصيغة الاتية 09XXXXXXXX (اختياري)")
+    phone = forms.CharField(max_length=15, required=False)
     scope = forms.ModelChoiceField(queryset=None, required=False, label="النطاق")
 
     permissions = forms.ModelMultipleChoiceField(
@@ -438,7 +444,7 @@ class CustomUserChangeForm(UserChangeForm):
                 'sessions',
                 'django_celery_beat',
             ]) |
-            (Q(content_type__app_label='microsys') & ~Q(codename='manage_staff')) |
+            (Q(content_type__app_label='microsys') & ~Q(codename='manage_staff') & ~Q(codename='view_activity_log') & ~Q(content_type__model='section')) |
             Q(content_type__app_label='auth', content_type__model__in=['group', 'user', 'permission'])
         ),
         required=False,
@@ -487,6 +493,8 @@ class CustomUserChangeForm(UserChangeForm):
         self.fields["username"].help_text = s.get('help_username', "اسم المستخدم يجب أن يكون فريدًا...")
         self.fields["email"].help_text = s.get('help_email', "أدخل عنوان البريد الإلكتروني الصحيح (اختياري)")
         self.fields["is_active"].help_text = s.get('help_is_active', "يحدد ما إذا كان يجب اعتبار هذا الحساب نشطًا.")
+        self.fields["is_staff"].help_text = s.get('help_is_staff', "يحدد ما إذا كان يمكن للمستخدم عرض وادارة المستخدمين.")
+        self.fields["phone"].help_text = s.get('help_phone', "أدخل رقم الهاتف الصحيح...")
         self.fields["scope"].help_text = ""
 
         if user_instance:

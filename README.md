@@ -17,7 +17,6 @@
 - crispy-bootstrap5 2025.3+
 - django-tables2 2.5+
 - django-filter 24.1+
-- django-health-check 3.20+
 - psutil
 
 ---
@@ -207,14 +206,16 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 - **Dynamic Auxiliary Model Detection**: Zero-Boilerplate Zero-Code Detection of auxiliary models using model attrs.
 - **Dynamic Forms, Filters and Tables**: Automatically detects and registers or creates forms, filters and tables to auxiliary models.
 - **Global Autofill**: Dynamic Smart Autofill tool that fills form fields based on related FK models, or model last entry.
+- **Universal Fetcher**: Global, Smart single-file and multi-file Downloader, and data-driven Excel Exporter for querysets.
 - **Automated Logging**: Full automatic activity tracking (CRUD, Login/Logout) via Signals.
 - **Dynamic Sidebar**: Auto-discovery of list views and customizable, reorderable menu items.
 - **Dynamic Titlebar**: Show-Hide autofill-toggle, dynamic home url, and title.
+- **Context Menu**: Easy to use context menu for quick actions.
 - **Options View**: Options view to enable, disable, and configure system features and details.
 - **Language Selector**: Native Arabic support with dynamic language switching with optional additional languages (RTL/LTR).
 - **Themes & Accessibility**: Bootstrap5 integration with built-in dark/light modes and accessibility tools (High Contrast, Zoom, etc.).
 - **Native Mobile Support**: Responsive design for all screen sizes.
-- **Health Checks**: Built-in health checks for common issues.
+- **Management Commands**: Built-in management commands for system setup and checks.
 - **Tutorial**: Built-in help/tutorial for microSYS views and features.
 - **Security**: CSP compliance, role-based access control (RBAC), Backend A&A enforcement.
 
@@ -308,6 +309,57 @@ class MainUnit(ScopedModel): # Parent section
 Notes:
 - These attributes apply only to the auto-generated form/table.
 - If you provide a custom Form/Table class, it takes full precedence.
+
+---
+
+### 📂 Universal File Fetcher & Excel Export
+
+Microsys provides a unified, zero-boilerplate utility for downloading files and exporting data.
+
+- **Universal Fetcher (`fetch_file`)**
+Handles single-file serving and multi-file zipping automatically.
+
+```python
+from microsys.fetcher import fetch_file
+
+def download_view(request, pk):
+    # 1. Single Instance -> Serves the file directly
+    obj = MyModel.objects.get(pk=pk)
+    return fetch_file(request, obj)
+
+def bulk_download_view(request):
+    # 2. QuerySet/List -> Serves a ZIP file containing all files
+    objs = MyModel.objects.filter(category='urgent')
+    return fetch_file(request, objs)
+
+def specific_field_view(request, pk):
+    # 3. Filter by specific file field
+    obj = MyModel.objects.get(pk=pk)
+    return fetch_file(request, obj, file_type='pdf_report')
+```
+
+- **Smart Excel Export (`fetch_excel`)**
+Exports any QuerySet to Excel with auto-generated headers and smart column hiding.
+
+```python
+from microsys.fetcher import fetch_excel
+
+def export_view(request):
+    qs = MyModel.objects.all()
+    
+    return fetch_excel(
+        request, 
+        qs, 
+        # Optional: Completely remove fields
+        exclude_fields=['id', 'internal_notes'],
+        # Optional: Hide columns (Auto-hides IDs, file paths, and system timestamps by default)
+        hidden_fields=['salary_grade']
+    )
+```
+
+**Features**:
+- **Smart Introspection**: Automatically finds the best "Identifier" (e.g. `number`, `code`, `pk`) and "Date" field for filenames.
+- **Smart Hiding**: `fetch_excel` automatically hides `FileField` paths and system timestamps (`created_at`) to keep the sheet clean, while keeping the data accessible.
 
 ---
 
@@ -632,3 +684,4 @@ microsys/
 | v1.6.1  | • **Translation Upgrade**: Improved translation system and coverage <br> • Various bug fixes and stability improvements |
 | v1.6.2  | • **Custom Password Form**: Refactored password change form with dynamic translations and helpful descriptions <br> • **RTL/LTR Fixes**: Fixed Login screen text direction in English mode <br> • **Profile Translations**: Fully translated profile view and edit pages |
 | v1.6.3  | • **Login Enhancements**: Added language switcher, session-based language persistence, and fixed RTL alignment bug <br> • **Smart Redirects**: Login now automatically redirects authenticated users and supports `home_url` config fallback <br> • **Unified Translations**: Refactored internal translation helper to support anonymous sessions |
+| v1.7.0  | • **Universal Fetcher**: Added a global, smart single-file and multi-file downloader<br> • Added a data-driven Excel exporter for querysets with auto-hidden fields, and an optional exclude fields list |
