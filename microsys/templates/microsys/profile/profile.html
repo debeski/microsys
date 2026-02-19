@@ -121,24 +121,27 @@
 
                     <!-- 2FA Section -->
                     <div class="glass-card mb-4 p-3">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="bg-primary rounded-circle p-2 text-white me-3">
-                                <i class="bi bi-shield-lock-fill"></i>
-                            </div>
-                            <div>
-                                <h5 class="mb-0">{{ MS_TRANS.2fa_title }}</h5>
-                                <p class="text-white-50 small mb-0">{{ MS_TRANS.2fa_desc }}</p>
+                        <div class="d-flex flex-column-reverse flex-sm-row align-items-center mb-3 gap-3 gap-sm-0">
+                            <!-- Icon + Text Wrapper -->
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary rounded-circle p-2 text-white me-3">
+                                    <i class="bi bi-shield-lock-fill"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">{{ MS_TRANS.2fa_title }}</h5>
+                                    <p class="text-white-50 small mb-0">{{ MS_TRANS.2fa_desc }}</p>
+                                </div>
                             </div>
                             
-                            <!-- Action Buttons Moved Here -->
-                            <div class="ms-auto d-flex gap-2">
-                                <a href="{{ APP_CONFIG.home_url }}" class="btn btn-sm btn-light border action-btn" title="{{ MS_TRANS.btn_home }}">
+                            <!-- Action Buttons -->
+                            <div class="ms-sm-auto d-flex gap-2">
+                                <a href="{{ APP_CONFIG.home_url }}" class="btn btn-sm btn-light rounded-pill border action-btn" title="{{ MS_TRANS.btn_home }}">
                                     <i class="bi bi-house-door"></i> {{ MS_TRANS.btn_home }}
                                 </a>
-                                <a class="btn btn-sm btn-success action-btn" href="{% url 'edit_profile' %}" title="{{ MS_TRANS.btn_update_data }}">
+                                <a class="btn btn-sm btn-success rounded-pill action-btn" href="{% url 'edit_profile' %}" title="{{ MS_TRANS.btn_update_data }}">
                                     <i class="bi bi-pencil-square"></i> {{ MS_TRANS.btn_edit }}
                                 </a>
-                                <button type="button" class="btn btn-sm btn-danger action-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal" title="{{ MS_TRANS.btn_change_password }}">
+                                <button type="button" class="btn btn-sm btn-danger rounded-pill action-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal" title="{{ MS_TRANS.btn_change_password }}">
                                     <i class="bi bi-key"></i> {{ MS_TRANS.btn_change_password }}
                                 </button>
                             </div>
@@ -147,7 +150,7 @@
                         <div class="list-group list-group-flush bg-transparent">
                             <!-- Email 2FA -->
                             {% if config_2fa.email %}
-                            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                            <div class="list-group-item bg-transparent d-flex flex-row justify-content-between align-items-center px-0">
                                 <div>
                                     <i class="bi bi-envelope mx-2"></i> {{ MS_TRANS.2fa_method_email|default:"Email Authentication" }}
                                 </div>
@@ -171,7 +174,7 @@
 
                             <!-- Phone 2FA -->
                             {% if config_2fa.phone %}
-                            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                            <div class="list-group-item bg-transparent d-flex flex-row justify-content-between align-items-center px-0">
                                 <div>
                                     <i class="bi bi-phone mx-2"></i> {{ MS_TRANS.2fa_method_phone|default:"SMS Authentication" }}
                                 </div>
@@ -195,7 +198,7 @@
 
                             <!-- TOTP 2FA -->
                             {% if config_2fa.totp %}
-                            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                            <div class="list-group-item bg-transparent d-flex flex-row justify-content-between align-items-center px-0">
                                 <div>
                                     <i class="bi bi-app-indicator mx-2"></i> {{ MS_TRANS.2fa_method_totp|default:"Authenticator App" }}
                                 </div>
@@ -219,7 +222,7 @@
                             
                             <!-- Backup Codes (Only if 2FA enabled) -->
                             {% if user.profile.is_2fa_enabled %}
-                            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                            <div class="list-group-item bg-transparent d-flex flex-row justify-content-between align-items-center px-0">
                                 <div>
                                     <i class="bi bi-safe mx-2"></i> {{ MS_TRANS.2fa_method_backup|default:"Recovery Codes" }}
                                 </div>
@@ -409,7 +412,13 @@
 
                 <div id="otpSetupError" class="alert alert-danger d-none"></div>
 
-                <form id="otpSetupForm" data-url="{% url 'verify_otp_enable' %}" data-csrf="{{ csrf_token }}">
+                <form id="otpSetupForm" 
+                      data-url="{% url 'verify_otp_enable' %}" 
+                      data-csrf="{{ csrf_token }}"
+                      data-trans-verify-title="{{ MS_TRANS.2fa_verify_title }}"
+                      data-trans-scan-instruction="{{ MS_TRANS.totp_scan_instruction }}"
+                      data-trans-otp-sent="{{ MS_TRANS.otp_sent_instruction }}"
+                      data-trans-recovery-codes="{{ MS_TRANS.2fa_method_backup|default:'Recovery Codes' }}">
                     <input type="hidden" id="otpMethodInput" name="method" value="">
                     
                     <div class="mb-3">

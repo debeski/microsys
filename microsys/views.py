@@ -963,25 +963,66 @@ def user_profile(request):
     total_downloads = UserActivityLog.objects.filter(user=user, action__in=['DOWNLOAD', 'EXPORT']).count()
     
     # 2. Activity Feeds
-    # 2. Activity / System Interactions
-    sys_models = ['auth', 'profile', 'password', 'user', 'preferences', 'scope', 'scopesettings', 'useractivitylog']
-    sys_actions = ['LOGIN', 'LOGOUT']
-    
-    from django.db.models import Q
-    
-    # System Interactions: (Model in sys_models OR Action in sys_actions)
-    system_interactions = UserActivityLog.objects.filter(
-        user=user
-    ).filter(
-        Q(model_name__in=sys_models) | Q(action__in=sys_actions)
-    ).order_by('-timestamp')[:5]
+    # Split by app ownership:
+    # - `system_interactions`: logs related to microsys app models.
+    # - `recent_activity`: logs from all other apps.
+    def _normalize_model_name(value):
+        return str(value).strip().casefold() if value else ""
 
-    # Recent Activit: (Model NOT in sys_models AND Action NOT in sys_actions)
-    recent_activity = UserActivityLog.objects.filter(
-        user=user
-    ).exclude(
-        Q(model_name__in=sys_models) | Q(action__in=sys_actions)
-    ).order_by('-timestamp')[:5]
+    microsys_model_names = set()
+    try:
+        microsys_app = apps.get_app_config('microsys')
+        for model in microsys_app.get_models():
+            meta = model._meta
+            microsys_model_names.update({
+                _normalize_model_name(meta.model_name),
+                _normalize_model_name(meta.object_name),
+                _normalize_model_name(meta.verbose_name),
+                _normalize_model_name(meta.verbose_name_plural),
+            })
+    except LookupError:
+        pass
+
+    # Virtual and legacy labels used by microsys logging helpers/signals.
+    microsys_model_names.update({
+        "auth",
+        "user",
+        "profile",
+        "scope",
+        "scopesettings",
+        "useractivitylog",
+        "user profile",
+        "password",
+        "preferences",
+    })
+
+    def _is_microsys_log(log_entry):
+        model_key = _normalize_model_name(log_entry.model_name)
+        action_key = _normalize_model_name(log_entry.action)
+        if action_key in {"login", "logout"}:
+            return True
+        if not model_key:
+            return False
+        if model_key in microsys_model_names:
+            return True
+        # Support explicit "app_label.ModelName" payloads if logged that way.
+        if "." in model_key:
+            return model_key.split(".", 1)[0] == "microsys"
+        return False
+
+    recent_activity = []
+    system_interactions = []
+    all_user_logs = UserActivityLog.objects.filter(user=user).order_by('-timestamp')[:200]
+
+    for log in all_user_logs:
+        if _is_microsys_log(log):
+            if len(system_interactions) < 5:
+                system_interactions.append(log)
+        else:
+            if len(recent_activity) < 5:
+                recent_activity.append(log)
+        if len(system_interactions) >= 5 and len(recent_activity) >= 5:
+            break
 
     # 3. Completeness & Health
     completeness = 0

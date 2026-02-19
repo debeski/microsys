@@ -692,3 +692,8 @@ microsys/
 | v1.7.3   | • **Dashboard Activity Chart**: Added a built-in activity chart powered by Plotly.js, visualizing system activity for the last 24 hours. <br> • **Responsive Chart**: Chart automatically resizes with the window and sidebar toggles using `ResizeObserver`. |
 | v1.7.5   | • **Unified User Detail Modal (2026-02-17)**: AJAX-driven modal for user details, integrating activity timeline and migrating context menu events for Users. |
 | v1.7.6   | • **Intuitive Double-Click Feedback (2026-02-17)**: Automatic pointer cursor for dblclick targets. |
+| v1.7.7   | • **Navigation Refactor**: Moved Profile to Sidebar and simplified Titlebar to a unified "Username \| Logout" button. |
+| v1.7.8   | • **UI Refinement**: Moved user's name outside the sign-out button in the titlebar for better separation. |
+| v1.7.9   | • **Premium Navigation Stability**: Finalized logout button with a `warning` theme, fixed icon "wobble" transitions, and tighter 8px spacing for a high-end, glitch-free feel. |
+| v1.7.10  | • **Responsive 2FA UI**: Fixed two-factor authentication method rows to stay side-by-side on small screens, preventing the enable buttons and labels from stacking. |
+| v1.7.11  | • **Theme Fixes**: Resolved issue where language picker options appeared white in dark theme by adding proper CSS variable overrides in `dark.css`. |

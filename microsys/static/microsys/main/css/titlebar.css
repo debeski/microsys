@@ -48,6 +48,89 @@
     border-color: rgba(var(--primal-rgb), 0.2) !important;
 }
 
+.titlebar .titlebar-signout {
+    --signout-size: 38px;
+    --signout-bg: rgba(255, 193, 7, 0.1);
+    --signout-border: rgba(255, 193, 7, 0.4);
+    
+    height: var(--signout-size);
+    width: var(--signout-size);
+    max-width: var(--signout-size);
+    padding: 0 !important;
+    border-radius: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start; /* Anchor to start to prevent wobble */
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent !important;
+    background-color: transparent;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    white-space: nowrap;
+}
+
+/* Stable wrapper ensures the hover area doesn't shift or flicker */
+.titlebar .signout-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: var(--signout-size);
+    height: var(--signout-size);
+    cursor: pointer;
+    margin-inline-start: 8px; /* Reduced gap between circular buttons */
+}
+
+.titlebar .signout-wrapper:hover .titlebar-signout,
+.titlebar .titlebar-signout:focus,
+.titlebar .titlebar-signout:focus-visible {
+    max-width: 300px;
+    width: auto;
+    background-color: var(--signout-bg);
+    border-color: var(--signout-border) !important;
+    padding-inline-end: 18px !important; /* Slightly more trailing padding for balance */
+}
+
+.titlebar .titlebar-signout .signout-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--signout-size); /* Stationary icon zone */
+    height: 100%;
+    margin: 0;
+}
+
+.titlebar .titlebar-signout .signout-name {
+    max-width: 0;
+    opacity: 0;
+    margin: 0;
+    overflow: hidden;
+    transition: all 0.35s ease;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.titlebar .signout-wrapper:hover .signout-name {
+    max-width: 200px;
+    opacity: 1;
+    margin-inline-start: 4px; /* Small gap between icon circle and text */
+}
+
+/* Keep hover buffer inside the titlebar to avoid horizontal page overflow */
+.titlebar .signout-wrapper::before {
+    content: "";
+    position: absolute;
+    inset-block: -10px;
+    inset-inline-start: -25px;
+    inset-inline-end: 0;
+    z-index: 1;
+}
+
 .titlebar img {
     height: 42px;
     width: auto;

@@ -5,12 +5,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const disableButtons = document.querySelectorAll('.disable-2fa-btn');
     const otpSetupForm = document.getElementById('otpSetupForm');
 
-    setupButtons.forEach(btn => {
-        btn.addEventListener('click', initiate2FASetup);
-    });
+    // Use Event Delegation for robust button handling
+    document.body.addEventListener('click', function(e) {
+        const setupBtn = e.target.closest('.setup-2fa-btn');
+        if (setupBtn) {
+            initiate2FASetup(setupBtn);
+        }
 
-    disableButtons.forEach(btn => {
-        btn.addEventListener('click', disable2FA);
+        const disableBtn = e.target.closest('.disable-2fa-btn');
+        if (disableBtn) {
+            disable2FA(disableBtn);
+        }
     });
 
     if (otpSetupForm) {
@@ -41,23 +46,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.reload();
             }
         });
+        
+        // Ensure focus on input when shown
+        modalEl.addEventListener('shown.bs.modal', function () {
+            const input = document.getElementById('otpSetupInput');
+            if (input) input.focus();
+        });
     }
 });
 
-function initiate2FASetup(e) {
-    const btn = e.target.closest('button');
+function initiate2FASetup(btn) {
     const method = btn.dataset.method;
     const url = btn.dataset.url;
     
     // Reset Modal State
-    document.getElementById('otpSetupError').classList.add('d-none');
-    document.getElementById('otpSetupInput').value = '';
+    const errorEl = document.getElementById('otpSetupError');
+    if (errorEl) errorEl.classList.add('d-none');
+    
+    const inputEl = document.getElementById('otpSetupInput');
+    if (inputEl) inputEl.value = '';
+    
     document.getElementById('otpSetupForm').classList.remove('d-none');
     document.getElementById('otp-instruction').classList.remove('d-none');
     document.getElementById('otpSetupSuccess').classList.add('d-none');
-    document.querySelector('#otpSetupModal .btn-close').classList.remove('d-none');
-    document.querySelector('#otpSetupModal .bi-shield-lock-fill').parentElement.classList.remove('d-none');
-    document.querySelector('#otpSetupModal .modal-title').textContent = "{{ MS_TRANS.2fa_verify_title }}";
+    
+    const closeBtn = document.querySelector('#otpSetupModal .btn-close');
+    if (closeBtn) closeBtn.classList.remove('d-none');
+    
+    const iconContainer = document.querySelector('#otpSetupModal .bi-shield-lock-fill');
+    if (iconContainer && iconContainer.parentElement) {
+        iconContainer.parentElement.classList.remove('d-none');
+    }
+
+    const form = document.getElementById('otpSetupForm');
+    const titleEl = document.querySelector('#otpSetupModal .modal-title');
+    if (titleEl && form.dataset.transVerifyTitle) {
+        titleEl.textContent = form.dataset.transVerifyTitle;
+    }
+    
     needsReload = false;
     
     // Logic split for TOTP vs Email/Phone
@@ -72,7 +98,7 @@ function initiate2FASetup(e) {
                 
                 qrContainer.innerHTML = `<img src="data:image/png;base64,${data.qr_code}" class="img-fluid rounded border p-2 mb-3">`;
                 qrContainer.classList.remove('d-none');
-                instructionText.textContent = "{{ MS_TRANS.totp_scan_instruction|default:'Scan this QR code with your authenticator app' }}";
+                instructionText.textContent = form.dataset.transScanInstruction || 'Scan this QR code with your authenticator app';
                 
                 // Set form method hidden input
                 document.getElementById('otpMethodInput').value = 'totp';
@@ -81,7 +107,8 @@ function initiate2FASetup(e) {
             } else {
                 alert(data.message || 'Error generating QR');
             }
-        });
+        })
+        .catch(err => console.error("Error fetching TOTP setup:", err));
     } else {
         // Email/Phone
         fetch(`${url}?method=${method}&ajax=1`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
@@ -90,7 +117,7 @@ function initiate2FASetup(e) {
             if (data.status === 'success') {
                 // Hide QR, Show plain text
                 document.getElementById('totp-qr-container').classList.add('d-none');
-                document.getElementById('otp-instruction').textContent = `{{ MS_TRANS.otp_sent_instruction|default:'Enter the code sent to your' }} ${method}`;
+                document.getElementById('otp-instruction').textContent = (form.dataset.transOtpSent || 'Enter the code sent to your') + ' ' + method;
                 
                 document.getElementById('otpMethodInput').value = method;
                 
@@ -98,21 +125,21 @@ function initiate2FASetup(e) {
             } else {
                 alert(data.message || 'Error sending code');
             }
-        });
+        })
+        .catch(err => console.error("Error initiating 2FA:", err));
     }
 }
 
 function showModal() {
     const modalEl = document.getElementById('otpSetupModal');
-    // Check if instance exists
+    if (!modalEl) return;
+    
+    // Check if instance exists or create new
     let modal = bootstrap.Modal.getInstance(modalEl);
     if (!modal) {
         modal = new bootstrap.Modal(modalEl);
     }
     modal.show();
-    modalEl.addEventListener('shown.bs.modal', function () {
-        document.getElementById('otpSetupInput').focus();
-    });
 }
 
 function submitOTPSetup(e) {
@@ -144,7 +171,7 @@ function submitOTPSetup(e) {
                 document.getElementById('totp-qr-container').classList.add('d-none');
                 document.querySelector('#otpSetupModal .bi-shield-lock-fill').parentElement.classList.add('d-none'); // Hide icon container
                 document.querySelector('#otpSetupModal .btn-close').classList.add('d-none'); // Hide close button
-                document.querySelector('#otpSetupModal .modal-title').textContent = "Recovery Codes";
+                document.querySelector('#otpSetupModal .modal-title').textContent = form.dataset.transRecoveryCodes || "Recovery Codes";
 
                 // SHOW Success Section
                 const successDiv = document.getElementById('otpSetupSuccess');

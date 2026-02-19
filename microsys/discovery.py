@@ -44,6 +44,11 @@ def get_sidebar_config(lang_code=None):
                 'permission': 'microsys.view_activity_log',
             },
             {
+                'url_name': 'user_profile',
+                'label': strings.get('profile', 'الملف الشخصي'),
+                'icon': 'bi-person-badge',
+            },
+            {
                 'url_name': 'options_view',
                 'label': strings.get('options_title', 'خيارات التطبيق'),
                 'icon': 'bi-gear',
