@@ -207,7 +207,7 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 - **Dynamic Forms, Filters and Tables**: Automatically detects and registers or creates forms, filters and tables to auxiliary models.
 - **Global Autofill**: Dynamic Smart Autofill tool that fills form fields based on related FK models, or model last entry.
 - **Universal Fetcher**: Global, Smart single-file and multi-file Downloader, and data-driven Excel Exporter for querysets.
-- **Automated Logging**: Full automatic activity tracking (CRUD, Login/Logout) via Signals.
+- **Automated Logging**: Full automatic activity tracking (CRUD, Login/Logout) via Signals with **Detailed Diff Tracking** and **Smart Deduplication**.
 - **Dynamic Sidebar**: Auto-discovery of list views and customizable, reorderable menu items.
 - **Dynamic Titlebar**: Show-Hide autofill-toggle, dynamic home url, and title.
 - **Context Menu**: Easy to use context menu for quick actions.
@@ -217,7 +217,7 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 - **Native Mobile Support**: Responsive design for all screen sizes.
 - **Management Commands**: Built-in management commands for system setup and checks.
 - **Tutorial**: Built-in help/tutorial for microSYS views and features.
-- **Security**: CSP compliance, role-based access control (RBAC), Backend A&A enforcement.
+- **Security**: CSP compliance, role-based access control (RBAC), Backend A&A enforcement, and Global **Double-Submit Prevention**.
 
 ---
 
@@ -238,6 +238,8 @@ Microsys provides a custom, intuitive UI for managing permissions. Permissions a
 Every action (CRUD, Login/Logout, etc.) is automatically recorded in the `UserActivityLog`.
 - **Global Middleware**: Tracks IP address and User Agent.
 - **Signal-Based**: Captures changes even from the Django Admin.
+- **Detailed Diffs**: Logs specific field changes (e.g., `phone: old -> new`) and masked password updates.
+- **Smart Merging**: Concurrent updates to `User` and `Profile` are intelligently merged into a single "User Update" log entry to reduce noise.
 - **Searchable**: View and filter activity logs directly from the system dashboard.
 
 4. Unified Preferences
@@ -685,3 +687,8 @@ microsys/
 | v1.6.2  | • **Custom Password Form**: Refactored password change form with dynamic translations and helpful descriptions <br> • **RTL/LTR Fixes**: Fixed Login screen text direction in English mode <br> • **Profile Translations**: Fully translated profile view and edit pages |
 | v1.6.3  | • **Login Enhancements**: Added language switcher, session-based language persistence, and fixed RTL alignment bug <br> • **Smart Redirects**: Login now automatically redirects authenticated users and supports `home_url` config fallback <br> • **Unified Translations**: Refactored internal translation helper to support anonymous sessions |
 | v1.7.0  | • **Universal Fetcher**: Added a global, smart single-file and multi-file downloader<br> • Added a data-driven Excel exporter for querysets with auto-hidden fields, and an optional exclude fields list |
+| v1.7.1   | • **Enhanced Activity Logging**: Added JSON-based detail tracking for all updates (Diffs), including masked password changes and file download specifics <br> • **Log Deduplication**: Implemented smart merging of concurrent User/Profile updates into single log entries <br> • **Double Submit Prevention**: Added global JavaScript protection to disable submit buttons immediately after click <br> • **Profile UI**: Updated profile view to display detailed log history with formatted diffs |
+| v1.7.2   | • **Premium Modal UI**: Overhauled all section and activity modals with the glass-card/info-label design from the Profile view <br> • **Dark Mode Accessibility**: Increased glass-card opacity to 0.92 and refined shadows to ensure data visibility in dark themes <br> • **Double Modal Fix**: Resolved redundant script inclusion causing duplicate modal triggers <br> • **Log Refinement**: Standardized activity log details with profile-consistent typography and theme-aware badges |
+| v1.7.3   | • **Dashboard Activity Chart**: Added a built-in activity chart powered by Plotly.js, visualizing system activity for the last 24 hours. <br> • **Responsive Chart**: Chart automatically resizes with the window and sidebar toggles using `ResizeObserver`. |
+| v1.7.5   | • **Unified User Detail Modal (2026-02-17)**: AJAX-driven modal for user details, integrating activity timeline and migrating context menu events for Users. |
+| v1.7.6   | • **Intuitive Double-Click Feedback (2026-02-17)**: Automatic pointer cursor for dblclick targets. |

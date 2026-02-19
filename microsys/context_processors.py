@@ -100,21 +100,8 @@ def microsys_context(request):
     # Merge configurations
     final_config = default_config.copy()
     final_config.update(user_config)
-    
-    context['APP_CONFIG'] = final_config
 
-
-    # 2. Scope Settings
-    # We add this boolean so templates know if the scope feature is ON globally
-    context['scope_settings'] = {'is_enabled': is_scope_enabled()}
-
-    # 3. User Preferences (for JS injection & server-side logic)
-    user_prefs = {}
-    if request.user.is_authenticated and hasattr(request.user, 'profile'):
-        user_prefs = request.user.profile.preferences or {}
-    context['user_preferences'] = user_prefs # Injected for JS use
-
-    # 4. Language / i18n (resolved BEFORE sidebar so labels can be translated)
+    # 4. Language / i18n (resolved BEFORE branding overrides so we know current_lang)
     from .translations import get_strings
 
     # Available languages from config (default: Arabic only)
@@ -128,8 +115,12 @@ def microsys_context(request):
     
     current_lang = None
     # 1. User Preference
-    if user_prefs and 'language' in user_prefs:
-        current_lang = user_prefs.get('language')
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        user_prefs = request.user.profile.preferences or {}
+        if 'language' in user_prefs:
+            current_lang = user_prefs.get('language')
+    else:
+        user_prefs = {}
     
     # 2. Session Preference (for anonymous users or overrides)
     if not current_lang:
@@ -142,6 +133,27 @@ def microsys_context(request):
     # Validate the resolved language exists in available languages
     if current_lang not in languages:
         current_lang = default_lang if default_lang in languages else 'ar'
+
+    # DYNAMIC BRANDING: Look for [key]_[lang] overrides in final_config
+    # (e.g. name_en, logo_ar) and promote them to the base keys
+    for key in list(final_config.keys()):
+        lang_suffix = f"_{current_lang}"
+        if key.endswith(lang_suffix):
+            base_key = key[:-len(lang_suffix)]
+            final_config[base_key] = final_config[key]
+
+    context['APP_CONFIG'] = final_config
+
+
+    # 2. Scope Settings
+    # We add this boolean so templates know if the scope feature is ON globally
+    context['scope_settings'] = {'is_enabled': is_scope_enabled()}
+
+    # 3. User Preferences (for JS injection & server-side logic)
+    user_prefs = {}
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        user_prefs = request.user.profile.preferences or {}
+    context['user_preferences'] = user_prefs # Injected for JS use
 
     lang_config = languages.get(current_lang, {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'})
     current_dir = lang_config.get('dir', 'rtl')

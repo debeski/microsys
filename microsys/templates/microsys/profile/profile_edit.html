@@ -48,15 +48,6 @@
                             </div>
                         </div>
 
-                        <div class="mt-5 d-flex gap-3 flex-wrap">
-                            <button type="submit" class="btn btn-success rounded-pill action-btn shadow-sm" title="{{ MS_TRANS.save_changes }}">
-                                <i class="bi bi-check2-circle h4 m-0"></i> {{ MS_TRANS.save_changes }}
-                            </button>
-                            
-                            <a href="{% url 'user_profile' %}" class="btn btn-secondary rounded-pill action-btn shadow-sm" title="{{ MS_TRANS.btn_cancel }}">
-                                <i class="bi bi-x-circle h4 m-0"></i> {{ MS_TRANS.btn_cancel }}
-                            </a>
-                        </div>
                     </div>
 
                     <!-- Image Preview -->
@@ -70,6 +61,16 @@
                             <div class="text-muted small">{{ MS_TRANS.profile_picture }}</div>
                         </div>
                     </div>
+                </div>
+
+                <div class="mt-5 d-flex gap-3 flex-wrap justify-content-end w-100">
+                    <button type="submit" class="btn btn-success rounded-pill action-btn shadow-sm" title="{{ MS_TRANS.save_changes }}">
+                        <i class="bi bi-check2-circle h4 m-0"></i> {{ MS_TRANS.save_changes }}
+                    </button>
+                    
+                    <a href="{% url 'user_profile' %}" class="btn btn-secondary rounded-pill action-btn shadow-sm" title="{{ MS_TRANS.btn_cancel }}">
+                        <i class="bi bi-x-circle h4 m-0"></i> {{ MS_TRANS.btn_cancel }}
+                    </a>
                 </div>
             </div>
         </form>

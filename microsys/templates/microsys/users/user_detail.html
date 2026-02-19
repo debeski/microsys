@@ -72,13 +72,13 @@
                             <div class="col-6">
                                 <div class="info-group">
                                     <div class="info-label-sm">{{ MS_TRANS.date_joined }}</div>
-                                    <div class="text-muted fw-bold">{{ object.date_joined|date:"Y-m-d" }}</div>
+                                    <div class="text-muted fw-bold">{{ object.date_joined|date }}</div>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="info-group">
                                     <div class="info-label-sm">{{ MS_TRANS.tbl_last_login }}</div>
-                                    <div class="text-muted fw-bold">{{ object.last_login|date:"Y-m-d H:i"|default:"-" }}</div>
+                                    <div class="text-muted fw-bold">{{ object.last_login|date|default:"-" }}</div>
                                 </div>
                             </div>
                         </div>

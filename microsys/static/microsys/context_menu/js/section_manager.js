@@ -30,15 +30,15 @@
         const modalHtml = `
             <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-                        <div class="modal-header bg-${variant} text-white border-0">
-                            <h5 class="modal-title fw-bold"><i class="bi bi-info-circle me-2"></i> ${title}</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-content glass-card border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-header border-0 pb-0">
+                            <h5 class="modal-title fw-bold text-${variant}"><i class="bi bi-info-circle me-2"></i> ${title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body p-4" style="background-color: #f8f9fa;">
+                        <div class="modal-body p-4">
                             ${bodyContent}
                         </div>
-                        <div class="modal-footer bg-white border-top-0">
+                        <div class="modal-footer border-0 pt-0">
                             ${footerContent}
                         </div>
                     </div>
@@ -58,19 +58,19 @@
 
     function buildRelatedHtml(relatedData) {
         if (!relatedData || Object.keys(relatedData).length === 0) {
-            return '<p class="text-muted text-center my-3">لا توجد سجلات مرتبطة.</p>';
+            return '<p class="text-muted text-center my-3 small italic">لا توجد سجلات مرتبطة.</p>';
         }
         
         let html = '<div class="row g-3">';
         for (const [modelName, items] of Object.entries(relatedData)) {
             html += `
                 <div class="col-md-6">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-header bg-white border-bottom-0 fw-bold text-primary">
-                            ${modelName}
+                    <div class="glass-card h-100 p-3">
+                        <div class="info-label-sm mb-2 text-primary fw-bold border-bottom pb-1" style="font-size: 0.8rem;">
+                            <i class="bi bi-diagram-2 me-1"></i> ${modelName}
                         </div>
-                        <ul class="list-group list-group-flush list-group-item-action">
-                            ${items.map(item => `<li class="list-group-item bg-light border-0 mb-1 rounded px-3 mx-2">${item}</li>`).join('')}
+                        <ul class="list-group list-group-flush bg-transparent">
+                            ${items.map(item => `<li class="list-group-item bg-transparent border-0 py-1 px-1 small text-white-50"><i class="bi bi-dot me-1"></i> ${item}</li>`).join('')}
                         </ul>
                     </div>
                 </div>
@@ -104,7 +104,7 @@
                 },
                 body: JSON.stringify({
                     model: data.model,
-                    pk: data.id // Ensure backend expects 'pk' (utils calls it data-pk, script passes it)
+                    pk: data.id 
                 })
             })
             .then(response => response.json())
@@ -146,15 +146,6 @@
         // ---------------------------------------------------------
         document.body.addEventListener('micro:section:view', function(e) {
             const data = e.detail.data;
-            
-            // Fetch Details
-            // Use the new detailsUrl (we need to pass it from template or construct it)
-            // Assuming we added it to sectionData or use existing pattern
-            // The user removed get_section_subsections and added get_section_details
-            
-            // Construct URL: we can assume a pattern or use the one from sectionData if updated
-            // Let's assume sectionData.detailsUrl exists. I will update template next.
-            
             const url = `${sectionData.detailsUrl}?model=${data.model}&pk=${data.id}`;
 
             fetch(url, {
@@ -165,14 +156,14 @@
             .then(response => response.json())
             .then(res => {
                 if (res.success) {
-                    // Build Fields HTML
+                    // Build Fields HTML - Mirrors Profile Info Grid
                     let fieldsHtml = '<div class="row g-3 mb-4">';
                     for (const [label, value] of Object.entries(res.fields)) {
                         fieldsHtml += `
                             <div class="col-md-6">
-                                <div class="p-3 bg-white rounded shadow-sm border h-100">
-                                    <div class="text-muted small mb-1">${label}</div>
-                                    <div class="fw-bold text-dark">${value}</div>
+                                <div class="mb-2 px-2">
+                                    <div class="info-label">${label}</div>
+                                    <div class="info-value" style="font-size: 1rem;">${value || '-'}</div>
                                 </div>
                             </div>
                         `;
@@ -183,9 +174,12 @@
                     const relatedHtml = buildRelatedHtml(res.related);
 
                     const body = `
-                        <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">تفاصيل بيانات السجل</h6>
-                        ${fieldsHtml}
-                        <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2 mt-4">السجلات والاستخدامات المرتبطة</h6>
+                        <div class="mb-4">
+                            ${fieldsHtml}
+                        </div>
+                        <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">
+                            <i class="bi bi-link-45deg me-1"></i> السجلات والاستخدامات المرتبطة
+                        </h6>
                         ${relatedHtml}
                     `;
                     const footer = '<button type="button" class="btn btn-primary rounded-pill px-4" data-bs-dismiss="modal">تم</button>';

@@ -32,7 +32,6 @@
 .table-hover > tbody > tr:hover > * {
     --bs-table-bg-state: var(--table-row-hover) !important;
     background-color: var(--table-row-hover) !important;
-    cursor: default !important;
 }
 
 .table tbody tr td,
@@ -73,7 +72,6 @@ th.desc a::after {
     --bs-table-accent-bg: #f8d7da !important;
     background-color: #f8d7da !important;
     color: inherit !important;
-    cursor: default !important;
     box-shadow: none !important;
     border-color: inherit !important;
 }

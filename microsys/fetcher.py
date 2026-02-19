@@ -82,6 +82,7 @@ def fetch_file(request, data, file_type=None):
     if len(files_to_download) == 1:
         # Serve Single File
         target = files_to_download[0]
+        _log_download_action(request, target['filename'], model_name=model_name)
         return _serve_file(target['file'], target['filename'])
     else:
         # Serve Zip
@@ -95,6 +96,8 @@ def fetch_file(request, data, file_type=None):
         
         zip_name = f"{model_name}_{first_num}-{last_num}.zip"
         zip_name = _sanitize_filename(zip_name)
+        
+        _log_download_action(request, zip_name, model_name=model_name, count=len(files_to_download))
         return _serve_zip(files_to_download, zip_name)
 
 
@@ -331,9 +334,65 @@ def fetch_excel(request, queryset, exclude_fields=None, hidden_fields=None, shee
     obj_count = len(data_list)
     filename = f"{model._meta.model_name}_export_{obj_count}.xlsx"
 
+    # Log Action
+    try:
+        if request.user.is_authenticated:
+            from django.utils.timezone import now
+            from django.apps import apps
+            UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
+            
+            # Extract IP
+            x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(",")[0]
+            else:
+                ip = request.META.get("REMOTE_ADDR")
+
+            UserActivityLog.objects.create(
+                user=request.user,
+                action="EXPORT",
+                model_name=model._meta.verbose_name,
+                details={'filename': filename, 'count': obj_count},
+                ip_address=ip,
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                timestamp=now()
+            )
+    except Exception as e:
+        # Don't fail download if logging fails
+        print(f"Logging failed: {e}")
+
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
+
+def _log_download_action(request, filename, model_name="Document", count=1):
+    """Helper to log download actions."""
+    try:
+        if not request.user.is_authenticated:
+            return
+
+        from django.utils.timezone import now
+        from django.apps import apps
+        UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
+        
+        # Extract IP
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(",")[0]
+        else:
+            ip = request.META.get("REMOTE_ADDR")
+
+        UserActivityLog.objects.create(
+            user=request.user,
+            action="DOWNLOAD",
+            model_name=model_name,
+            details={'filename': filename, 'count': count},
+            ip_address=ip,
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            timestamp=now()
+        )
+    except Exception as e:
+        print(f"Logging failed: {e}")

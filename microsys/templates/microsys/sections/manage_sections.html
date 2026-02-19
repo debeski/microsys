@@ -102,9 +102,9 @@
     {% for subsection in subsection_forms %}
     <div class="modal fade" id="addSubsectionModal_{{ subsection.name }}" tabindex="-1" aria-labelledby="addSubsectionModalLabel_{{ subsection.name }}" aria-hidden="true">
       <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="addSubsectionModalLabel_{{ subsection.name }}">{{ MS_TRANS.add_label }} {{ subsection.verbose_name }}</h5>
+        <div class="modal-content glass-card border-0">
+          <div class="modal-header border-0">
+            <h5 class="modal-title" id="addSubsectionModalLabel_{{ subsection.name }}"><i class="bi bi-plus-circle me-2"></i>{{ MS_TRANS.add_label }} {{ subsection.verbose_name }}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
@@ -124,9 +124,9 @@
     {% if has_subsections %}
     <div class="modal fade" id="viewSubsectionsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">{{ MS_TRANS.subsections }}</h5>
+            <div class="modal-content glass-card border-0">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="bi bi-list-task me-2"></i>{{ MS_TRANS.subsections }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="viewSubsectionsModalBody">
@@ -201,9 +201,6 @@
         });
     </script>
 
-    {# Context Menu #}
-    {% include 'microsys/includes/micro_context_menu.html' %}
-    
     {# Section Manager (Smart Delete / View) #}
     <script src="{% static 'microsys/context_menu/js/section_manager.js' %}"></script>
 

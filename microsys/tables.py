@@ -61,8 +61,11 @@ class UserTable(tables.Table):
                 {
                     "label": s.get('view_label', 'عرض'),
                     "icon": "bi bi-eye",
-                    "url": reverse('user_detail', args=[record.pk]),
-                    "type": "url",
+                    "type": "event",
+                    "event": "micro:view-user-details",
+                    "data": {
+                        "url": reverse('user_detail_modal', args=[record.pk])
+                    },
                     "dblclick": True 
                 },
                 {"type": "divider"},
@@ -139,9 +142,10 @@ class UserActivityLogTable(tables.Table):
     action = tables.Column(verbose_name="الإجراء")
     model_name = tables.Column(verbose_name="النموذج")
 
-    def __init__(self, *args, translations=None, **kwargs):
+    def __init__(self, *args, translations=None, request=None, **kwargs):
         super().__init__(*args, **kwargs)
         s = translations or _get_default_strings()
+        self.request = request
         self.columns['timestamp'].column.verbose_name = s.get('tbl_timestamp', 'وقت العملية')
         if 'full_name' in self.columns:
             self.columns['full_name'].column.verbose_name = s.get('tbl_full_name', 'الاسم الكامل')
@@ -161,6 +165,28 @@ class UserActivityLogTable(tables.Table):
         
         # Store translations for render methods
         self.translations = s
+
+        # Context Menu Helper
+        def get_log_actions(record):
+            actions = [
+                {
+                    "label": s.get('view_details', 'عرض التفاصيل'),
+                    "icon": "bi bi-eye",
+                    "type": "event",
+                    "event": "micro:view-log-details",
+                    "data": {
+                        "url": reverse('user_activity_log_detail', args=[record.pk])
+                    },
+                    "dblclick": True
+                }
+            ]
+            return json.dumps(actions)
+
+        # Inject context menu attributes
+        self.row_attrs.update({
+            "data-micro-context": "true",
+            "data-micro-actions": get_log_actions,
+        })
 
     def render_action(self, value, record):
         """Translate action type dynamically."""
@@ -194,10 +220,7 @@ class UserActivityLogTable(tables.Table):
         fields = ("timestamp", "user", "full_name", "model_name", "action", "object_id", "number", "scope")
         exclude = ("id", "ip_address", "user_agent")
         attrs = {'class': 'table table-hover align-middle'}
-        row_attrs = {
-            # Check for deleted_at on the profile
-            "class": lambda record: "row-deleted" if record.user and hasattr(record.user, 'profile') and record.user.profile.deleted_at else ""
-        }
+        # row_attrs is handled in __init__ to allow dynamic behavior
 
 class UserActivityLogTableNoUser(UserActivityLogTable):
     class Meta(UserActivityLogTable.Meta):

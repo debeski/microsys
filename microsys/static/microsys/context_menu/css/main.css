@@ -73,6 +73,12 @@
     touch-action: manipulation;
 }
 
+/* Double click pointer feedback (CSS-only for maximum robustness) */
+[data-micro-context][data-micro-actions*='"dblclick": true'],
+[data-micro-context][data-micro-actions*='"dblclick": true'] * {
+    cursor: pointer !important;
+}
+
 .tooltip-custom .tooltip-inner {
     font-size: 1.2rem;
     background-color: var(--title);

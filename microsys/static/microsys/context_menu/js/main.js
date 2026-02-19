@@ -89,7 +89,12 @@
                  // Dispatch event if it's an event-based action
                  const eventName = quickAction.action || quickAction.event;
                  const event = new CustomEvent(eventName, {
-                    detail: { originalTarget: target, actionData: quickAction }
+                    bubbles: true,
+                    detail: { 
+                        originalTarget: target, 
+                        action: quickAction,
+                        data: quickAction.data 
+                    }
                 });
                 document.body.dispatchEvent(event);
             }

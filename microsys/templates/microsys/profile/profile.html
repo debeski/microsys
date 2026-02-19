@@ -2,6 +2,7 @@
 {% load django_tables2 %}
 {% load crispy_forms_tags %}
 {% load static %}
+{% load microsys_tags %}
 
 {% block title %}{{ MS_TRANS.profile }}{% endblock %}
 
@@ -17,43 +18,6 @@
             </h1>
 
             <div class="row align-items-start">
-                <!-- Profile Image Section -->
-                <div class="col-md-4 text-center mb-4 mb-md-0 border-start ps-md-4">
-                    <div class="profile-img-container mb-3">
-                        {% if user.profile.profile_picture %}
-                            <img src="{{ user.profile.profile_picture.url }}" alt="Profile Image">
-                        {% else %}
-                            <img src="{% static 'img/default_profile.webp' %}" alt="Profile Image">
-                        {% endif %}
-                    </div>
-                    <h3 class="fw-bold text-primary mb-1">
-                        {{ user.profile.full_name }} 
-                        {% if user.is_active %}<i class="bi bi-check-circle-fill text-success fs-5" title="{{ MS_TRANS.account_active }}"></i>{% endif %}
-                    </h3>
-                    <div class="mb-3">
-                        <span class="badge bg-primary badge-role">{{ MS_TRANS.badge_verified }}</span>
-                        {% if user.is_superuser %}
-                            <span class="badge bg-danger badge-role">{{ MS_TRANS.badge_admin }}</span>
-                        {% elif user.is_staff %}
-                            <span class="badge bg-info text-dark badge-role">{{ MS_TRANS.badge_staff }}</span>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Account Health -->
-                    <div class="mt-4 p-3 rounded bg-light border">
-                         <small class="text-muted d-block mb-1">{{ MS_TRANS.account_health }}</small>
-                         {% if stats.health == 'good' %}
-                             <div class="d-flex align-items-center justify-content-center gap-2 text-success fw-bold">
-                                 <i class="bi bi-heart-pulse-fill"></i> {{ MS_TRANS.account_health_good }}
-                             </div>
-                         {% else %}
-                             <div class="d-flex align-items-center justify-content-center gap-2 text-warning fw-bold">
-                                 <i class="bi bi-exclamation-triangle-fill"></i> {{ MS_TRANS.account_health_attention }}
-                             </div>
-                         {% endif %}
-                    </div>
-                </div>
-
                 <!-- Info Section -->
                 <div class="col-md-8 pe-md-4">
                     
@@ -105,37 +69,169 @@
                         <div class="col-md-6">
                             <div class="mb-2">
                                 <div class="info-label">{{ MS_TRANS.date_joined }}</div>
-                                <div class="info-value fs-6 text-dark">{{ user.date_joined|date:"d/m/Y" }}</div>
+                                <div class="info-value fs-6 text-dark">{{ user.date_joined|date }}</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-2">
                                 <div class="info-label">{{ MS_TRANS.tbl_last_login }}</div>
-                                <div class="info-value fs-6 text-dark">{{ user.last_login|timesince }}</div>
+                                <div class="info-value fs-6 text-dark">{% ms_timesince user.last_login %}</div>
                             </div>
                         </div>
                     </div>
 
+                </div>
+
+                <!-- Profile Image Section -->
+                <div class="col-md-4 text-center mb-4 mb-md-0 border-start ps-md-4">
+                    <div class="profile-img-container mb-3">
+                        {% if user.profile.profile_picture %}
+                            <img src="{{ user.profile.profile_picture.url }}" alt="Profile Image">
+                        {% else %}
+                            <img src="{% static 'img/default_profile.webp' %}" alt="Profile Image">
+                        {% endif %}
                     </div>
+                    <h3 class="fw-bold text-dark mb-1">
+                        {{ user.profile.full_name }} 
+                        {% if user.is_active %}<i class="bi bi-check-circle-fill text-success fs-5" title="{{ MS_TRANS.account_active }}"></i>{% endif %}
+                    </h3>
+                    <div class="mb-3">
+                        <!-- <span class="badge bg-primary badge-role">{{ MS_TRANS.badge_verified }}</span> -->
+                        {% if user.is_superuser %}
+                            <span class="badge bg-danger badge-role">{{ MS_TRANS.badge_admin }}</span>
+                        {% elif user.is_staff %}
+                            <span class="badge bg-info text-dark badge-role">{{ MS_TRANS.badge_staff }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Account Health -->
+                    <div class="mt-4 p-3 rounded bg-light border">
+                         <small class="text-muted d-block mb-1">{{ MS_TRANS.account_health }}</small>
+                         {% if stats.health == 'good' %}
+                             <div class="d-flex align-items-center justify-content-center gap-2 text-success fw-bold">
+                                 <i class="bi bi-heart-pulse-fill"></i> {{ MS_TRANS.account_health_good }}
+                             </div>
+                         {% else %}
+                             <div class="d-flex align-items-center justify-content-center gap-2 text-warning fw-bold">
+                                 <i class="bi bi-exclamation-triangle-fill"></i> {{ MS_TRANS.account_health_attention }}
+                             </div>
+                         {% endif %}
+                    </div>
+                </div>
 
                     <!-- 2FA Section -->
-                    <div class="glass-card mb-4 p-3 d-flex align-items-center justify-content-between">
-                        <div>
-                            <h6 class="mb-1 text-muted">{{ MS_TRANS.2fa_title }}</h6>
-                            <small class="text-muted d-block">{{ MS_TRANS.2fa_desc }}</small>
-                        </div>
-                        <div>
-                            {% if user.profile.is_2fa_enabled %}
-                                <span class="badge bg-success me-2"><i class="bi bi-shield-check"></i> Enabled</span>
-                                <a href="{% url 'disable_2fa' %}" class="btn btn-sm btn-outline-danger">{{ MS_TRANS.2fa_disable }}</a>
-                            {% else %}
-                                <span class="badge bg-secondary me-2">Disabled</span>
-                                <button type="button" 
-                                        class="btn btn-sm btn-primary" 
-                                        id="enable2FABtn"
-                                        data-url="{% url 'enable_2fa' %}">
-                                    {{ MS_TRANS.2fa_enable }}
+                    <div class="glass-card mb-4 p-3">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary rounded-circle p-2 text-white me-3">
+                                <i class="bi bi-shield-lock-fill"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">{{ MS_TRANS.2fa_title }}</h5>
+                                <p class="text-white-50 small mb-0">{{ MS_TRANS.2fa_desc }}</p>
+                            </div>
+                            
+                            <!-- Action Buttons Moved Here -->
+                            <div class="ms-auto d-flex gap-2">
+                                <a href="{{ APP_CONFIG.home_url }}" class="btn btn-sm btn-light border action-btn" title="{{ MS_TRANS.btn_home }}">
+                                    <i class="bi bi-house-door"></i> {{ MS_TRANS.btn_home }}
+                                </a>
+                                <a class="btn btn-sm btn-success action-btn" href="{% url 'edit_profile' %}" title="{{ MS_TRANS.btn_update_data }}">
+                                    <i class="bi bi-pencil-square"></i> {{ MS_TRANS.btn_edit }}
+                                </a>
+                                <button type="button" class="btn btn-sm btn-danger action-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal" title="{{ MS_TRANS.btn_change_password }}">
+                                    <i class="bi bi-key"></i> {{ MS_TRANS.btn_change_password }}
                                 </button>
+                            </div>
+                        </div>
+
+                        <div class="list-group list-group-flush bg-transparent">
+                            <!-- Email 2FA -->
+                            {% if config_2fa.email %}
+                            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <i class="bi bi-envelope mx-2"></i> {{ MS_TRANS.2fa_method_email|default:"Email Authentication" }}
+                                </div>
+                                <div>
+                                    {% if user.profile.is_email_2fa_enabled %}
+                                        <span class="badge bg-success me-2">{{ MS_TRANS.status_enabled }}</span>
+                                        <button class="btn btn-sm btn-outline-danger disable-2fa-btn" 
+                                                data-method="email" 
+                                                data-url="{% url 'disable_2fa' %}"
+                                                data-confirm-msg="{{ MS_TRANS.msg_confirm_disable_2fa }}">
+                                            {{ MS_TRANS.2fa_disable }}
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-primary setup-2fa-btn" data-method="email" data-url="{% url 'enable_2fa' %}">
+                                            {{ MS_TRANS.2fa_enable }}
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Phone 2FA -->
+                            {% if config_2fa.phone %}
+                            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <i class="bi bi-phone mx-2"></i> {{ MS_TRANS.2fa_method_phone|default:"SMS Authentication" }}
+                                </div>
+                                <div>
+                                    {% if user.profile.is_phone_2fa_enabled %}
+                                        <span class="badge bg-success me-2">{{ MS_TRANS.status_enabled }}</span>
+                                        <button class="btn btn-sm btn-outline-danger disable-2fa-btn" 
+                                                data-method="phone" 
+                                                data-url="{% url 'disable_2fa' %}"
+                                                data-confirm-msg="{{ MS_TRANS.msg_confirm_disable_2fa }}">
+                                            {{ MS_TRANS.2fa_disable }}
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-primary setup-2fa-btn" data-method="phone" data-url="{% url 'enable_2fa' %}">
+                                            {{ MS_TRANS.2fa_enable }}
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- TOTP 2FA -->
+                            {% if config_2fa.totp %}
+                            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <i class="bi bi-app-indicator mx-2"></i> {{ MS_TRANS.2fa_method_totp|default:"Authenticator App" }}
+                                </div>
+                                <div>
+                                    {% if user.profile.is_totp_2fa_enabled %}
+                                        <span class="badge bg-success me-2">{{ MS_TRANS.status_enabled }}</span>
+                                        <button class="btn btn-sm btn-outline-danger disable-2fa-btn" 
+                                                data-method="totp" 
+                                                data-url="{% url 'disable_2fa' %}"
+                                                data-confirm-msg="{{ MS_TRANS.msg_confirm_disable_2fa }}">
+                                            {{ MS_TRANS.2fa_disable }}
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-primary setup-2fa-btn" data-method="totp" data-url="{% url 'setup_totp' %}">
+                                            {{ MS_TRANS.2fa_enable }}
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Backup Codes (Only if 2FA enabled) -->
+                            {% if user.profile.is_2fa_enabled %}
+                            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <i class="bi bi-safe mx-2"></i> {{ MS_TRANS.2fa_method_backup|default:"Recovery Codes" }}
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-warning mx-2" 
+                                            id="generateBackupCodesBtn" 
+                                            data-url="{% url 'generate_backup_codes' %}"
+                                            data-confirm-msg="{{ MS_TRANS.msg_confirm_generate_backup }}">
+                                        <i class="bi bi-arrow-clockwise"></i> {{ MS_TRANS.btn_generate_new }}
+                                    </button>
+                                </div>
+                            </div>
                             {% endif %}
                         </div>
                     </div>
@@ -144,124 +240,215 @@
                     <div class="row g-3 mb-4">
                         <div class="col-6 col-lg-3">
                             <div class="stats-card text-center">
-                                <div class="stats-icon text-primary"><i class="bi bi-bar-chart-steps"></i></div>
+                                <div class="stats-icon text-primary">
+                                    <i class="bi bi-lightning-charge"></i>
+                                </div>
                                 <div class="stats-value">{{ stats.total_actions }}</div>
-                                <div class="stats-label">{{ MS_TRANS.stats_total_actions }}</div>
+                                <div class="stats-label">{{ MS_TRANS.stats_total_actions|default:"Total Actions" }}</div>
                             </div>
                         </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="stats-card text-center">
+                                <div class="stats-icon text-success">
+                                    <i class="bi bi-file-earmark-plus"></i>
+                                </div>
+                                <div class="stats-value">{{ stats.docs_created }}</div>
+                                <div class="stats-label">{{ MS_TRANS.stats_docs_created|default:"Docs Created" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="stats-card text-center">
+                                <div class="stats-icon text-info">
+                                    <i class="bi bi-pencil-square"></i>
+                                </div>
+                                <div class="stats-value">{{ stats.total_edits }}</div>
+                                <div class="stats-label">{{ MS_TRANS.stats_edits|default:"Edits" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="stats-card text-center">
+                                <div class="stats-icon text-warning">
+                                    <i class="bi bi-download"></i>
+                                </div>
+                                <div class="stats-value">{{ stats.total_downloads }}</div>
+                                <div class="stats-label">{{ MS_TRANS.stats_downloads|default:"Downloads" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+
+    <script src="{% static 'microsys/users/js/profile_2fa.js' %}" nonce="{{ request.csp_nonce }}"></script>
                          <!-- Add more stats if needed -->
                     </div>
 
-    <!-- 2FA Setup Modal -->
-    <div class="modal fade" id="otpSetupModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content glass-card border-0">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title">{{ MS_TRANS.2fa_verify_title }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <div class="mb-3">
-                        <i class="bi bi-shield-lock-fill text-primary" style="font-size: 3rem;"></i>
-                    </div>
-                    <p class="text-muted mb-4">{{ MS_TRANS.2fa_verify_desc }}</p>
-                    
-                    <div id="otpSetupError" class="alert alert-danger d-none"></div>
+                     <!-- Timelines -->
+                     <div class="row g-4">
+                         <!-- Recent Activity -->
+                         <div class="col-lg-6">
+                              <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-clock-history me-2"></i> {{ MS_TRANS.stats_recent_activity }}</h5>
+                              {% if recent_activity %}
+                                  {% load microsys_translation %}
+                                  <div class="activity-timeline">
+                                      {% for log in recent_activity %}
+                                      <div class="timeline-item">
+                                          <div class="timeline-dot"></div>
+                                          <div class="timeline-content">
+                                              <div class="timeline-time">{% ms_timesince log.timestamp %}</div>
+                                              <div class="timeline-title">
+                                                  {% translate_log_value log.action 'action' %} - 
+                                                  {% if log.model_name %}
+                                                      {% translate_log_value log.model_name 'model' %}
+                                                  {% else %}
+                                                      General
+                                                  {% endif %}
+                                              </div>
+                                              {% format_log_details log.details as details_html %}
+                                              {% if details_html %}
+                                                  <div class="mt-1 small">{{ details_html|safe }}</div>
+                                              {% else %}
+                                                  <small class="text-muted">{{ log.object_id|default:"-" }}</small>
+                                              {% endif %}
+                                          </div>
+                                      </div>
+                                      {% endfor %}
+                                  </div>
+                              {% else %}
+                                  <p class="text-muted small">{{ MS_TRANS.timeline_empty }}</p>
+                              {% endif %}
+                         </div>
+ 
+                         <!-- System Interactions -->
+                         <div class="col-lg-6">
+                              <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-cpu me-2"></i> {{ MS_TRANS.stats_system_interactions }}</h5>
+                              {% if system_interactions %}
+                                  <div class="activity-timeline">
+                                      {% for log in system_interactions %}
+                                      <div class="timeline-item">
+                                          <div class="timeline-dot" style="background-color: #fd7e14;"></div>
+                                          <div class="timeline-content">
+                                              <div class="timeline-time">{{ log.timestamp|date }}</div>
+                                              <div class="timeline-title">
+                                                  {% translate_log_value log.action 'action' %}
+                                              </div>
+                                              {% format_log_details log.details as sys_details_html %}
+                                              {% if sys_details_html %}
+                                                  <div class="mt-1 small">{{ sys_details_html|safe }}</div>
+                                              {% else %}
+                                                  <small class="text-muted">{{ log.ip_address }}</small>
+                                              {% endif %}
+                                          </div>
+                                      </div>
+                                      {% endfor %}
+                                  </div>
+                              {% else %}
+                                  <p class="text-muted small">{{ MS_TRANS.timeline_empty }}</p>
+                              {% endif %}
+                         </div>
+                     </div>
 
-                    <form id="otpSetupForm" data-url="{% url 'verify_otp_enable' %}" data-csrf="{{ csrf_token }}">
-                        <div class="mb-3">
-                            <input type="text" 
-                                   class="form-control form-control-lg text-center fw-bold" 
-                                   id="otpSetupInput" 
-                                   name="otp_code" 
-                                   placeholder="######" 
-                                   maxlength="6" 
-                                   required
-                                   style="letter-spacing: 0.5em; font-size: 1.5rem;">
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            {{ MS_TRANS.2fa_verify_btn }}
-                        </button>
-                    </form>
+                    <!-- Actions (Removed - Moved to 2FA Card) -->
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="{% static 'microsys/users/js/profile_2fa.js' %}" nonce="{{ request.csp_nonce }}"></script>
-                        <div class="col-6 col-lg-3">
-                            <div class="stats-card text-center">
-                                <div class="stats-icon text-success"><i class="bi bi-file-earmark-plus"></i></div>
-                                <div class="stats-value">{{ stats.docs_created }}</div>
-                                <div class="stats-label">{{ MS_TRANS.stats_docs_created }}</div>
-                            </div>
-                        </div>
-                         <!-- Add more stats if needed -->
+<!-- Change Password Modal -->
+<!-- ... existing modal ... -->
+
+<!-- Backup Codes Modal -->
+<div class="modal fade" id="backupCodesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">{{ MS_TRANS.backup_codes_title|default:"Backup Codes" }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="alert alert-warning small text-start">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> 
+                    {{ MS_TRANS.backup_codes_warning|default:"<strong>Warning:</strong> These codes will only be shown <strong>once</strong>. Save them immediately. Generating new codes will invalidate any previous ones." }}
+                </div>
+                
+                <div class="p-3 rounded mb-3 border font-monospace" id="backupCodesContainer" style="letter-spacing: 2px; background: rgba(var(--primal-rgb), 0.05); color: var(--title); border-color: rgba(var(--primal-rgb), 0.1);">
+                    <!-- Codes injected here -->
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary" id="downloadBackupCodesBtn">
+                        <i class="bi bi-download"></i> {{ MS_TRANS.btn_download_txt|default:"Save as TXT" }}
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ MS_TRANS.btn_close }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2FA Setup Modal (Moved to root level) -->
+<div class="modal fade" id="otpSetupModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">{{ MS_TRANS.2fa_verify_title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-shield-lock-fill text-primary" style="font-size: 3rem;"></i>
+                </div>
+                
+                <p class="text-white-50 mb-4" id="otp-instruction">{{ MS_TRANS.2fa_verify_desc }}</p>
+                
+                <div id="totp-qr-container" class="mb-4 d-none"></div>
+
+                <div id="otpSetupError" class="alert alert-danger d-none"></div>
+
+                <form id="otpSetupForm" data-url="{% url 'verify_otp_enable' %}" data-csrf="{{ csrf_token }}">
+                    <input type="hidden" id="otpMethodInput" name="method" value="">
+                    
+                    <div class="mb-3">
+                        <input type="text" 
+                                class="form-control form-control-lg text-center fw-bold" 
+                                id="otpSetupInput" 
+                                name="otp_code" 
+                                placeholder="######" 
+                                maxlength="6" 
+                                required
+                                style="letter-spacing: 0.5em; font-size: 1.5rem;">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        {{ MS_TRANS.2fa_verify_btn }}
+                    </button>
+                </form>
+
+                <!-- Hidden Backup Codes Section for First-Time Setup -->
+                <div id="otpSetupSuccess" class="d-none text-start">
+                    <div class="alert alert-success text-center mb-3">
+                        <i class="bi bi-check-circle-fill me-2"></i> {{ MS_TRANS.2fa_enabled_success|default:"Two-Factor Authentication Enabled!" }}
+                    </div>
+                    
+                    <div class="alert alert-warning small">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> 
+                        {{ MS_TRANS.backup_codes_warning|default:"<strong>Warning:</strong> These recovery codes will only be shown <strong>once</strong>. Save them immediately." }}
                     </div>
 
-                    <!-- Timelines -->
-                    <div class="row g-4">
-                        <!-- Recent Activity -->
-                        <div class="col-lg-6">
-                             <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-clock-history me-2"></i> {{ MS_TRANS.stats_recent_activity }}</h5>
-                             {% if recent_activity %}
-                                 <div class="activity-timeline">
-                                     {% for log in recent_activity %}
-                                     <div class="timeline-item">
-                                         <div class="timeline-dot"></div>
-                                         <div class="timeline-content">
-                                             <div class="timeline-time">{{ log.timestamp|timesince }}</div>
-                                             <div class="timeline-title">{{ log.action }} - {{ log.model_name|default:"General" }}</div>
-                                             <small class="text-muted">{{ log.object_id|default:"-" }}</small>
-                                         </div>
-                                     </div>
-                                     {% endfor %}
-                                 </div>
-                             {% else %}
-                                 <p class="text-muted small">{{ MS_TRANS.timeline_empty }}</p>
-                             {% endif %}
-                        </div>
-
-                        <!-- System Interactions -->
-                        <div class="col-lg-6">
-                             <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-cpu me-2"></i> {{ MS_TRANS.stats_system_interactions }}</h5>
-                             {% if system_interactions %}
-                                 <div class="activity-timeline">
-                                     {% for log in system_interactions %}
-                                     <div class="timeline-item">
-                                         <div class="timeline-dot" style="background-color: #fd7e14;"></div>
-                                         <div class="timeline-content">
-                                             <div class="timeline-time">{{ log.timestamp|date:"H:i" }}</div>
-                                             <div class="timeline-title">{{ log.action }}</div>
-                                             <small class="text-muted">{{ log.ip_address }}</small>
-                                         </div>
-                                     </div>
-                                     {% endfor %}
-                                 </div>
-                             {% else %}
-                                 <p class="text-muted small">{{ MS_TRANS.timeline_empty }}</p>
-                             {% endif %}
-                        </div>
+                    <div class="p-3 rounded mb-3 border font-monospace text-center" id="otpSetupBackupCodesContainer" style="letter-spacing: 2px; background: rgba(var(--primal-rgb), 0.05); color: var(--title); border-color: rgba(var(--primal-rgb), 0.1);">
+                        <!-- Codes injected here -->
                     </div>
 
-                    <!-- Actions -->
-                    <div class="row mt-4 pt-3 border-top border-light">
-                        <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
-                            <a class="btn btn-success action-btn rounded-pill" href="{% url 'edit_profile' %}">
-                                <i class="bi bi-pencil-square h5 m-0"></i> 
-                                <span>{{ MS_TRANS.btn_update_data }}</span>
-                            </a>
-                            
-                            <button type="button" class="btn btn-danger action-btn rounded-pill" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
-                                <i class="bi bi-shield-lock h5 m-0"></i>
-                                <span>{{ MS_TRANS.btn_change_password }}</span>
-                            </button>
-                            
-                            <a href="{{ APP_CONFIG.home_url }}" class="btn btn-secondary action rounded-pill">
-                                <i class="bi bi-house-door h5 m-0"></i>
-                                <span>{{ MS_TRANS.btn_home }}</span>
-                            </a>
-                        </div>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" id="downloadSetupBackupCodesBtn">
+                            <i class="bi bi-download"></i> {{ MS_TRANS.btn_download_txt|default:"Save as TXT" }}
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="confirmCodesSavedBtn" data-bs-dismiss="modal">
+                            {{ MS_TRANS.btn_close_reload|default:"I have saved my codes" }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -272,8 +459,8 @@
 <!-- Change Password Modal -->
 <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-            <div class="modal-header bg-light border-0">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-0">
                 <h5 class="modal-title fw-bold text-primary" id="resetPasswordModalLabel">
                     <i class="bi bi-key me-2"></i> {{ MS_TRANS.btn_change_password }}
                 </h5>
@@ -284,11 +471,28 @@
                     {% csrf_token %}
                     {{ password_form|crispy }}
                     <div class="d-grid mt-4">
-                        <button type="submit" name="change_password" class="btn btn-danger action-btn rounded-pill justify-content-center">
+                        <button type="submit" name="change_password" class="btn btn-primary action-btn rounded-pill justify-content-center">
                             {{ MS_TRANS.btn_confirm_password_change }}
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-body text-center p-4">
+                <i class="bi bi-exclamation-circle text-warning display-4 mb-3"></i>
+                <h5 class="mb-2" style="color: var(--title);">{{ MS_TRANS.modal_confirm_title }}</h5>
+                <p class="small mb-4" id="confirmationMessage" style="color: var(--htitle);">{{ MS_TRANS.modal_confirm_msg }}</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{{ MS_TRANS.cancel }}</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4" id="confirmationConfirmBtn">{{ MS_TRANS.confirm }}</button>
+                </div>
             </div>
         </div>
     </div>

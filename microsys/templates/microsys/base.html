@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ APP_CONFIG.name|default:"microSYS" }} - {% block title %}{% endblock %}</title>
+    <title>{{ APP_CONFIG.name|default:"microSYS" }} &nbsp;&nbsp; {% block title %}{% endblock %}</title>
     
     {{ user_preferences|json_script:"user-prefs-data" }}
     <script nonce="{{ request.csp_nonce }}">
@@ -67,6 +67,7 @@
     <script src="{% static 'microsys/accessibility/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/language/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/autofill/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+    <script src="{% static 'microsys/main/js/prevent_double_submit.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 
 </head>
 <body>
@@ -99,10 +100,11 @@
     {% endblock %}
 
     {% include_if_exists 'microsys/includes/custom_scripts.html' %}
-    {% block scripts %}{% endblock %}
-
-    <!-- Include Bootstrap JS -->
+    
+    <!-- Include Bootstrap JS (Placed before scripts block so dependencies work) -->
     <script src="{% static 'bootstrap/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    
+    {% block scripts %}{% endblock %}
     <link rel="stylesheet" href="{% static 'flatpickr/flatpickr.min.css' %}">
     <script src="{% static 'flatpickr/flatpickr.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
     {% if CURRENT_LANG == 'ar' %}
@@ -115,7 +117,6 @@
             const fpOpts = {
                 dateFormat: "Y-m-d",
                 position: "auto",
-                altFormat: "d F Y",
                 allowInput: true,
             };
             {% if CURRENT_LANG == 'ar' %}fpOpts.locale = 'ar';{% endif %}
@@ -138,6 +139,7 @@
         });
     </script>
     <!-- {% include 'includes/scan.html' %} -->
+    {% include 'microsys/includes/micro_context_menu.html' %}
     <!-- Themes logic moved to sidebar app -->
     <!-- <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" nonce="{{ request.csp_nonce }}"></script> -->
 

@@ -20,8 +20,10 @@ urlpatterns = [
     path('sys/users/edit/<int:pk>/', views.edit_user, name='edit_user'),
     path('sys/users/delete/<int:pk>/', views.delete_user, name='delete_user'),
     path('sys/users/<int:pk>/', views.UserDetailView.as_view(), name='user_detail'),
+    path('sys/users/<int:pk>/modal/', views.UserDetailModalView.as_view(), name='user_detail_modal'),
 
     path('sys/logs/', views.UserActivityLogView.as_view(), name='user_activity_log'),
+    path('sys/logs/<int:pk>/details/', views.ActivityLogDetailView.as_view(), name='user_activity_log_detail'),
     path('sys/reset_password/<int:pk>/', views.reset_password, name='reset_password'),
     
     # Scope Management URLs
@@ -43,12 +45,16 @@ urlpatterns = [
     path('sys/section/details/', views.get_section_details, name='get_section_details'),
     
     # 2FA URLs
+    path('sys/2fa/verify/enable/', views.verify_otp_view, {'intent': 'enable'}, name='verify_otp_enable'), # Maps to generic enable if needed, or specific
     path('sys/2fa/verify/login/', views.verify_otp_view, {'intent': 'login'}, name='verify_otp_login'),
-    path('sys/2fa/verify/enable/', views.verify_otp_view, {'intent': 'enable'}, name='verify_otp_enable'),
+    
+    path('sys/2fa/verify/', views.verify_otp_view, name='verify_otp_generic'),
     path('sys/2fa/enable/', views.enable_2fa, name='enable_2fa'),
+    path('sys/2fa/setup/totp/', views.setup_totp, name='setup_totp'),
     path('sys/2fa/disable/', views.disable_2fa, name='disable_2fa'),
-    path('sys/2fa/resend/login/', views.resend_otp, {'intent': 'login'}, name='resend_otp_login'),
-    path('sys/2fa/resend/enable/', views.resend_otp, {'intent': 'enable'}, name='resend_otp_enable'),
+    path('sys/2fa/backup-codes/generate/', views.generate_backup_codes, name='generate_backup_codes'),
+    path('sys/2fa/resend/<str:intent>/', views.resend_otp, name='resend_otp'), # Generic resend
+    path('sys/2fa/resend/', views.resend_otp, {'intent': 'login'}, name='resend_otp_login'),
 
     # Sidebar Toggle URL
     path('sys/toggle-sidebar/', utils.toggle_sidebar, name='toggle_sidebar'),

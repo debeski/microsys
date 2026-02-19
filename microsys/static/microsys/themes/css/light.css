@@ -50,3 +50,8 @@
     background-color: rgba(71, 85, 105, 0.08) !important;
     color: #334155 !important;
 }
+:root.theme-light .glass-card {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 12px 40px -10px rgba(71, 85, 105, 0.2) !important;
+}

@@ -17,50 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
         deleteModal.addEventListener("show.bs.modal", handleDeleteModalShow);
     }
 
-    // 4. Handle Password Reset Event from Context Menu
-    document.addEventListener('micro:reset-password', function(e) {
-        // Context menu dispatch structure: e.detail = { originalTarget, action, data }
-        const eventData = e.detail.data; 
-        if (!eventData || !eventData.url) return;
-
-        const modalEl = document.getElementById('resetPasswordModal');
-        const form = document.getElementById('resetPasswordForm');
-        const usernameInput = document.getElementById('id_username');
-
-        if (modalEl && form) {
-            // Set form action
-            form.action = eventData.url;
-            
-            // Set username field if it exists
-            if (usernameInput && eventData.username) {
-                usernameInput.value = eventData.username;
-            }
-
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-        }
-    });
-
-    // 5. Handle Soft Delete Event from Context Menu
-    document.addEventListener('micro:soft-delete', function(e) {
-        // Context menu dispatch structure: e.detail = { originalTarget, action, data }
-        const eventData = e.detail.data;
-        if (!eventData || !eventData.url) return;
-
-        const modalEl = document.getElementById('deleteModal');
-        const form = document.getElementById('deleteForm');
-        const nameSpan = document.getElementById('userName');
-
-        if (modalEl && form) {
-            form.action = eventData.url;
-            if (nameSpan && eventData.name) {
-                nameSpan.textContent = eventData.name;
-            }
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-        }
-    });
-
     // Event Delegation for Scope Modal content (loaded via AJAX)
     const scopeModalBody = document.getElementById('scopeModalBody');
     if (scopeModalBody) {

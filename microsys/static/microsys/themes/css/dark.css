@@ -555,9 +555,9 @@
 /* 22. Profile View Dark Mode Overrides */
 :root.theme-dark .glass-profile,
 :root.theme-dark .glass-card {
-    background: rgba(30, 30, 30, 0.65) !important;
+    background: rgba(30, 30, 30, 0.92) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
 }
 
 :root.theme-dark .profile-img-container {

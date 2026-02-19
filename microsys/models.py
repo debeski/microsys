@@ -77,7 +77,18 @@ class Profile(ScopedModel):
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الحذف")
     preferences = models.JSONField(default=dict, blank=True, verbose_name="تفضيلات المستخدم")
-    is_2fa_enabled = models.BooleanField(default=False, verbose_name="تفعيل المصادقة الثنائية")
+    
+    # 2FA Fields
+    is_email_2fa_enabled = models.BooleanField(default=False, verbose_name="2FA via Email")
+    is_phone_2fa_enabled = models.BooleanField(default=False, verbose_name="2FA via Phone")
+    is_totp_2fa_enabled = models.BooleanField(default=False, verbose_name="2FA via App")
+    totp_secret = models.CharField(max_length=32, blank=True, null=True, verbose_name="TOTP Secret")
+    backup_codes = models.JSONField(default=list, blank=True, verbose_name="Backup Codes")
+
+    @property
+    def is_2fa_enabled(self):
+        """Returns True if any 2FA method is enabled."""
+        return self.is_email_2fa_enabled or self.is_phone_2fa_enabled or self.is_totp_2fa_enabled
 
     @property
     def full_name(self):
@@ -103,6 +114,7 @@ class UserActivityLog(ScopedModel):
     number = models.CharField(max_length=50, null=True, blank=True, verbose_name="المستند")
     ip_address = models.GenericIPAddressField(blank=True, null=True, verbose_name="عنوان IP")
     user_agent = models.TextField(blank=True, null=True, verbose_name="agent")
+    details = models.JSONField(default=dict, blank=True, null=True, verbose_name="التفاصيل")
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="الوقت")
 
     def __str__(self):
@@ -115,6 +127,50 @@ class UserActivityLog(ScopedModel):
         permissions = [
             ("view_activity_log", "View activity log"),
         ]
+
+    @classmethod
+    def safe_log(cls, user, action, model_name=None, object_id=None, number=None, details=None, ip_address=None, user_agent=None, scope=None):
+        """
+        Log an action only if a duplicate entry hasn't been created in the last 2 seconds.
+        """
+        from django.utils.timezone import now
+        from datetime import timedelta
+        
+        # Debounce window
+        time_threshold = now() - timedelta(seconds=2)
+        
+        # Check for duplicates
+        duplicate = cls.objects.filter(
+            user=user,
+            action=action,
+            model_name=model_name,
+            object_id=object_id,
+            timestamp__gte=time_threshold
+        )
+        
+        if details:
+             # Basic check if details match. precise match for JSON might be strict but good for duplicates.
+             duplicate = duplicate.filter(details=details)
+             
+        if duplicate.exists():
+            return None
+
+        # Automatically use actor's scope if not provided
+        if not scope and user and hasattr(user, 'profile'):
+            scope = user.profile.scope
+
+        return cls.objects.create(
+            user=user,
+            action=action,
+            model_name=model_name,
+            object_id=object_id,
+            number=number,
+            details=details or {},
+            ip_address=ip_address,
+            user_agent=user_agent,
+            scope=scope,
+            timestamp=now()
+        )
 
 class Section(models.Model):
     """Dummy Model for section permissions."""
