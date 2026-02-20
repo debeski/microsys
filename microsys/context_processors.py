@@ -14,12 +14,17 @@ def _get_config_hash(config):
     config_str = json.dumps(config_copy, sort_keys=True)
     return hashlib.md5(config_str.encode()).hexdigest()[:8]
 
-def _process_extra_items(config, request):
+def _process_extra_items(config, request, user_prefs=None):
     """
     Process EXTRA_ITEMS config into sidebar-ready format.
     
     Returns dict of groups, each with icon and list of items with resolved URLs.
     """
+    from django.utils.text import slugify
+    if user_prefs is None:
+        user_prefs = {}
+    open_accordions = user_prefs.get('open_accordions', [])
+
     extra_items = config.get('EXTRA_ITEMS', {})
     processed_groups = {}
     
@@ -64,10 +69,14 @@ def _process_extra_items(config, request):
             })
         
         if items:  # Only add group if it has visible items
+            group_id = f"extraGroup-{slugify(group_name)}"
+            is_open = group_id in open_accordions
             processed_groups[group_name] = {
                 'icon': group_icon,
                 'items': items,
                 'has_active': any(item['active'] for item in items),
+                'is_open': is_open,
+                'id': group_id,
             }
     
     return processed_groups
@@ -196,7 +205,7 @@ def microsys_context(request):
             sidebar_items = visible
         
         # Process extra items for authenticated users
-        extra_groups = _process_extra_items(config, request)
+        extra_groups = _process_extra_items(config, request, user_prefs)
     
     context['sidebar_auto_items'] = sidebar_items
     context['sidebar_extra_groups'] = extra_groups

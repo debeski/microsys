@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.utils.timezone import now
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.contrib.auth import get_user_model
 from .middleware import get_current_user, get_current_request
@@ -306,3 +307,11 @@ def log_delete(sender, instance, **kwargs):
         ip_address=ip,
         user_agent=user_agent,
     )
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_user_profile(sender, instance, created, **kwargs):
+    """Automatically create a Profile for every new User."""
+    if created:
+        Profile = apps.get_model('microsys', 'Profile')
+        Profile.objects.get_or_create(user=instance)
+

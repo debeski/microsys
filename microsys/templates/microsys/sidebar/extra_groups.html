@@ -3,19 +3,18 @@
 {% for group_name, group in groups.items %}
     <div class="accordion-item">
         <h2 class="accordion-header">
-            <button class="accordion-button{% if not group.has_active %} collapsed{% endif %}" 
+            <button class="accordion-button{% if not group.is_open %} collapsed{% endif %}" 
                     type="button" 
                     data-bs-toggle="collapse" 
-                    data-bs-target="#extraGroup{{ forloop.counter }}" 
-                    aria-expanded="{% if group.has_active %}true{% else %}false{% endif %}" 
-                    aria-controls="extraGroup{{ forloop.counter }}">
+                    data-bs-target="#{{ group.id }}" 
+                    aria-expanded="{% if group.is_open %}true{% else %}false{% endif %}" 
+                    aria-controls="{{ group.id }}">
                 <i class="bi {{ group.icon }} me-2" style="font-size: 24px;"></i>
                 <span>{{ group_name }}</span>
             </button>
         </h2>
-        <div id="extraGroup{{ forloop.counter }}" 
-             class="accordion-collapse collapse{% if group.has_active %} show{% endif %}" 
-             data-bs-parent="#sidebarExtraAccordion">
+        <div id="{{ group.id }}" 
+             class="accordion-collapse collapse{% if group.is_open %} show{% endif %}">
             <div class="accordion-body p-0" data-group-name="{{ group_name|slugify }}">
                 {% for item in group.items %}
                 <a href="{{ item.url }}" 
