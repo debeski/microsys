@@ -18,6 +18,8 @@
 - django-tables2 2.5+
 - django-filter 24.1+
 - psutil
+- pyotp
+- qrcode
 
 ---
 
@@ -697,3 +699,5 @@ microsys/
 | v1.7.9   | • **Premium Navigation Stability**: Finalized logout button with a `warning` theme, fixed icon "wobble" transitions, and tighter 8px spacing for a high-end, glitch-free feel. |
 | v1.7.10  | • **Responsive 2FA UI**: Fixed two-factor authentication method rows to stay side-by-side on small screens, preventing the enable buttons and labels from stacking. |
 | v1.7.11  | • **Theme Fixes**: Resolved issue where language picker options appeared white in dark theme by adding proper CSS variable overrides in `dark.css`. |
+| v1.7.12  | • **Offline Twemoji Flags**: Added local hosting for the Twemoji Country Flags web font polyfill to ensure flag emojis render correctly on Windows without external CDN dependencies. |
+| v1.8.0   | • **Dynamic Multi-Language Tutorial**: Completely refactored the guided tutorial system. The tutorial is now fully dynamic based on the current URL path (`/sys/`, `/sys/sections/`, `/sys/users/`, etc.), supports full English/Arabic translations, and intelligently targets elements even if they change positions. |

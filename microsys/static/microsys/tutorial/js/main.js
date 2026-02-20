@@ -5,65 +5,91 @@ document.addEventListener("DOMContentLoaded", function () {
     function getTutorialSteps() {
         const path = window.location.pathname;
         let steps = [];
+        const t = window.TUT_STRINGS || {};
 
-        // 1. Dashboard / Home
-        if (path === '/' || path === '/index/') {
+        // Base step that applies to most pages
+        const sidebarStep = { element: '#sidebar', popover: { title: t.sidebar_title || 'Sidebar', description: t.sidebar_desc || 'Navigate between sections.', side: "right", align: 'start' }};
+
+        // 1. Dashboard / Home (`/sys/`, `/index/`, `/`)
+        if (path === '/' || path.includes('/index/') || path === '/sys/' || path === '/sys/dashboard/') {
             steps = [
-                { element: '#sidebar', popover: { title: 'القائمة الجانبية', description: 'يمكنك التنقل بين أقسام الأرشيف المختلفة من هنا في اي وقت (بريد صادر، وارد، قرارات...).', side: "top", align: 'start' }},
-                { element: '.titlebar', popover: { title: 'شريط العنوان', description: 'يحتوي على اسم النظام والقائمة الشخصية للمستخدم.', side: "top", align: 'center' }},
-                { element: '.login-title-btn', popover: { title: 'قائمة المستخدم', description: 'من هنا يمكنك تسجيل الخروج أو الذهاب لصفحة الملف الشخصي.', side: "top", align: 'end' }},
-                { element: '#mainContent', popover: { title: 'منطقة العمل', description: 'هنا تظهر الجداول، النماذج، والمحتوى الرئيسي للنظام.', side: "top", align: 'end' }},
-                { element: '#sidebarToggle', popover: { title: 'اخفاء/اظهار القائمة', description: 'يمكنك توسيع أو تصغير القائمة الجانبية لتوفير مساحة أكبر للعرض.', side: "top", align: 'end' }},
+                sidebarStep,
+                { element: '.titlebar', popover: { title: t.titlebar_title || 'Titlebar', description: t.titlebar_desc || 'System name and user menu.', side: "bottom", align: 'center' }},
+                { element: '.login-title-btn', popover: { title: t.usermenu_title || 'User Menu', description: t.usermenu_desc || 'Logout or profile.', side: "bottom", align: 'end' }},
+                { element: '#sidebarThemeIndicator', popover: { title: t.options_theme_title || 'Theme', description: t.options_theme_desc || 'Change theme.', side: "top", align: 'center' }},
+                { element: '#mainContent', popover: { title: t.maincontent_title || 'Workspace', description: t.maincontent_desc || 'Main content area.', side: "top", align: 'center' }}
             ];
         }
-        // 2. List Views (Check for search form or table)
-        else if (document.querySelector('input[name="keyword"]') || document.querySelector('.table')) {
+        // 2. Sections Management (`/sys/sections/`)
+        else if (path.includes('/sys/sections/')) {
             steps = [
-                { element: '#sidebar', popover: { title: 'القائمة الجانبية', description: 'يمكنك التنقل بين أقسام الأرشيف المختلفة من هنا في اي وقت (بريد صادر، وارد، قرارات...).', side: "top", align: 'start' }},
-                { element: 'input[name="keyword"]', popover: { title: 'البحث', description: 'ابحث عن المستندات باستخدام العناوين، الكلمات المفتاحية، الأرقام، والجهات والسنوات.', side: "right", align: 'center' }},
-                { element: 'select[name="date__year"]', popover: { title: 'الفرز عبر السنة', description: 'فرز النتائج حسب السنة.', side: "left", align: 'center' }},
-
-                { element: '#advanced-search', popover: { title: 'البحث المتقدم', description: 'استخدم الفلاتر لتقليص نتائج البحث (مثلا: الرقم بالضبط، السنة، النوع).', side: "top", align: 'center' }},
-                { element: '.bi-plus-lg', popover: { title: 'إضافة جديد', description: 'اضغط هنا لإضافة مستند جديد لهذا القسم.', side: "left", align: 'center' }},
-                { element: '.bi-download', popover: { title: 'تنزيل ملفات PDF', description: 'اضغط هنا لتحميل جميع ملفات النتائج الظاهرة في الجدول.', side: "left", align: 'center' }},
-                { element: '.bi-file-earmark-spreadsheet', popover: { title: 'تنزيل كملف اكسل', description: 'اضغط هنا لتحميل جميع بيانات النتائج الظاهرة في الجدول الى ملف اكسل.', side: "left", align: 'center' }},
-
-                { element: '.nav-tabs', popover: { title: 'انواع المستندات', description: 'بالضغط على مختلف الازرار هنا، يمكنك فرز المستندات حسب نوعها او تصنيفها بسرعه، كما يمكنك اضافة فلاتر اخرى من البحث المتقدم لتقليص النتائج الى اقصى حد.', side: "top", align: 'start' }},
-
-                { element: '.table-responsive-lg', popover: { title: 'جدول البيانات', description: 'هنا يتم عرض المستندات بهذا القسم. اضغط على الثلاث نقاط لعرض التفاصيل او التعديل، او اضعط على ايقونة الملف لتحميل ملف المستند.', side: "top", align: 'start' }},
+                sidebarStep,
+                { element: '.bi-plus-lg', popover: { title: t.add_title || 'Add', description: t.add_desc || 'Add new section.', side: "left", align: 'center' }},
+                { element: '.table', popover: { title: t.sections_list_title || 'Sections List', description: t.sections_list_desc || 'List of sections.', side: "top", align: 'start' }}
             ];
         }
-        // 3. Form Views (Check for main form)
-        else if (document.querySelector('form[method="post"]')) {
-                steps = [
-                { element: '#sidebar', popover: { title: 'القائمة الجانبية', description: 'تأكد من أنك تقوم بالادخال في المكان الصحيح،  تنبيه: الخروج دون الحفظ سيفقدك البيانات التي قمت بإدخالها.', side: "top", align: 'start' }},
-                { element: 'input[name="number"]', popover: { title: 'الرقم الرئيسي للمستند', description: 'هذا هو الرقم الرئيسي للمستند، للبريد الوارد فهو رقم التسجيل في ختم التسجيل، للبريد الصادر فهو رقم الكتاب، للقرارات والمناشير والخ فهو رقم المستند.', side: "top", align: 'start' }},
-                { element: 'input[name="og_number"]', popover: { title: 'رقم الكتاب الأصلي', description: 'اما هذا فهو رقم كتاب الوارد الاصلي، عادة يكون مكتوبا باليد في اعلى يسار الورقة.', side: "top", align: 'start' }},
-                { element: 'select[name="affiliate"]', popover: { title: 'الجهات الاخرى والجهات التابعة', description: 'بعد اختيارك للجهة، تأكد من اختيار التقسيم الاداري الصحيح في الخانة التالية.', side: "top", align: 'start' }},
-                { element: 'select[name="destination"]', popover: { title: 'التقسيم الاداري الموجه له الكتاب', description: 'في حالة كان الكتاب موجه الى تقسيم اداري اخر غير التقسيم الرئيسي "في هذه الحالة مكتب الوكيل" سيتم اعتباره تلقائيا على انه بريد تم اعادة توجيهه / احالته الى مكتب الوكيل.', side: "top", align: 'start' }},
-                
-                { element: 'input[name="is_routed"]', popover: { title: 'بريد معاد توجيهه', description: 'قم بتفعيل هذا الخيار اذا كان الكتاب قد وصل الى قسم آخر أولاً (مثلاً: مكتب الوزير) ثم تمت إحالته إلينا. عند التفعيل، يجب عليك تحديد الجهة الأصلية (المرسل الخارجي) والجهة المحال منها (المرسل الداخلي).', side: "top", align: 'start' }},
-                { element: 'input[name="is_fyi"]', popover: { title: 'صورة للعلم', description: 'قم بتفعيل هذا الخيار اذا كان الكتاب عبارة عن "صورة للعلم" فقط من قسم داخلي آخر، وليس كتاباً أصلياً موجهاً لنا من جهة خارجية. عند التفعيل، ستختفي خانات الجهة الخارجية ويكتفى بتحديد القسم الداخلي المرسل.', side: "top", align: 'start' }},
-                
-                { element: 'select[name="source_routed"]', popover: { title: 'الجهة المصدر / المحال منها', description: 'من هذه الخانة يمكنك اخنيار التقسيم الاداري الذي تم اعادة توجيه الرسالة منه أو ارسل كصورة للعلم.', side: "top", align: 'start' }},
-
-                { element: 'select[name="type"]', popover: { title: 'نوع المستند', description: 'من هنا يمكنك اختيار نوع المستند، قد تتغير بعض الحقول بناء على النوع المختار.', side: "top", align: 'start' }},
-                { element: 'input[type="file"]', popover: { title: 'حقل الملف', description: 'يمكنك الضغط على الزر لرفع ملف الPDF، او يمكنك سحبه الى هنا مباشرة.', side: "top", align: 'start' }},
-                { element: '.scan-btn', popover: { title: 'استخدام الماسح الضوئي', description: 'اذا كان لديك ماسح ضوئي متصل، استخدم هذا الزر لمسح المستند مباشرة من هنا، تأكد من ان تطبيق ScanLink شغال وان الماسح الضوئي شغال ومتصل بجهازك..', side: "top", align: 'center' }},
-                { element: 'button[name="save"]', popover: { title: 'الحفظ', description: 'اضغط لحفظ البيانات والخروج.', side: "top", align: 'center' }},
-                { element: 'button[name="save_add_more"]', popover: { title: 'حفظ و إضافة المزيد', description: 'اضغط لحفظ البيانات والقيام بادخال اخر جديد دون الرجوع الى القائمة السابقة.', side: "top", align: 'center' }},
+        // 3. User Management (`/sys/users/`)
+        else if (path.includes('/sys/users/')) {
+            steps = [
+                sidebarStep,
+                { element: 'input[name="keyword"]', popover: { title: t.search_title || 'Search', description: t.search_desc || 'Search users.', side: "right", align: 'center' }},
+                { element: 'a[href*="create_user"]', popover: { title: t.users_add_btn_title || 'Add User', description: t.users_add_btn_desc || 'Add new user.', side: "bottom", align: 'end' }},
+                { element: '#btn-manage-scopes, #toggleScopes', popover: { title: t.users_scopes_title || 'Scopes', description: t.users_scopes_desc || 'Manage scopes.', side: "bottom", align: 'center' }},
+                { element: '.badge', popover: { title: t.users_roles_title || 'User Roles', description: t.users_roles_desc || 'Role indicators.', side: "bottom", align: 'center' }},
+                { element: '.table tbody tr', popover: { title: t.users_row_title || 'User Details', description: t.users_row_desc || 'Double click row.', side: "bottom", align: 'center' }},
+                { element: '.table-responsive', popover: { title: t.table_title || 'Data Table', description: t.table_desc || 'User records.', side: "top", align: 'start' }}
+            ];
+        }
+        // 4. Activity Logs (`/sys/logs/`)
+        else if (path.includes('/sys/logs/')) {
+             steps = [
+                sidebarStep,
+                { element: 'input[name="keyword"]', popover: { title: t.search_title || 'Search', description: t.search_desc || 'Search logs.', side: "right", align: 'center' }},
+                { element: '.log-row, .table tbody tr', popover: { title: t.logs_row_title || 'Activity Details', description: t.logs_row_desc || 'Double-click to view details.', side: "bottom", align: 'center' }},
+                { element: '.table-responsive-lg', popover: { title: t.table_title || 'Data Table', description: t.table_desc || 'Activity records.', side: "top", align: 'start' }}
+            ];
+        }
+        // 5. Options / Settings (`/sys/options/`)
+        else if (path.includes('/sys/options/')) {
+             steps = [
+                sidebarStep,
+                { element: '.accessibility-switch', popover: { title: t.options_access_title || 'Accessibility', description: t.options_access_desc || 'Accessibility options.', side: "bottom", align: 'center' }},
+                { element: '.table-borderless', popover: { title: t.options_info_title || 'System Info', description: t.options_info_desc || 'Server information.', side: "bottom", align: 'center' }},
+                { element: '.theme-preview', popover: { title: t.options_theme_title || 'Themes', description: t.options_theme_desc || 'Change appearance.', side: "top", align: 'center' }},
+                { element: '.lang-option, [data-lang]', popover: { title: t.options_lang_title || 'Language', description: t.options_lang_desc || 'Language options.', side: "top", align: 'center' }},
+                { element: '#autofillToggle', popover: { title: t.options_autofill_title || 'Autofill', description: t.options_autofill_desc || 'Autofill options.', side: "top", align: 'center' }}
+            ];
+        }
+        // 6. Profile (`/accounts/profile/`)
+        else if (path.includes('/accounts/profile/')) {
+            steps = [
+                sidebarStep,
+                { element: '.info-value', popover: { title: t.profile_details_title || 'Profile Details', description: t.profile_details_desc || 'Personal data.', side: "right", align: 'center' }},
+                { element: 'a[href*="edit_profile"]', popover: { title: t.profile_edit_title || 'Edit Profile', description: t.profile_edit_desc || 'Update info.', side: "left", align: 'center' }},
+                { element: '.bi-shield-lock-fill', popover: { title: t.profile_2fa_title || 'Security Settings', description: t.profile_2fa_desc || 'Enable 2FA.', side: "top", align: 'center' }},
+                { element: '.stats-card', popover: { title: t.profile_stats_title || 'Profile Stats', description: t.profile_stats_desc || 'Your statistics.', side: "top", align: 'center' }},
+                { element: '.activity-timeline', popover: { title: t.profile_activity_title || 'Activity', description: t.profile_activity_desc || 'Recent actions.', side: "top", align: 'center' }}
+            ];
+        }
+        // Check for generic List Views (Fallback if not matched above but has list elements)
+        else if (document.querySelector('input[name="keyword"]') && document.querySelector('.table')) {
+            steps = [
+                sidebarStep,
+                { element: 'input[name="keyword"]', popover: { title: t.search_title || 'Search', description: t.search_desc || 'Search records.', side: "right", align: 'center' }},
+                { element: '.bi-plus-lg', popover: { title: t.add_title || 'Add New', description: t.add_desc || 'Add new item.', side: "left", align: 'center' }},
+                { element: '.table-responsive-lg, .table-responsive', popover: { title: t.table_title || 'Data Table', description: t.table_desc || 'Records table.', side: "top", align: 'start' }},
             ];
         }
         // Fallback
         else {
             steps = [
-                { element: '#sidebar', popover: { title: 'القائمة الجانبية', description: 'استخدم القائمة للتنقل.', side: "left", align: 'start' }},
-                { element: '#mainContent', popover: { title: 'المحتوى', description: 'محتوى الصفحة الحالي.', side: "top", align: 'center' }},
+                sidebarStep,
+                { element: '#mainContent', popover: { title: t.maincontent_title || 'Content', description: t.maincontent_desc || 'Page content.', side: "top", align: 'center' }},
             ];
         }
         
         // Filter out steps where element doesn't exist
-            return steps.filter(step => document.querySelector(step.element));
+        return steps.filter(step => document.querySelector(step.element));
     }
 
     // Driver instance will be created on click
@@ -213,6 +239,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             // Instantiate Driver on click to ensure fresh config
+            const t = window.TUT_STRINGS || {};
             
             // Helper to get active index since getActiveIndex() availability varies
             let currentIndex = 0;
@@ -225,9 +252,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 controls.innerHTML = `
                     <span id="tut-progress" class="tut-progress"></span>
                     <div style="display: flex; gap: 10px;">
-                        <button id="tut-prev" class="tut-btn tut-btn-prev">السابق</button>
-                        <button id="tut-next" class="tut-btn tut-btn-next">التالي</button>
-                        <button id="tut-skip" class="tut-btn tut-btn-skip">إلغاء</button>
+                        <button id="tut-prev" class="tut-btn tut-btn-prev">${t.btn_prev || 'Previous'}</button>
+                        <button id="tut-next" class="tut-btn tut-btn-next">${t.btn_next || 'Next'}</button>
+                        <button id="tut-skip" class="tut-btn tut-btn-skip">${t.btn_skip || 'Cancel'}</button>
                     </div>
                 `;
                 document.body.appendChild(controls);
@@ -282,12 +309,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 const isLast = currentIndex === total - 1;
                 const isFirst = currentIndex === 0;
 
-                document.getElementById('tut-progress').innerText = `${currentIndex + 1} من ${total}`;
+                const ofText = (window.TUT_STRINGS && window.TUT_STRINGS.of) ? window.TUT_STRINGS.of : 'of';
+                document.getElementById('tut-progress').innerText = `${currentIndex + 1} ${ofText} ${total}`;
                 
                 const nextBtn = document.getElementById('tut-next');
                 const prevBtn = document.getElementById('tut-prev');
 
-                nextBtn.innerText = isLast ? 'إنهاء' : 'التالي';
+                const nextText = (window.TUT_STRINGS && window.TUT_STRINGS.btn_next) ? window.TUT_STRINGS.btn_next : 'Next';
+                const finishText = (window.TUT_STRINGS && window.TUT_STRINGS.btn_finish) ? window.TUT_STRINGS.btn_finish : 'Finish';
+
+                nextBtn.innerText = isLast ? finishText : nextText;
                 prevBtn.disabled = isFirst;
             }
             

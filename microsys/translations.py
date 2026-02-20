@@ -349,6 +349,75 @@ MICROSYS_STRINGS = {
         'duration_and': 'و',
         'ago': 'منذ',
         'no_activity_recorded': 'لم يتم تسجيل نشاط بعد.',
+
+        # Tutorial / Guided Tour
+        'tut_btn_next': 'التالي',
+        'tut_btn_prev': 'السابق',
+        'tut_btn_skip': 'إلغاء',
+        'tut_btn_finish': 'إنهاء',
+        'tut_of': 'من',
+        
+        # Dashboard Tutorial
+        'tut_sidebar_title': 'القائمة الجانبية',
+        'tut_sidebar_desc': 'يمكنك التنقل بين أقسام النظام المختلفة من هنا في اي وقت.',
+        'tut_titlebar_title': 'شريط العنوان',
+        'tut_titlebar_desc': 'يحتوي على اسم النظام والقائمة الشخصية للمستخدم.',
+        'tut_usermenu_title': 'قائمة المستخدم',
+        'tut_usermenu_desc': 'من هنا يمكنك تسجيل الخروج أو الذهاب لصفحة الملف الشخصي.',
+        'tut_maincontent_title': 'منطقة العمل',
+        'tut_maincontent_desc': 'هنا تظهر الجداول، النماذج، والمحتوى الرئيسي للنظام.',
+        
+        # Lists / Tables Tutorial
+        'tut_search_title': 'البحث السريع',
+        'tut_search_desc': 'ابحث عن السجلات باستخدام العناوين، الكلمات المفتاحية، أو الأرقام.',
+        'tut_add_title': 'إضافة جديد',
+        'tut_add_desc': 'اضغط هنا لإضافة سجل أو عنصر جديد لهذا القسم.',
+        'tut_table_title': 'جدول البيانات',
+        'tut_table_desc': 'هنا يتم عرض السجلات. يمكنك الضغط على العناصر للعرض أو التعديل.',
+        
+        # Sections Tutorial
+        'tut_sections_list_title': 'قائمة الأقسام',
+        'tut_sections_list_desc': 'تعرض هذه القائمة جميع الأقسام والجهات المعرفة في النظام.',
+        
+        # Users Tutorial
+        'tut_users_roles_title': 'أدوار المستخدمين',
+        'tut_users_roles_desc': 'يمكنك تمييز أدوار الصلاحيات من خلال العلامات (مدير، مسؤول، مستخدم).',
+        'tut_users_row_title': 'تفاصيل وبدائل المستخدم',
+        'tut_users_row_desc': 'انقر نقرًا مزدوجًا على أي صف لفتح بطاقة تفاصيل المستخدم شاملة سجلات نشاطه.',
+        'tut_users_add_btn_title': 'إضافة مستخدم جديد',
+        'tut_users_add_btn_desc': 'انقر هنا لإنشاء حساب مستخدم جديد وتحديد صلاحياته.',
+        'tut_users_scopes_title': 'إدارة النطاقات',
+        'tut_users_scopes_desc': 'يتيح لك نظام النطاقات تقييد رؤية المستخدمين لبيانات محددة بناءً على إداراتهم.',
+        
+        # Logs Tutorial
+        'tut_logs_row_title': 'تفاصيل النشاط',
+        'tut_logs_row_desc': 'اضغط نقراً مزدوجاً على أي صف أو اضغط على زر التفاصيل لعرض ما تم تغييره بالضبط.',
+        
+        # Profile Tutorial
+        'tut_profile_stats_title': 'إحصائيات الملف الشخصي',
+        'tut_profile_stats_desc': 'هنا تجد إحصائيات سريعة عن نشاطك داخل النظام.',
+        'tut_profile_details_title': 'بياناتك الشخصية',
+        'tut_profile_details_desc': 'تُعرض معلومات حسابك مثل البريد الإلكتروني ورقم الهاتف والدور في النظام هنا.',
+        'tut_profile_edit_title': 'تحديث البيانات',
+        'tut_profile_edit_desc': 'استخدم هذا الزر لتعديل بيانات ملفك الشخصي أو تغيير صورتك الرمزية.',
+        'tut_profile_2fa_title': 'إعدادات الأمان (2FA)',
+        'tut_profile_2fa_desc': 'يمكنك تفعيل وتعطيل طرق المصادقة الثنائية لزيادة أمان حسابك.',
+        'tut_profile_activity_title': 'نشاطاتك الأخيرة',
+        'tut_profile_activity_desc': 'يمكنك تتبع تفاعلاتك مع النظام والإجراءات الحديثة التي قمت بها هنا.',
+        
+        # Options Tutorial
+        'tut_options_tabs_title': 'تبويبات الإعدادات',
+        'tut_options_tabs_desc': 'تصفح التبويبات للوصول إلى خيارات سهولة الوصول، المظهر، والتعبئة التلقائية.',
+        'tut_options_access_title': 'سهولة الوصول',
+        'tut_options_access_desc': 'يتيح هذا القسم تخصيص تجربة القراءة وتفعيل خيارات مثل التباين العالي وإلغاء الحركات.',
+        'tut_options_info_title': 'معلومات النظام',
+        'tut_options_info_desc': 'عرض تفاصيل خادم النظام والتخزين وإصدارات الخدمات البرمجية الأساسية.',
+        'tut_options_theme_title': 'المظهر والألوان',
+        'tut_options_theme_desc': 'اختر المظهر الذي يناسبك، سيتم تطبيق التغييرات فوراً.',
+        'tut_options_lang_title': 'إعدادات اللغة',
+        'tut_options_lang_desc': 'يمكنك التبديل بين اللغات المتاحة لعرض الواجهة هنا.',
+        'tut_options_autofill_title': 'التعبئة التلقائية',
+        'tut_options_autofill_desc': 'عند التفعيل، سيتذكر النظام المدخلات السابقة لتسريع عملية تعبئة النماذج.',
     },
 
     # ───────────────────────────── English ─────────────────────────────
@@ -686,8 +755,76 @@ MICROSYS_STRINGS = {
         'duration_month': 'month',
         'duration_months': 'months',
         'duration_and': ',',
-        'ago': 'ago',
         'no_activity_recorded': 'No activity recorded yet.',
+
+        # Tutorial / Guided Tour
+        'tut_btn_next': 'Next',
+        'tut_btn_prev': 'Previous',
+        'tut_btn_skip': 'Skip',
+        'tut_btn_finish': 'Finish',
+        'tut_of': 'of',
+        
+        # Dashboard Tutorial
+        'tut_sidebar_title': 'Sidebar Navigation',
+        'tut_sidebar_desc': 'You can navigate between different system sections from here at any time.',
+        'tut_titlebar_title': 'Titlebar',
+        'tut_titlebar_desc': 'Contains the system name and your personal user menu.',
+        'tut_usermenu_title': 'User Menu',
+        'tut_usermenu_desc': 'From here you can log out or go to your profile page.',
+        'tut_maincontent_title': 'Workspace',
+        'tut_maincontent_desc': 'This is where tables, forms, and the main system content appear.',
+        
+        # Lists / Tables Tutorial
+        'tut_search_title': 'Quick Search',
+        'tut_search_desc': 'Search for records using titles, keywords, or numbers.',
+        'tut_add_title': 'Add New',
+        'tut_add_desc': 'Click here to add a new record or item to this section.',
+        'tut_table_title': 'Data Table',
+        'tut_table_desc': 'Records are displayed here. You can click on items to view or edit them.',
+        
+        # Sections Tutorial
+        'tut_sections_list_title': 'Sections List',
+        'tut_sections_list_desc': 'This list displays all departments and entities defined in the system.',
+        
+        # Users Tutorial
+        'tut_users_roles_title': 'User Roles',
+        'tut_users_roles_desc': 'You can distinguish permission roles through badges (Admin, Staff, User).',
+        'tut_users_row_title': 'User Details & Actions',
+        'tut_users_row_desc': 'Double-click any row to open the user details card, including their activity logs.',
+        'tut_users_add_btn_title': 'Add New User',
+        'tut_users_add_btn_desc': 'Click here to create a new user account and configure their permissions.',
+        'tut_users_scopes_title': 'Scope Management',
+        'tut_users_scopes_desc': 'Scopes restrict users from viewing certain data unless they belong to the authorized department.',
+        
+        # Logs Tutorial
+        'tut_logs_row_title': 'Activity Details',
+        'tut_logs_row_desc': 'Double-click any row or click the details button to see exactly what changed.',
+        
+        # Profile Tutorial
+        'tut_profile_stats_title': 'Profile Statistics',
+        'tut_profile_stats_desc': 'Find quick statistics about your activity within the system here.',
+        'tut_profile_details_title': 'Personal Information',
+        'tut_profile_details_desc': 'Your account details, including email, phone number, and system role are displayed here.',
+        'tut_profile_edit_title': 'Update Info',
+        'tut_profile_edit_desc': 'Use this button to edit your profile data or change your avatar.',
+        'tut_profile_2fa_title': 'Security Settings (2FA)',
+        'tut_profile_2fa_desc': 'You can enable and disable two-factor authentication methods to secure your account.',
+        'tut_profile_activity_title': 'Recent Activity',
+        'tut_profile_activity_desc': 'Track your system interactions and recently performed actions here.',
+        
+        # Options Tutorial
+        'tut_options_tabs_title': 'Settings Tabs',
+        'tut_options_tabs_desc': 'Browse the tabs to access accessibility, theme, and autofill options.',
+        'tut_options_access_title': 'Accessibility',
+        'tut_options_access_desc': 'This section lets you customize the reading experience with high contrast or by disabling animations.',
+        'tut_options_info_title': 'System Info',
+        'tut_options_info_desc': 'View details regarding the server environment, storage, and underlying service versions.',
+        'tut_options_theme_title': 'Themes & Colors',
+        'tut_options_theme_desc': 'Choose the theme that suits you, changes apply immediately.',
+        'tut_options_lang_title': 'Language Settings',
+        'tut_options_lang_desc': 'You can switch between available interface languages here.',
+        'tut_options_autofill_title': 'Smart Autofill',
+        'tut_options_autofill_desc': 'When enabled, the system remembers previous inputs to expedite form filling.',
     },
 }
 
