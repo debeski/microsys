@@ -22,35 +22,36 @@ def get_sidebar_config(lang_code=None):
     strings = get_strings(lang_code, overrides=project_overrides)
 
     system_group = {
-        'name': strings.get('sidebar_system', 'إدارة النظام'),
+        'name': strings.get('sidebar_system', 'System Management'),
         'icon': 'bi-sliders',
+        'url_name': 'sys_dashboard',
         'items': [
             {
                 'url_name': 'manage_sections',
-                'label': strings.get('manage_sections', 'إدارة الاقسام'),
+                'label': strings.get('manage_sections', 'Section Management'),
                 'icon': 'bi-diagram-3',
                 'permission': ['is_staff', 'microsys.manage_sections', 'microsys.view_sections'],
             },
             {
                 'url_name': 'manage_users',
-                'label': strings.get('manage_users', 'إدارة المستخدمين'),
+                'label': strings.get('manage_users', 'User Management'),
                 'icon': 'bi-people',
                 'permission': 'is_staff',
             },
             {
                 'url_name': 'user_activity_log',
-                'label': strings.get('activity_log', 'سجل النشاط'),
+                'label': strings.get('activity_log', 'Activity Log'),
                 'icon': 'bi-clock-history',
                 'permission': 'microsys.view_activity_log',
             },
             {
                 'url_name': 'user_profile',
-                'label': strings.get('profile', 'الملف الشخصي'),
+                'label': strings.get('profile', 'Profile'),
                 'icon': 'bi-person-badge',
             },
             {
                 'url_name': 'options_view',
-                'label': strings.get('options_title', 'خيارات التطبيق'),
+                'label': strings.get('options_title', 'Options'),
                 'icon': 'bi-gear',
             },
         ],
@@ -83,14 +84,27 @@ def get_sidebar_config(lang_code=None):
 
     if config.get('SYSTEM_GROUP_ENABLED', True):
         sys_group = config.get('SYSTEM_GROUP', system_group)
+        # Use a stable ASCII key for the group instead of the translated name
+        sys_key = 'sidebar_system'
         sys_name = sys_group.get('name', 'إدارة النظام')
         sys_icon = sys_group.get('icon', 'bi-sliders')
+        sys_url_name = sys_group.get('url_name')
         sys_items = list(sys_group.get('items', []))
 
-        if sys_name in merged_extra:
-            existing = merged_extra[sys_name]
+        # We first check if the user overrode the group using the translation key (sidebar_system)
+        # We also check the translated name (sys_name) for backwards compatibility
+        existing_key = sys_key if sys_key in merged_extra else (sys_name if sys_name in merged_extra else None)
+
+        if existing_key:
+            existing = merged_extra[existing_key]
             if not existing.get('icon'):
                 existing['icon'] = sys_icon
+            if not existing.get('url_name'):
+                existing['url_name'] = sys_url_name
+            # Ensure label is set
+            if not existing.get('label'):
+                existing['label'] = sys_name
+
             existing_items = list(existing.get('items', []))
             existing_urls = {item.get('url_name') for item in existing_items}
             for item in sys_items:
@@ -98,9 +112,9 @@ def get_sidebar_config(lang_code=None):
                     continue
                 existing_items.append(item)
             existing['items'] = existing_items
-            merged_extra[sys_name] = existing
+            merged_extra[existing_key] = existing
         else:
-            merged_extra[sys_name] = {'icon': sys_icon, 'items': sys_items}
+            merged_extra[sys_key] = {'label': sys_name, 'icon': sys_icon, 'url_name': sys_url_name, 'items': sys_items}
 
     config['EXTRA_ITEMS'] = merged_extra
     return config

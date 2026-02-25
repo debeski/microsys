@@ -3,6 +3,7 @@
 
     const STORAGE_KEY_AUTO = 'sidebar_auto_order';
     const STORAGE_KEY_PREFIX_EXTRA = 'sidebar_extra_';
+    const STORAGE_KEY_GROUPS = 'sidebar_groups_order';
 
     let isReorderMode = false;
     let draggedElement = null;
@@ -54,26 +55,31 @@
     });
 
     function enableDragAndDrop() {
-        // Auto items in .sidebar-auto-items or direct .list-group children
-        const autoContainer = document.getElementById('sidebarAutoItems') || 
-                              document.querySelector('.sidebar .list-group');
+        // 1. Auto items in .sidebar-auto-items
+        const autoContainer = document.getElementById('sidebarAutoItems');
         if (autoContainer) {
-            setupDraggableContainer(autoContainer, STORAGE_KEY_AUTO);
+            setupDraggableContainer(autoContainer, ':scope > .list-group-item', STORAGE_KEY_AUTO, 'urlName');
         }
 
-        // Extra group items in accordion bodies
+        // 2. Extra group items in accordion bodies
         const accordionBodies = document.querySelectorAll('.sidebar .accordion-body');
         accordionBodies.forEach(body => {
             const groupName = body.dataset.groupName || body.closest('.accordion-item')?.querySelector('.accordion-button span')?.textContent?.trim();
             if (groupName) {
                 const key = STORAGE_KEY_PREFIX_EXTRA + slugify(groupName);
-                setupDraggableContainer(body, key);
+                setupDraggableContainer(body, ':scope > .list-group-item', key, 'urlName');
             }
         });
+
+        // 3. Accordion groups themselves
+        const groupsContainer = document.getElementById('sidebarExtraAccordion');
+        if (groupsContainer) {
+            setupDraggableContainer(groupsContainer, ':scope > .accordion-item', STORAGE_KEY_GROUPS, 'groupId');
+        }
     }
 
     function disableDragAndDrop() {
-        const items = document.querySelectorAll('.sidebar .list-group-item[draggable="true"]');
+        const items = document.querySelectorAll('.sidebar [draggable="true"]');
         items.forEach(item => {
             item.removeAttribute('draggable');
             item.removeEventListener('dragstart', handleDragStart);
@@ -91,15 +97,13 @@
         }
     }
 
-    function setupDraggableContainer(container, storageKey) {
-        const items = container.querySelectorAll(':scope > .list-group-item');
+    function setupDraggableContainer(container, selector, storageKey, idAttribute) {
+        const items = container.querySelectorAll(selector);
         
         items.forEach(item => {
-            // Skip accordion buttons - they're not reorderable
-            if (item.classList.contains('accordion-button')) return;
-            
             item.setAttribute('draggable', 'true');
             item.dataset.storageKey = storageKey;
+            item.dataset.idAttribute = idAttribute;
             
             item.addEventListener('dragstart', handleDragStart);
             item.addEventListener('dragend', handleDragEnd);
@@ -134,7 +138,7 @@
         
         // Save new order
         if (draggedElement) {
-            saveOrder(draggedElement.parentNode, draggedElement.dataset.storageKey);
+            saveOrder(draggedElement.parentNode, draggedElement.dataset.storageKey, draggedElement.dataset.idAttribute);
         }
         
         draggedElement = null;
@@ -187,11 +191,11 @@
         // Item drops are handled by individual items
     }
 
-    function saveOrder(container, storageKey) {
-        if (!container || !storageKey) return;
+    function saveOrder(container, storageKey, idAttribute) {
+        if (!container || !storageKey || !idAttribute) return;
         
-        const items = container.querySelectorAll(':scope > .list-group-item[data-url-name]');
-        const order = Array.from(items).map(item => item.dataset.urlName);
+        const items = container.querySelectorAll(`:scope > [data-${slugifyAttr(idAttribute)}]`);
+        const order = Array.from(items).map(item => item.dataset[idAttribute]);
         
         try {
             localStorage.setItem(storageKey, JSON.stringify(order));
@@ -217,28 +221,33 @@
     }
 
     function restoreOrder() {
-        // Restore auto items order
-        const autoContainer = document.getElementById('sidebarAutoItems') || 
-                              document.querySelector('.sidebar .list-group');
+        // 1. Restore auto items order
+        const autoContainer = document.getElementById('sidebarAutoItems');
         if (autoContainer) {
-            restoreContainerOrder(autoContainer, STORAGE_KEY_AUTO);
+            restoreContainerOrder(autoContainer, STORAGE_KEY_AUTO, 'urlName');
         }
 
-        // Restore extra group items order
+        // 2. Restore extra group items order
         const accordionBodies = document.querySelectorAll('.sidebar .accordion-body');
         accordionBodies.forEach(body => {
             const groupName = body.dataset.groupName || body.closest('.accordion-item')?.querySelector('.accordion-button span')?.textContent?.trim();
             if (groupName) {
                 const key = STORAGE_KEY_PREFIX_EXTRA + slugify(groupName);
-                restoreContainerOrder(body, key);
+                restoreContainerOrder(body, key, 'urlName');
             }
         });
+
+        // 3. Restore parent groups order
+        const groupsContainer = document.getElementById('sidebarExtraAccordion');
+        if (groupsContainer) {
+            restoreContainerOrder(groupsContainer, STORAGE_KEY_GROUPS, 'groupId');
+        }
         
         // Mark as restored
         window._sidebarOrderRestored = true;
     }
 
-    function restoreContainerOrder(container, storageKey) {
+    function restoreContainerOrder(container, storageKey, idAttribute) {
         let savedOrder;
         try {
             // Try USER_PREFS first
@@ -255,18 +264,18 @@
         
         if (!Array.isArray(savedOrder) || savedOrder.length === 0) return;
         
-        const items = container.querySelectorAll(':scope > .list-group-item[data-url-name]');
+        const items = container.querySelectorAll(`:scope > [data-${slugifyAttr(idAttribute)}]`);
         const itemMap = new Map();
         items.forEach(item => {
-            itemMap.set(item.dataset.urlName, item);
+            itemMap.set(item.dataset[idAttribute], item);
         });
         
         // Reorder based on saved order
-        savedOrder.forEach(urlName => {
-            const item = itemMap.get(urlName);
+        savedOrder.forEach(idValue => {
+            const item = itemMap.get(idValue);
             if (item) {
                 container.appendChild(item);
-                itemMap.delete(urlName);
+                itemMap.delete(idValue);
             }
         });
         
@@ -284,5 +293,9 @@
             .replace(/\s+/g, '-')
             .replace(/[^\w\-]+/g, '')
             .replace(/\-\-+/g, '-');
+    }
+
+    function slugifyAttr(text) {
+        return text.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     }
 })();

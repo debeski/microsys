@@ -8,54 +8,22 @@ from django.conf import settings
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.contrib.auth import get_user_model
 from .middleware import get_current_user, get_current_request
+from .utils import log_user_action, get_client_ip
 
 # Models to exclude from activity logging (e.g., internal Django models with non-integer PKs)
 EXCLUDED_MODELS = [
     'django.contrib.sessions.models.Session',
 ]
 
-def get_model_path(sender):
-    """Get full model path for comparison."""
-    return f"{sender.__module__}.{sender.__name__}"
-
-def get_client_ip(request):
-    """Extract client IP address from request."""
-    if not request:
-        return None
-    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(",")[0]
-    else:
-        ip = request.META.get("REMOTE_ADDR")
-    return ip
-
 @receiver(user_logged_in)
 def log_login(sender, request, user, **kwargs):
     """Log user login actions."""
-    UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
-    UserActivityLog.objects.create(
-        user=user,
-        action="LOGIN",
-        model_name="auth",
-        object_id=None,
-        ip_address=get_client_ip(request),
-        user_agent=request.META.get("HTTP_USER_AGENT", ""),
-        timestamp=now(),
-    )
+    log_user_action(request, "LOGIN", model_name="auth")
 
 @receiver(user_logged_out)
 def log_logout(sender, request, user, **kwargs):
     """Log user logout actions."""
-    UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
-    UserActivityLog.objects.create(
-        user=user,
-        action="LOGOUT",
-        model_name="auth",
-        object_id=None,
-        ip_address=get_client_ip(request),
-        user_agent=request.META.get("HTTP_USER_AGENT", ""),
-        timestamp=now(),
-    )
+    log_user_action(request, "LOGOUT", model_name="auth")
 
 @receiver(pre_save)
 def capture_original_state(sender, instance, **kwargs):
@@ -91,7 +59,7 @@ def log_save(sender, instance, created, **kwargs):
         return
     
     # Skip excluded models (like Session)
-    if get_model_path(sender) in EXCLUDED_MODELS:
+    if f"{sender.__module__}.{sender.__name__}" in EXCLUDED_MODELS:
         return
 
     # Skip if instance explicitly requests no logging
@@ -128,7 +96,7 @@ def log_save(sender, instance, created, **kwargs):
             field_name = field.name
             
             # Skip irrelevant fields
-            if field_name in ['last_login', 'date_joined', 'updated_at', 'modified_at']:
+            if field_name in ['last_login', 'date_joined', 'updated_at', 'modified_at', 'created_at', 'created_by', 'updated_by', 'deleted_at', 'deleted_by']:
                 continue
                 
             try:
@@ -178,7 +146,7 @@ def log_save(sender, instance, created, **kwargs):
     # Capture initial state for creations (User/Profile)
     if is_user_entry and created:
         for field in instance._meta.fields:
-            if field.name in ['password', 'last_login', 'date_joined', 'updated_at', 'modified_at', 'deleted_at', 'preferences']:
+            if field.name in ['password', 'last_login', 'date_joined', 'updated_at', 'modified_at', 'deleted_at', 'deleted_by', 'created_at', 'created_by', 'updated_by', 'preferences']:
                 continue
             val = getattr(instance, field.name)
             if val is not None and val != '':
@@ -188,11 +156,11 @@ def log_save(sender, instance, created, **kwargs):
     if is_user_entry:
         # Search for a log created by the same actor for the same target in the last 1 second
         recent_log = UserActivityLog.objects.filter(
-            user=user,
+            created_by=user,
             model_name="User Profile",
             object_id=obj_id,
-            timestamp__gte=now().replace(microsecond=0) # Round to the current second
-        ).order_by('-timestamp').first()
+            created_at__gte=now().replace(microsecond=0) # Round to the current second
+        ).order_by('-created_at').first()
         
         if recent_log:
             # Merge details
@@ -248,7 +216,7 @@ def log_delete(sender, instance, **kwargs):
         return
     
     # Skip excluded models (like Session)
-    if get_model_path(sender) in EXCLUDED_MODELS:
+    if f"{sender.__module__}.{sender.__name__}" in EXCLUDED_MODELS:
         return
 
     user = get_current_user()
@@ -279,11 +247,11 @@ def log_delete(sender, instance, **kwargs):
     # Aggressive Grouping for Delete as well
     if is_user_entry:
         recent_log = UserActivityLog.objects.filter(
-            user=user,
+            created_by=user,
             model_name="User Profile",
             action="DELETE",
             object_id=obj_id,
-            timestamp__gte=now().replace(microsecond=0)
+            created_at__gte=now().replace(microsecond=0)
         ).first()
         if recent_log:
             return # Already logged deletion of this pair

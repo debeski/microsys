@@ -8,6 +8,7 @@ from io import BytesIO
 import mimetypes
 import openpyxl
 import zipfile
+from .utils import log_user_action
 
 # Universal Downloader
 #####################################################################
@@ -337,26 +338,7 @@ def fetch_excel(request, queryset, exclude_fields=None, hidden_fields=None, shee
     # Log Action
     try:
         if request.user.is_authenticated:
-            from django.utils.timezone import now
-            from django.apps import apps
-            UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
-            
-            # Extract IP
-            x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-            if x_forwarded_for:
-                ip = x_forwarded_for.split(",")[0]
-            else:
-                ip = request.META.get("REMOTE_ADDR")
-
-            UserActivityLog.objects.create(
-                user=request.user,
-                action="EXPORT",
-                model_name=model._meta.verbose_name,
-                details={'filename': filename, 'count': obj_count},
-                ip_address=ip,
-                user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                timestamp=now()
-            )
+            log_user_action(request, "EXPORT", model_name=model._meta.verbose_name, details={'filename': filename, 'count': obj_count})
     except Exception as e:
         # Don't fail download if logging fails
         print(f"Logging failed: {e}")
@@ -373,26 +355,6 @@ def _log_download_action(request, filename, model_name="Document", count=1):
     try:
         if not request.user.is_authenticated:
             return
-
-        from django.utils.timezone import now
-        from django.apps import apps
-        UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
-        
-        # Extract IP
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0]
-        else:
-            ip = request.META.get("REMOTE_ADDR")
-
-        UserActivityLog.objects.create(
-            user=request.user,
-            action="DOWNLOAD",
-            model_name=model_name,
-            details={'filename': filename, 'count': count},
-            ip_address=ip,
-            user_agent=request.META.get("HTTP_USER_AGENT", ""),
-            timestamp=now()
-        )
+        log_user_action(request, "DOWNLOAD", model_name=model_name, details={'filename': filename, 'count': count})
     except Exception as e:
         print(f"Logging failed: {e}")

@@ -1,29 +1,36 @@
 .sidebar {
     z-index: 900;
     transition: width 0.2s ease-in-out;
-    background: linear-gradient(180deg, #ffffff 10%, #f1f7fd 100%);
+    background: linear-gradient(180deg, #f1f7fd 0%, #e1effd 100%);
     position: sticky;
     top: var(--header-height, 60px);
     align-self: flex-start; /* Force to top of flex container */
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden; /* Changed from auto */
+    display: flex; /* Added for layout */
+    flex-direction: column; /* Added for layout */
     height: calc(100vh - var(--header-height, 60px));
     border-inline-start: 1px solid #f1f3f5;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0,0,0,0.1) transparent;
     
     /* Variables for stable positioning */
     --sidebar-item-px: 12.5px;
     --sidebar-icon-width: 40px;
 }
 
-.sidebar::-webkit-scrollbar {
+.sidebar-items-wrapper {
+    flex-grow: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+
+.sidebar-items-wrapper::-webkit-scrollbar {
     width: 6px;
 }
-.sidebar::-webkit-scrollbar-track {
+.sidebar-items-wrapper::-webkit-scrollbar-track {
     background: transparent;
 }
-.sidebar::-webkit-scrollbar-thumb {
+.sidebar-items-wrapper::-webkit-scrollbar-thumb {
     background-color: rgba(0,0,0,0.2);
     border-radius: 20px;
 }
@@ -93,6 +100,11 @@
     }
 }
 /* Sidebar Styling Redesign */
+.sidebar .list-group,
+.sidebar .list-group-item {
+    background-color: transparent !important;
+}
+
 .sidebar .list-group-item {
     border: 1px solid transparent !important; /* Reserve space to prevent jumps */
     font-size: 0.95rem !important;
@@ -203,8 +215,8 @@
 }
 
 .sidebar-toggle:hover {
-    background-color: #f8f9fa;
-    color: #0d6efd;
+    background-color: transparent !important;
+    color: var(--primal) !important;
 }
 
 .sidebar-toggle:active {

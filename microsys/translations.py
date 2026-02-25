@@ -25,6 +25,19 @@ MICROSYS_STRINGS = {
 
         # Dashboard
         'dashboard_welcome': 'مرحباً بك في النظام المتكامل لإدارة الموارد العامة.',
+        'greeting_morning': 'صباح الخير',
+        'greeting_afternoon': 'مساء الخير',
+        'greeting_evening': 'طابت ليلتك',
+        'app_storage': 'إدارة المخازن',
+        'app_storage_desc': 'إدارة الأصول، المخازن، وحركة الأصناف.',
+        'app_finance': 'إدارة المالية',
+        'app_finance_desc': 'إدارة الميزانية، الأبواب، والمناقلات المالية.',
+        'app_treasury': 'الخزينة',
+        'app_treasury_desc': 'إدارة الإيرادات، المصروفات، والعهد المالية.',
+        'app_salary': 'المرتبات',
+        'app_salary_desc': 'إدارة بطاقات المرتبات، الإستقطاعات، وكشوف المرتبات.',
+        'sidebar_system_desc': 'إدارة المستخدمين، الصلاحيات، وإعدادات المنظومة.',
+        'contact_admin': 'الرجاء التواصل مع مدير النظام للحصول على صلاحيات الوصول.',
         'work_scope': 'نطاق العمل',
         'manage_users': 'إدارة المستخدمين',
         'manage_users_desc': 'إدارة حسابات المستخدمين والصلاحيات.',
@@ -34,6 +47,7 @@ MICROSYS_STRINGS = {
         'activity_log_desc': 'متابعة نشاطات المستخدمين والتغييرات.',
         'settings': 'الإعدادات',
         'settings_desc': 'خيارات النظام ومعلومات النسخة.',
+        'profile_desc': 'عرض وتعديل بيانات ملفك الشخصي.',
         'go': 'الذهاب',
         'activity_24h': 'النشاط (آخر 24 ساعة)',
 
@@ -144,6 +158,7 @@ MICROSYS_STRINGS = {
         'no_models': 'لا توجد موديلات متاحة.',
         'model_load_error': 'هناك خطأ في تحميل المودل.',
         'view_label': 'عرض',
+        'delete_error_related': 'لا يمكن الحذف لارتباطه بسجلات أخرى.',
 
         # Activity log page
         # Activity log page
@@ -436,6 +451,19 @@ MICROSYS_STRINGS = {
 
         # Dashboard
         'dashboard_welcome': 'Welcome to the integrated resource management system.',
+        'greeting_morning': 'Good Morning',
+        'greeting_afternoon': 'Good Afternoon',
+        'greeting_evening': 'Good Evening',
+        'app_storage': 'Storage Management',
+        'app_storage_desc': 'Manage assets, warehouses, and item movements.',
+        'app_finance': 'Finance Management',
+        'app_finance_desc': 'Manage budget, chapters, and financial transfers.',
+        'app_treasury': 'Treasury',
+        'app_treasury_desc': 'Manage revenues, expenses, and financial trusts.',
+        'app_salary': 'Salary Management',
+        'app_salary_desc': 'Manage salary cards, deductions, and payroll sheets.',
+        'sidebar_system_desc': 'Manage users, permissions, and system settings.',
+        'contact_admin': 'Please contact the system administrator to grant you access.',
         'work_scope': 'Work Scope',
         'manage_users': 'User Management',
         'manage_users_desc': 'Manage user accounts and permissions.',
@@ -445,6 +473,7 @@ MICROSYS_STRINGS = {
         'activity_log_desc': 'Track user activities and changes.',
         'settings': 'Settings',
         'settings_desc': 'System options and version info.',
+        'profile_desc': 'View and edit your profile details.',
         'go': 'Go',
         'activity_24h': 'Activity (Last 24 Hours)',
 
@@ -555,6 +584,7 @@ MICROSYS_STRINGS = {
         'no_models': 'No models available.',
         'model_load_error': 'Error loading model.',
         'view_label': 'View',
+        'delete_error_related': 'Cannot delete record because it is linked to other items.',
 
         # Activity log page
         'log_title': 'Activity Log',

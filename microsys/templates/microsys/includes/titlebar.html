@@ -5,14 +5,14 @@
         {% if request.user.is_authenticated %}
             <button id="sidebarToggle" class="sidebar-toggle ms-2 rounded flex-shrink-0">☰</button>
         {% endif %}
-        <a class="align-items-center d-flex text-decoration-none text-inherit w-100" href="{% if user.is_authenticated %}{{ APP_CONFIG.home_url }}{% else %}/{% endif %}" style="min-width: 0;">
+        <div class="align-items-center d-flex text-decoration-none text-inherit w-100 ps-2" style="min-width: 0;">
             <img src="{{ APP_CONFIG.logo_url|default:'/static/img/base_logo.webp' }}" alt="Logo" class="flex-shrink-0">
             <!-- Responsive Title with Smart Truncation -->
-            <p class="ms-2 mb-0 align-items-center d-flex text-truncate" style="flex-shrink: 1; min-width: 0;">
+            <p class="ms-1 mb-0 align-items-center d-flex text-truncate" style="flex-shrink: 1; min-width: 0;">
                 <span class="text-truncate">{{ APP_CONFIG.name|default:"microSYS" }}{% if user.scope %} - {{ user.scope.name }}{% endif %}</span>
                 &nbsp;&nbsp;{% block header %}{% endblock %}
             </p>
-        </a>
+        </div>
     </div>
         <!-- The Login Button -->
     <div class="pe-2 d-flex align-items-center">
@@ -20,6 +20,13 @@
         <!-- Tutorial Trigger -->
             {% if user.is_authenticated %}
         <div class="m-0 signout-wrapper">
+            <a href="{{ APP_CONFIG.home_url }}" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.btn_home }}">
+                <i class="bi bi-house-fill signout-icon"></i>
+                <span class="signout-name">{{ MS_TRANS.btn_home }}</span>
+            </a>
+        </div>
+
+        <div class="m-0 signout-wrapper ms-2">
             <button id="start-tour" type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.tour_title }}" aria-label="{{ MS_TRANS.help }}">
                 <i class="bi bi-question-circle-fill signout-icon"></i>
                 <span class="signout-name">{{ MS_TRANS.help }}</span>
@@ -30,7 +37,7 @@
 
     {% if user.is_authenticated %}
         <!-- Logout Button (expands to show user name on hover) -->
-        <form method="POST" action="{% url 'logout' %}" class="m-0 signout-wrapper">
+        <form method="POST" action="{% url 'logout' %}" class="m-0 signout-wrapper ms-2">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.logout }}" aria-label="{{ MS_TRANS.logout }} {{ user.username }}" style="--signout-name-ch: {{ user.username|length }};">
                 <i class="bi bi-box-arrow-left signout-icon"></i>

@@ -1,0 +1,6 @@
+{% load crispy_forms_tags %}
+
+<form method="post" action="{{ request.path }}{% if request.GET.model %}?model={{ request.GET.model }}{% endif %}{% if request.GET.id %}&id={{ request.GET.id }}{% endif %}">
+    {% csrf_token %}
+    {% crispy form %}
+</form>

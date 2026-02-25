@@ -27,8 +27,9 @@
             }
         })();
     </script>
-    <div class="list-group flex-shrink-0">
-        {% block items %}
+    <div class="sidebar-items-wrapper">
+        <div class="list-group flex-shrink-0">
+            {% block items %}
         
         <!-- DEFAULT CONTENT / INSTRUCTIONS -->
         <!-- <div class="p-3 text-center text-muted">
@@ -53,12 +54,13 @@
             (function() {
                 var STORAGE_KEY_AUTO = 'sidebar_auto_order';
                 var STORAGE_KEY_PREFIX_EXTRA = 'sidebar_extra_';
+                var STORAGE_KEY_GROUPS = 'sidebar_groups_order';
                 
                 // Try to get USER_PREFS from script tag above if available
                 var prefs = window.USER_PREFS || {};
                 var savedOrder = prefs.sidebar_order || {};
 
-                function restoreContainer(container, storageKey) {
+                function restoreContainer(container, storageKey, identifierAttr) {
                     var saved;
                     // Try DB pref first
                     if (savedOrder[storageKey]) {
@@ -73,10 +75,11 @@
                     
                     if (!Array.isArray(saved) || saved.length === 0) return;
                     
-                    var items = container.querySelectorAll(':scope > .list-group-item[data-url-name]');
+                    var items = container.querySelectorAll(':scope > [data-' + identifierAttr + ']');
                     var itemMap = {};
                     for (var i = 0; i < items.length; i++) {
-                        itemMap[items[i].dataset.urlName] = items[i];
+                        var id = items[i].getAttribute('data-' + identifierAttr);
+                        itemMap[id] = items[i];
                     }
                     for (var j = 0; j < saved.length; j++) {
                         var item = itemMap[saved[j]];
@@ -95,32 +98,39 @@
                         .replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-');
                 }
                 
-                // Restore auto items
+                // 1. Restore auto items
                 var autoContainer = document.getElementById('sidebarAutoItems');
                 if (autoContainer) {
-                    restoreContainer(autoContainer, STORAGE_KEY_AUTO);
+                    restoreContainer(autoContainer, STORAGE_KEY_AUTO, 'url-name');
                 }
                 
-                // Restore extra groups
+                // 2. Restore extra group items within their bodies
                 var accordionBodies = document.querySelectorAll('.sidebar .accordion-body');
                 for (var k = 0; k < accordionBodies.length; k++) {
                     var body = accordionBodies[k];
                     var groupName = body.dataset.groupName;
                     if (!groupName) {
-                        var btn = body.closest('.accordion-item');
-                        if (btn) {
-                            var span = btn.querySelector('.accordion-button span');
+                        var item = body.closest('.accordion-item');
+                        if (item) {
+                            var span = item.querySelector('.accordion-button span');
                             if (span) groupName = span.textContent.trim();
                         }
                     }
                     if (groupName) {
-                        restoreContainer(body, STORAGE_KEY_PREFIX_EXTRA + slugify(groupName));
+                        restoreContainer(body, STORAGE_KEY_PREFIX_EXTRA + slugify(groupName), 'url-name');
                     }
+                }
+
+                // 3. Restore parent groups themselves
+                var groupsContainer = document.getElementById('sidebarExtraAccordion');
+                if (groupsContainer) {
+                    restoreContainer(groupsContainer, STORAGE_KEY_GROUPS, 'group-id');
                 }
                 
                 window._sidebarOrderRestored = true;
             })();
         </script>
+    </div>
 
     <!-- Sidebar Toolbar (Theme Picker, Reorder, etc.) -->
     <div class="sidebar-toolbar no-print">

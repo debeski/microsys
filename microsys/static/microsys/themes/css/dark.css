@@ -41,16 +41,34 @@
 
 /* --- Comprehensive Dark Theme Overrides --- */
 
-/* 1. Global, Cards & Modals */
-:root.theme-dark .card,
-:root.theme-dark .card-body,
-:root.theme-dark .dashboard-card, 
-:root.theme-dark .option-section,
-:root.theme-dark .list-group-item,
-:root.theme-dark .modal-content {
+/* 1. Global, Cards & Modals - Background & Text */
+:root.theme-dark .card:not([class*="text-bg-"]):not([class*="bg-"]),
+:root.theme-dark .card-body:not([class*="text-bg-"]):not([class*="bg-"]),
+:root.theme-dark .dashboard-card:not([class*="text-bg-"]):not([class*="bg-"]), 
+:root.theme-dark .option-section:not([class*="text-bg-"]):not([class*="bg-"]),
+:root.theme-dark .list-group-item:not([class*="text-bg-"]):not([class*="bg-"]):not(.active),
+:root.theme-dark .modal-content,
+:root.theme-dark .chart-container-sys {
     background-color: #1e1e1e !important;
     color: #e9ecef !important;
+}
+
+/* 1b. Selective Border Coloring - ONLY override if NO utility border is present */
+:root.theme-dark .card:not([class*="border-"]),
+:root.theme-dark .card-body:not([class*="border-"]),
+:root.theme-dark .dashboard-card:not([class*="border-"]),
+:root.theme-dark .option-section:not([class*="border-"]),
+:root.theme-dark .list-group-item:not([class*="border-"]),
+:root.theme-dark .modal-content:not([class*="border-"]),
+:root.theme-dark .chart-container-sys:not([class*="border-"]) {
     border-color: #343a40 !important;
+}
+
+/* Specific Activity Chart Fix: Needs to be transparent to blend */
+:root.theme-dark .chart-container-sys {
+    background-color: transparent !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
 }
 
 /* Ensure transparency utilities are respected [FIX-2026-02-19] */
@@ -63,8 +81,9 @@
     border-left: 1px solid #343a40 !important;
 }
 
-:root.theme-dark .text-muted {
-    color: #adb5bd !important;
+:root.theme-dark .text-muted,
+:root.theme-dark .text-secondary {
+    color: #dee2e6 !important; /* High contrast light slate */
 }
 
 :root.theme-dark .bg-light {
@@ -131,11 +150,36 @@
     color: #e9ecef !important;
 }
 
-:root.theme-dark ::placeholder {
-    color: #868e96 !important;
-    opacity: 1;
+/* 3d. Placeholder Polish - SEPARATED BLOCKS ARE CRITICAL */
+.theme-dark input::placeholder, 
+.theme-dark textarea::placeholder,
+.theme-dark .form-control::placeholder { 
+    color: #f8f9fa !important; 
+    opacity: 1 !important; 
 }
 
+/* Webkit (Chrome/Safari/Edge) */
+.theme-dark input::-webkit-input-placeholder,
+.theme-dark textarea::-webkit-input-placeholder,
+.theme-dark .form-control::-webkit-input-placeholder {
+    color: #f8f9fa !important;
+    opacity: 1 !important;
+}
+
+/* Firefox */
+.theme-dark input::-moz-placeholder,
+.theme-dark textarea::-moz-placeholder,
+.theme-dark .form-control::-moz-placeholder {
+    color: #f8f9fa !important;
+    opacity: 1 !important;
+}
+
+/* IE/Edge Legacy */
+.theme-dark input:-ms-input-placeholder,
+.theme-dark textarea:-ms-input-placeholder {
+    color: #f8f9fa !important;
+    opacity: 1 !important;
+}
 /* 4. Tables */
 :root.theme-dark .table {
     color: #e9ecef !important;
@@ -184,11 +228,35 @@
     color: #fff !important;
 }
 
+/* 5b. Explicit Button Polish */
+:root.theme-dark .btn-primary, 
+:root.theme-dark .btn-primary *,
+:root.theme-dark .btn-primary:hover,
+:root.theme-dark .btn-primary:active,
+.theme-dark .btn-primary,
+.theme-dark .btn-primary * {
+    color: #ffffff !important; /* Force absolute white */
+}
+
 /* 6. Sidebar Active State & Scrollbar */
-:root.theme-dark .list-group-item.active {
-    background-color: var(--primal) !important;
-    border-color: var(--primal) !important;
-    color: #fff !important; 
+.theme-dark .sidebar .list-group-item:not(.active),
+.theme-dark .sidebar .accordion-button.collapsed,
+.theme-dark .sidebar .accordion-button {
+    color: #f8f9fa !important; /* Force all sidebar labels to be bright */
+}
+
+/* Fix Accordion Arrows visibility */
+:root.theme-dark .accordion-button::after,
+.theme-dark .accordion-button::after {
+    filter: invert(1) grayscale(1) brightness(1.5) !important;
+}
+
+:root.theme-dark .sidebar .list-group-item.active,
+:root.theme-dark .sidebar .accordion-button:not(.collapsed),
+.theme-dark .sidebar .list-group-item.active,
+.theme-dark .sidebar .accordion-button:not(.collapsed) {
+    color: #60a5fa !important; /* Bright blue for active/expanded */
+    font-weight: 700 !important;
 }
 
 :root.theme-dark ::-webkit-scrollbar-track {
@@ -228,13 +296,38 @@
 :root.theme-dark h6,
 :root.theme-dark .header-title,
 :root.theme-dark .stat-value,
-:root.theme-dark .form-text {
-    color: #e9ecef !important;
+:root.theme-dark .form-text,
+:root.theme-dark .accordion-button,
+:root.theme-dark label,
+:root.theme-dark .form-label,
+:root.theme-dark .titlebar p,
+:root.theme-dark .card-title-sys,
+.theme-dark h1, 
+.theme-dark h2, 
+.theme-dark h3, 
+.theme-dark h4, 
+.theme-dark h5, 
+.theme-dark h6,
+.theme-dark .header-title,
+.theme-dark .stat-value,
+.theme-dark .form-text,
+.theme-dark .accordion-button,
+.theme-dark label,
+.theme-dark .form-label,
+.theme-dark .titlebar p,
+.theme-dark .card-title-sys {
+    color: #ffffff !important;
+}
+
+:root.theme-dark .card-text-sys {
+    color: #ced4da !important;
 }
 
 /* 9. Sidebar & Button Specifics Clean-up */
 :root.theme-dark .sidebar .list-group-item,
-:root.theme-dark .sidebar .accordion-button {
+:root.theme-dark .sidebar .accordion-button,
+:root.theme-dark .sidebar .btn {
+    border: none !important;
     border-color: transparent !important;
 }
 
@@ -245,6 +338,11 @@
 
 /* Ensure Soft Buttons (Secondary, Success, Info, Warning, Danger) Retain their identity in Dark Mode */
 /* Force Black Text & Icons for these soft colored buttons */
+:root.theme-dark .btn,
+.theme-dark .btn {
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
 :root.theme-dark .btn-secondary,
 :root.theme-dark .btn-success,
 :root.theme-dark .btn-info,
@@ -252,6 +350,25 @@
 :root.theme-dark .btn-danger,
 :root.theme-dark .btn-light {
     color: #1e1e1e !important; /* Force dark slate text */
+}
+
+/* Hard Dark Buttons: Needs brightness in dark mode */
+:root.theme-dark .btn-dark {
+    background-color: #343a40 !important;
+    border-color: #495057 !important;
+    color: #f8f9fa !important;
+}
+:root.theme-dark .btn-dark:hover {
+    background-color: #495057 !important;
+}
+
+:root.theme-dark .btn-outline-dark {
+    border-color: #6c757d !important;
+    color: #f8f9fa !important;
+}
+:root.theme-dark .btn-outline-dark:hover {
+    background-color: #6c757d !important;
+    color: #fff !important;
 }
 
 :root.theme-dark .btn-secondary .bi,

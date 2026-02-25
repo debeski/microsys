@@ -5,22 +5,14 @@ from .middleware import get_current_user
 class ScopedManager(models.Manager):
     """
     A manager that automatically filters queries by the current user's scope.
-    Also handles soft-deletion if 'deleted_at' field is present.
+    Automatically excludes soft-deleted records (deleted_at is built into ScopedModel).
     """
     
     def get_queryset(self):
         qs = super().get_queryset()
         
-        # 1. Soft Delete Check
-        # If the model has a 'deleted_at' field, exclude deleted records
-        if hasattr(self.model, 'deleted_at'):
-             # We need to check if 'deleted_at' is actually a field in the model
-             # to avoid errors if it's just a property or method
-             try:
-                 self.model._meta.get_field('deleted_at')
-                 qs = qs.filter(deleted_at__isnull=True)
-             except Exception:
-                 pass
+        # 1. Soft Delete Check — deleted_at is built into every ScopedModel
+        qs = qs.filter(deleted_at__isnull=True)
 
         # 2. Scope Filtering
         # Check if Scope system is globally enabled

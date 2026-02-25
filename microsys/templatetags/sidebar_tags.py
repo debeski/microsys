@@ -24,6 +24,8 @@ def auto_sidebar(context):
     """
     request = context.get('request')
     items = list(context.get('sidebar_auto_items', []))
+    extra_groups = context.get('sidebar_extra_groups', {})
+    has_extra = bool(extra_groups)
     
     # Add resolved URLs and active state
     for item in items:
@@ -35,7 +37,7 @@ def auto_sidebar(context):
             item['url'] = '#'
             item['active'] = False
     
-    return {'items': items, 'request': request}
+    return {'items': items, 'request': request, 'has_extra': has_extra}
 
 
 @register.simple_tag(takes_context=True)

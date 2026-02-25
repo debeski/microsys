@@ -25,57 +25,74 @@
     </div>
 
     <div class="row g-4 justify-content-center">
-        <!-- Dashboard Widgets or Quick Links -->
-        <div class="col-md-4 col-lg-3">
-            <div class="dashboard-card position-relative">
-                <div class="card-body text-center p-4">
-                    <div class="feature-icon bg-primary bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
-                        <i class="bi bi-people"></i>
-                    </div>
-                    <h5 class="card-title">{{ MS_TRANS.manage_users }}</h5>
-                    <p class="card-text text-muted small">{{ MS_TRANS.manage_users_desc }}</p>
-                    <a href="{% url 'manage_users' %}" class="btn btn-outline-primary rounded-pill px-4">{{ MS_TRANS.go }}</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 col-lg-3">
-            <div class="dashboard-card position-relative">
-                <div class="card-body text-center p-4">
-                    <div class="feature-icon bg-success bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+        <!-- 1. SECTIONS -->
+        <div class="col-md-6 col-lg-4 col-xl-2">
+            <div class="dashboard-card">
+                <div class="card-body-sys">
+                    <div class="feature-icon-sys sys-success">
                         <i class="bi bi-diagram-3"></i>
                     </div>
-                    <h5 class="card-title">{{ MS_TRANS.manage_sections }}</h5>
-                    <p class="card-text text-muted small">{{ MS_TRANS.manage_sections_desc }}</p>
-                    <a href="{% url 'manage_sections' %}" class="btn btn-outline-success rounded-pill px-4">{{ MS_TRANS.go }}</a>
+                    <h5 class="card-title-sys">{{ MS_TRANS.manage_sections }}</h5>
+                    <p class="card-text-sys">{{ MS_TRANS.manage_sections_desc }}</p>
+                    <a href="{% url 'manage_sections' %}" class="btn btn-sys-outline btn-sys-success">{{ MS_TRANS.go }}</a>
                 </div>
             </div>
         </div>
 
+        <!-- 2. USERS -->
+        <div class="col-md-6 col-lg-4 col-xl-2">
+            <div class="dashboard-card">
+                <div class="card-body-sys">
+                    <div class="feature-icon-sys sys-primary">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h5 class="card-title-sys">{{ MS_TRANS.manage_users }}</h5>
+                    <p class="card-text-sys">{{ MS_TRANS.manage_users_desc }}</p>
+                    <a href="{% url 'manage_users' %}" class="btn btn-sys-outline btn-sys-primary">{{ MS_TRANS.go }}</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. LOG -->
         {% if user.is_staff %}
-        <div class="col-md-4 col-lg-3">
-            <div class="dashboard-card position-relative">
-                <div class="card-body text-center p-4">
-                    <div class="feature-icon bg-info bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+        <div class="col-md-6 col-lg-4 col-xl-2">
+            <div class="dashboard-card">
+                <div class="card-body-sys">
+                    <div class="feature-icon-sys sys-info">
                         <i class="bi bi-clock-history"></i>
                     </div>
-                    <h5 class="card-title">{{ MS_TRANS.activity_log }}</h5>
-                    <p class="card-text text-muted small">{{ MS_TRANS.activity_log_desc }}</p>
-                    <a href="{% url 'user_activity_log' %}" class="btn btn-outline-info rounded-pill px-4">{{ MS_TRANS.go }}</a>
+                    <h5 class="card-title-sys">{{ MS_TRANS.activity_log }}</h5>
+                    <p class="card-text-sys">{{ MS_TRANS.activity_log_desc }}</p>
+                    <a href="{% url 'user_activity_log' %}" class="btn btn-sys-outline btn-sys-info">{{ MS_TRANS.go }}</a>
                 </div>
             </div>
         </div>
         {% endif %}
+
+        <!-- 4. PROFILE -->
+        <div class="col-md-6 col-lg-4 col-xl-2">
+            <div class="dashboard-card">
+                <div class="card-body-sys">
+                    <div class="feature-icon-sys sys-purple">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <h5 class="card-title-sys">{{ MS_TRANS.profile }}</h5>
+                    <p class="card-text-sys">{{ MS_TRANS.profile_desc }}</p>
+                    <a href="{% url 'edit_profile' %}" class="btn btn-sys-outline btn-sys-purple">{{ MS_TRANS.go }}</a>
+                </div>
+            </div>
+        </div>
         
-        <div class="col-md-4 col-lg-3">
-            <div class="dashboard-card position-relative">
-                <div class="card-body text-center p-4">
-                    <div class="feature-icon bg-secondary bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+        <!-- 5. SETTINGS -->
+        <div class="col-md-6 col-lg-4 col-xl-2">
+            <div class="dashboard-card">
+                <div class="card-body-sys">
+                    <div class="feature-icon-sys sys-warning">
                         <i class="bi bi-gear"></i>
                     </div>
-                    <h5 class="card-title">{{ MS_TRANS.settings }}</h5>
-                    <p class="card-text text-muted small">{{ MS_TRANS.settings_desc }}</p>
-                    <a href="{% url 'options_view' %}" class="btn btn-outline-secondary rounded-pill px-4">{{ MS_TRANS.go }}</a>
+                    <h5 class="card-title-sys">{{ MS_TRANS.settings }}</h5>
+                    <p class="card-text-sys">{{ MS_TRANS.settings_desc }}</p>
+                    <a href="{% url 'options_view' %}" class="btn btn-sys-outline btn-sys-warning">{{ MS_TRANS.go }}</a>
                 </div>
             </div>
         </div>
@@ -84,7 +101,9 @@
     <!-- Activity Chart Section -->
     <div class="row justify-content-center mt-5">
         <div class="col-12 px-0">
-            <div id="activityChart24h" style="width:100%; height:300px;"></div>
+            <div class="chart-container-sys">
+                <div id="activityChart24h" style="width:100%; height:300px;"></div>
+            </div>
         </div>
     </div>
 </div>

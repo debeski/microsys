@@ -1,5 +1,6 @@
 from django.apps import apps
 from django.utils.module_loading import import_string
+from django import forms
 from django.forms import modelform_factory
 import django_tables2 as tables
 from django.http import JsonResponse
@@ -17,6 +18,53 @@ import inspect
 from .translations import get_strings
 from django.conf import settings
 
+
+# Auth Check — Staff permission test for @user_passes_test decorator
+def is_staff(user):
+    return user.is_staff
+
+# Auth Check — Superuser permission test for @user_passes_test decorator
+def is_superuser(user):
+    return user.is_superuser
+
+# Network Helper — Extract client IP from request (supports X-Forwarded-For)
+def get_client_ip(request):
+    """Extract client IP address from request."""
+    if not request:
+        return None
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(",")[0]
+    else:
+        ip = request.META.get("REMOTE_ADDR")
+    return ip
+
+# Activity Logging — Universal logging utility for user actions
+def log_user_action(request, action, instance=None, model_name=None, details=None, number=None):
+    """
+    Centralized activity logging. All manual UserActivityLog creation should go through here.
+    
+    Args:
+        request:    Django request object
+        action:     Action string (e.g. 'CREATE', 'LOGIN', 'EXPORT')
+        instance:   Optional model instance (auto-extracts pk, number, model_name)
+        model_name: Optional override for model name (used when no instance exists)
+        details:    Optional dict of extra details to attach to log
+        number:     Optional override for the document number field
+    """
+    UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
+    UserActivityLog.safe_log(
+        user=request.user,
+        action=action,
+        model_name=model_name or (instance._meta.verbose_name if instance else None),
+        object_id=instance.pk if instance else None,
+        number=number or (getattr(instance, 'number', '') if instance else None),
+        details=details,
+        ip_address=get_client_ip(request),
+        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+    )
+
+# Translation Helper — Retrieves default translation strings using system language config
 def _get_default_strings():
     """Helper to get default global strings dict"""
     ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
@@ -24,7 +72,42 @@ def _get_default_strings():
     overrides = ms_config.get('translations', None)
     return get_strings(lang, overrides=overrides)
 
+# Translation Helper — Resolves the current user's language code
+def _get_request_lang(request=None):
+    """
+    Resolve the current user's language code.
+    Resolution Order:
+    1. User Profile Preference (if authenticated)
+    2. Session 'lang' or 'django_language' key
+    3. System Default (microsys config or LANGUAGE_CODE)
+    """
+    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
+    default_lang = ms_config.get('default_language', settings.LANGUAGE_CODE)
+    lang = None
+    
+    if request:
+        # 1. User Profile
+        if hasattr(request, 'user') and request.user.is_authenticated and hasattr(request.user, 'profile'):
+            user_prefs = request.user.profile.preferences or {}
+            lang = user_prefs.get('language')
+            
+        # 2. Session
+        if not lang and hasattr(request, 'session'):
+            lang = request.session.get('lang') or request.session.get('django_language')
+        
+    # 3. Default
+    return lang or default_lang
 
+
+# Translation Helper — Resolves per-request language and returns translation strings
+def _get_request_translations(request=None):
+    """Resolve the current user's language and return translation strings."""
+    lang = _get_request_lang(request)
+    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
+    overrides = ms_config.get('translations', None)
+    return get_strings(lang, overrides=overrides)
+
+# Context Menu Helper — Filters context menu actions based on user permissions
 def filter_context_actions(user, actions):
     """
     Filter a list of context menu actions based on user permissions.
@@ -52,37 +135,7 @@ def filter_context_actions(user, actions):
     
     return filtered
 
-
-def _get_request_translations(request):
-    """
-    Resolve the current user's language and return translation strings.
-    Resolution Order:
-    1. User Profile Preference (if authenticated)
-    2. Session 'lang' key (e.g. from login screen or manual switch)
-    3. Browser/Request Headers (future extension)
-    4. System Default (microsys config)
-    """
-    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
-    default_lang = ms_config.get('default_language', 'ar')
-    lang = None
-    
-    # 1. User Profile
-    if request.user.is_authenticated and hasattr(request.user, 'profile'):
-        user_prefs = request.user.profile.preferences or {}
-        lang = user_prefs.get('language')
-        
-    # 2. Session (Fallback for login screen or guests)
-    if not lang and hasattr(request, 'session'):
-        lang = request.session.get('lang')
-        
-    # 3. Default
-    if not lang:
-        lang = default_lang
-        
-    overrides = ms_config.get('translations', None)
-    return get_strings(lang, overrides=overrides)
-
-
+# Model Introspection — Returns possible import base paths for a model's app
 def _get_model_app_bases(model):
     """
     Return possible import bases for a model's app.
@@ -105,7 +158,7 @@ def _get_model_app_bases(model):
 
     return bases
 
-
+# Model Resolution — Convention-based class importer (App.<submodule>.Model<Suffix>)
 def _import_by_convention(model, submodule, class_suffix):
     """
     Try importing a class following App.<submodule>.ModelName<class_suffix>.
@@ -119,7 +172,7 @@ def _import_by_convention(model, submodule, class_suffix):
             continue
     return None
 
-
+# Model Resolution — Resolves a class from a model method/attr (class or string path)
 def _resolve_model_class(model, getter_name):
     """
     Resolve class from model method/attr that may return a class or a string path.
@@ -144,7 +197,76 @@ def _resolve_model_class(model, getter_name):
 
     return None
 
+# Model Resolution — Dynamically imports model, form, table, and filter classes by name
+def get_model_classes(model_name, app_label=None):
+    """
+    Dynamically import model, form, table, and filter classes for a given model.
+    """
+    if not model_name:
+        return None
+    
+    model = resolve_model_by_name(model_name, app_label=app_label)
+    if not model:
+        return None
+    
+    # We can use discover_section_models to find it or just resolve manually
+    # For now, manually resolution based on conventions
+    meta = model._meta
+    
+    # Form
+    form_class = resolve_form_class_for_model(model)
+        
+    # Table
+    table_class = _import_by_convention(model, "tables", "Table")
+    if not table_class:
+         table_class = _resolve_model_class(model, "get_table_class")
+    if not table_class:
+         table_class = _build_generic_table_class(model)
 
+    # Filter
+    filter_class = _import_by_convention(model, "filters", "Filter")
+    if not filter_class and django_filters:
+         filter_class = _build_generic_filter_class(model)
+
+    return {
+        'model': model,
+        'form': form_class,
+        'table': table_class,
+        'filter': filter_class,
+        'ar_name': meta.verbose_name,
+        'ar_names': meta.verbose_name_plural,
+    }
+
+# Model Resolution — Dynamically Resolves a Model by Name
+def resolve_model_by_name(model_name, app_label=None):
+    """
+    Resolve a model by name, optionally constrained to an app label.
+    Falls back to scanning all apps if app_label is not provided.
+    """
+    if not model_name:
+        return None
+
+    normalized = model_name.lower()
+
+    if app_label:
+        try:
+            return apps.get_model(app_label, model_name)
+        except LookupError:
+            return None
+
+    for model in apps.get_models():
+        meta = model._meta
+        if meta.model_name == normalized or model.__name__.lower() == normalized:
+            return model
+
+    return None
+
+# Model Resolution — Dynamically imports and returns a class from a dotted string path
+def get_class_from_string(class_path):
+    """Dynamically imports and returns a class from a string path."""
+    return import_string(class_path)
+
+# Section Detection — Checks if a model is marked as a section model
 def _model_is_section(model):
     """
     Determine if a model should be treated as a section model.
@@ -157,7 +279,7 @@ def _model_is_section(model):
         return True
     return bool(getattr(model._meta, 'is_section', False))
 
-
+# Form Resolution — Resolves or generates a ModelForm class for any model
 def resolve_form_class_for_model(model):
     """
     Resolve a ModelForm class for a model using conventions or fallbacks.
@@ -213,7 +335,7 @@ def resolve_form_class_for_model(model):
             form_class = modelform_factory(model, fields='__all__', widgets=widgets)
     return form_class
 
-
+# Related Objects Inspector — Introspects all related objects for Smart Delete/View
 def collect_related_objects(instance):
     """
     Introspects a model instance to find all related objects (Reverse FK, M2M).
@@ -263,7 +385,7 @@ def collect_related_objects(instance):
                 
     return related_data
 
-
+# Dynamic Table Builder — Generates a django-tables2 Table class at runtime
 def _build_generic_table_class(model):
     """
     Build a minimal django-tables2 Table for a model.
@@ -351,7 +473,7 @@ def _build_generic_table_class(model):
     table_attrs = {"Meta": Meta, "__init__": __init__}
     return type(f"{model.__name__}AutoTable", (tables.Table,), table_attrs)
 
-
+# Dynamic Filter Builder — Generates a django-filters FilterSet class at runtime
 def _build_generic_filter_class(model):
     """
     Build a minimal django-filters FilterSet:
@@ -509,21 +631,7 @@ def _build_generic_filter_class(model):
 
     return type(f"{model.__name__}AutoFilter", (django_filters.FilterSet,), attrs)
 
-
-def is_scope_enabled():
-    """
-    Checks if the Scope system is globally enabled.
-    Returns:
-        bool: True if enabled, False otherwise.
-    """
-    try:
-        ScopeSettings = apps.get_model('microsys', 'ScopeSettings')
-        return ScopeSettings.load().is_enabled
-    except LookupError:
-        # Fallback if model shouldn't be loaded yet (e.g. migration)
-        return True
-
-
+# Section Detection — Identifies child/subsection models (M2M targets)
 def _is_child_model(model, app_name=None):
     """
     Detect if a model is a "child model" - one that exists primarily 
@@ -546,83 +654,7 @@ def _is_child_model(model, app_name=None):
     
     return has_m2m_rel and lacks_table
 
-
-def has_related_records(instance, ignore_relations=None):
-    """
-    Check if a model instance has any related records (FK, M2M, OneToOne).
-    Returns True if any related objects exist, False otherwise.
-    Used for locking logic (preventing deletion/unlinking).
-    
-    ignore_relations: list of accessor names to skip (e.g. ['affiliates', 'company_set'])
-    
-    Note: Automatically ignores M2M relations where this model is the 'child' 
-    (i.e., the target of a ManyToManyField from a parent section model).
-    This includes the M2M reverse accessor AND any FK from through tables
-    (both auto-created and custom through models like AffiliateDepartment).
-    """
-    from django.db.models.fields.related import ManyToManyRel, ManyToOneRel
-    
-    if not instance:
-        return False
-    
-    if ignore_relations is None:
-        ignore_relations = []
-    
-    # Auto-detect M2M parent relations to ignore
-    # Step 1: Collect all through-table models from M2M relationships pointing at us
-    auto_ignore = set()
-    through_models = set()
-    
-    for field in instance._meta.get_fields():
-        if isinstance(field, ManyToManyRel):
-            # This is the "reverse" side of a M2M - the parent points to us
-            accessor_name = field.get_accessor_name()
-            if accessor_name:
-                auto_ignore.add(accessor_name)
-            # Track through table (works for both auto-created and custom)
-            if hasattr(field, 'through') and field.through:
-                through_models.add(field.through)
-    
-    # Step 2: Any ManyToOneRel whose source model is a known through table
-    # should also be ignored (the FK from the through table to this model)
-    for field in instance._meta.get_fields():
-        if isinstance(field, ManyToOneRel):
-            if field.related_model in through_models:
-                accessor_name = field.get_accessor_name()
-                if accessor_name:
-                    auto_ignore.add(accessor_name)
-    
-    for related_object in instance._meta.get_fields():
-        if related_object.is_relation and related_object.auto_created:
-            # Reverse relationship (Someone points to us)
-            accessor_name = related_object.get_accessor_name()
-            if not accessor_name:
-                continue
-            if accessor_name in ignore_relations or accessor_name in auto_ignore:
-                continue
-                
-            try:
-                # Get the related manager/descriptor
-                related_item = getattr(instance, accessor_name)
-                
-                # Check based on relationship type
-                if related_object.one_to_many or related_object.many_to_many:
-                     if related_item.exists():
-                         return True
-                elif related_object.one_to_one:
-                     # OneToOne
-                     pass 
-            except Exception:
-                # DoesNotExist or other issues
-                continue
-            
-            # For O2O
-            if related_object.one_to_one and related_item:
-                return True
-                
-    return False
-
-
+# Section Discovery — Scans apps for section models and resolves their Form/Table/Filter classes
 def discover_section_models(app_name=None, include_children=False):
     """
     Discover section models based on explicit `is_section = True` in class/meta.
@@ -756,7 +788,7 @@ def discover_section_models(app_name=None, include_children=False):
     
     return section_models
 
-
+# Section Discovery — Returns the first section model name for default tab selection
 def get_default_section_model(app_name=None):
     """
     Get the first available section model name for auto-selection.
@@ -769,76 +801,189 @@ def get_default_section_model(app_name=None):
         return section_models[0]['model_name']
     return None
 
-
-def get_model_classes(model_name, app_label=None):
+# Section Management - M2M Helper — Provides through_defaults for scoped M2M relations
+def _get_m2m_through_defaults(model, field_name, request):
     """
-    Dynamically import model, form, table, and filter classes for a given model.
+    Provide through_defaults for M2M relations when the through model is scoped.
+    This prevents relations from disappearing when scope filtering is enabled.
     """
-    if not model_name:
-        return None
-    
-    model = resolve_model_by_name(model_name, app_label=app_label)
-    if not model:
-        return None
-    
-    # We can use discover_section_models to find it or just resolve manually
-    # For now, manually resolution based on conventions
-    meta = model._meta
-    
-    # Form
-    form_class = resolve_form_class_for_model(model)
-        
-    # Table
-    table_class = _import_by_convention(model, "tables", "Table")
-    if not table_class:
-         table_class = _resolve_model_class(model, "get_table_class")
-    if not table_class:
-         table_class = _build_generic_table_class(model)
-
-    # Filter
-    filter_class = _import_by_convention(model, "filters", "Filter")
-    if not filter_class and django_filters:
-         filter_class = _build_generic_filter_class(model)
-
-    return {
-        'model': model,
-        'form': form_class,
-        'table': table_class,
-        'filter': filter_class,
-        'ar_name': meta.verbose_name,
-        'ar_names': meta.verbose_name_plural,
-    }
-
-
-def resolve_model_by_name(model_name, app_label=None):
-    """
-    Resolve a model by name, optionally constrained to an app label.
-    Falls back to scanning all apps if app_label is not provided.
-    """
-    if not model_name:
+    try:
+        field = model._meta.get_field(field_name)
+    except FieldDoesNotExist:
         return None
 
-    normalized = model_name.lower()
+    # Only M2M fields can have through tables
+    if not getattr(field, "many_to_many", False):
+        return None
 
-    if app_label:
+    through = field.remote_field.through
+    if not through:
+        return None
+
+    defaults = {}
+    if is_scope_enabled():
+        # Resolve scope from profile first, then direct user attribute
+        scope = None
+        if hasattr(request.user, 'profile') and getattr(request.user.profile, 'scope', None):
+            scope = request.user.profile.scope
+        elif hasattr(request.user, 'scope') and getattr(request.user, 'scope', None):
+            scope = request.user.scope
+        if scope:
+            try:
+                through._meta.get_field('scope')
+                defaults['scope'] = scope
+            except Exception:
+                pass
+
+    return defaults or None
+
+# Section Management - Record Creation Helper — Creates a minimal model instance from raw POST data
+def _create_minimal_instance_from_post(model, data, request):
+    """
+    Fallback: create a minimal instance from POST data when a simple
+    inline add is used (e.g., just a `name` field).
+    Only proceeds if all required concrete fields are present.
+    """
+    field_map = {}
+    missing_required = []
+
+    # Identify truly required fields (skip auto-managed and optional ones)
+    for field in model._meta.fields:
+        if field.primary_key or field.auto_created:
+            continue
+        if getattr(field, "auto_now", False) or getattr(field, "auto_now_add", False):
+            continue
+        if field.has_default() or field.blank or field.null:
+            continue
+
+        if field.name not in data:
+            missing_required.append(field.name)
+
+    if missing_required:
+        return None, missing_required
+
+    for field in model._meta.fields:
+        if field.primary_key or field.auto_created:
+            continue
+        if field.name in data:
+            if isinstance(field, dj_models.ForeignKey):
+                try:
+                    field_map[field.name] = field.remote_field.model.objects.get(pk=data[field.name])
+                except Exception:
+                    return None, [field.name]
+            else:
+                field_map[field.name] = data[field.name]
+
+    instance = model(**field_map)
+    # created_by auto-populated by ScopedModel.save()
+    # Ensure scope is set for scoped models
+    if is_scope_enabled() and hasattr(instance, 'scope'):
         try:
-            return apps.get_model(app_label, model_name)
-        except LookupError:
-            return None
+            user_scope = getattr(getattr(request.user, 'profile', None), 'scope', None)
+            if not user_scope and hasattr(request.user, 'scope'):
+                user_scope = request.user.scope
+            # Non-superusers always get their scope forced; superusers only if unset
+            if user_scope:
+                if not request.user.is_superuser:
+                    instance.scope = user_scope
+                elif not getattr(instance, 'scope', None):
+                    instance.scope = user_scope
+        except Exception:
+            pass
+    instance.save()
+    return instance, []
 
-    for model in apps.get_models():
-        meta = model._meta
-        if meta.model_name == normalized or model.__name__.lower() == normalized:
-            return model
+# Scope Management — Checks if the multi-tenant Scope system is globally enabled
+def is_scope_enabled():
+    """
+    Checks if the Scope system is globally enabled.
+    Returns:
+        bool: True if enabled, False otherwise.
+    """
+    try:
+        ScopeSettings = apps.get_model('microsys', 'ScopeSettings')
+        return ScopeSettings.load().is_enabled
+    except LookupError:
+        # Fallback if model shouldn't be loaded yet (e.g. migration)
+        return True
 
-    return None
+# Deletion Safety — Checks if an instance has related records (lock/protect logic)
+def has_related_records(instance, ignore_relations=None):
+    """
+    Check if a model instance has any related records (FK, M2M, OneToOne).
+    Returns True if any related objects exist, False otherwise.
+    Used for locking logic (preventing deletion/unlinking).
+    
+    ignore_relations: list of accessor names to skip (e.g. ['affiliates', 'company_set'])
+    
+    Note: Automatically ignores M2M relations where this model is the 'child' 
+    (i.e., the target of a ManyToManyField from a parent section model).
+    This includes the M2M reverse accessor AND any FK from through tables
+    (both auto-created and custom through models like AffiliateDepartment).
+    """
+    from django.db.models.fields.related import ManyToManyRel, ManyToOneRel
+    
+    if not instance:
+        return False
+    
+    if ignore_relations is None:
+        ignore_relations = []
+    
+    # Auto-detect M2M parent relations to ignore
+    # Step 1: Collect all through-table models from M2M relationships pointing at us
+    auto_ignore = set()
+    through_models = set()
+    
+    for field in instance._meta.get_fields():
+        if isinstance(field, ManyToManyRel):
+            # This is the "reverse" side of a M2M - the parent points to us
+            accessor_name = field.get_accessor_name()
+            if accessor_name:
+                auto_ignore.add(accessor_name)
+            # Track through table (works for both auto-created and custom)
+            if hasattr(field, 'through') and field.through:
+                through_models.add(field.through)
+    
+    # Step 2: Any ManyToOneRel whose source model is a known through table
+    # should also be ignored (the FK from the through table to this model)
+    for field in instance._meta.get_fields():
+        if isinstance(field, ManyToOneRel):
+            if field.related_model in through_models:
+                accessor_name = field.get_accessor_name()
+                if accessor_name:
+                    auto_ignore.add(accessor_name)
+    
+    for related_object in instance._meta.get_fields():
+        if related_object.is_relation and related_object.auto_created:
+            # Reverse relationship (Someone points to us)
+            accessor_name = related_object.get_accessor_name()
+            if not accessor_name:
+                continue
+            if accessor_name in ignore_relations or accessor_name in auto_ignore:
+                continue
+                
+            try:
+                # Get the related manager/descriptor
+                related_item = getattr(instance, accessor_name)
+                
+                # Check based on relationship type
+                if related_object.one_to_many or related_object.many_to_many:
+                     if related_item.exists():
+                         return True
+                elif related_object.one_to_one:
+                     # OneToOne
+                     pass 
+            except Exception:
+                # DoesNotExist or other issues
+                continue
+            
+            # For O2O
+            if related_object.one_to_one and related_item:
+                return True
+                
+    return False
 
-
-def get_class_from_string(class_path):
-    """Dynamically imports and returns a class from a string path."""
-    return import_string(class_path)
-
-# Helper Function that handles the sidebar toggle and state
+# Sidebar State Manager — Handles sidebar collapse toggle and persists state to session/profile
 def toggle_sidebar(request):
     if request.method == "POST" and request.user.is_authenticated:
         collapsed = request.POST.get("collapsed") == "true"
@@ -868,3 +1013,123 @@ def toggle_sidebar(request):
 
         return JsonResponse({"status": "success"})
     return JsonResponse({"status": "error"}, status=400)
+
+
+# Form Helper — Automatically sets placeholders and direction based on language
+def set_field_attrs(form, request=None):
+    """Set common attributes for all fields in the form."""
+    ms_trans = _get_request_translations(request)
+    
+    # Detect language for direction
+    lang = _get_request_lang(request)
+    direction = 'rtl' if lang.startswith('ar') else 'ltr' 
+    
+    for field_name in form.fields:
+        field = form.fields.get(field_name)
+        # Try to get label from MS_TRANS if it looks like a key, or use verbose name
+        label_key = f"label_{field_name}"
+        label = ms_trans.get(label_key) or field.label or field_name.replace('_', ' ').title()
+        
+        # Common attributes
+        field.widget.attrs['placeholder'] = label
+        field.widget.attrs['dir'] = direction  # Set text direction dynamically
+        
+        # Inject Bootstrap classes based on widget type
+        existing_class = field.widget.attrs.get('class', '')
+        if isinstance(field.widget, (forms.Select, forms.SelectMultiple, forms.NullBooleanSelect)):
+            if 'form-select' not in existing_class:
+                field.widget.attrs['class'] = f"{existing_class} form-select".strip()
+        elif isinstance(field.widget, (forms.CheckboxInput, forms.RadioSelect)):
+            if 'form-check-input' not in existing_class:
+                field.widget.attrs['class'] = f"{existing_class} form-check-input".strip()
+        else:
+            if 'form-control' not in existing_class:
+                field.widget.attrs['class'] = f"{existing_class} form-control".strip()
+            
+        field.label = ''  # Clear the label for crispy layouts that use placeholders
+
+
+def setup_filter_helper(filter_instance, request=None):
+    """
+    Sets up a modern, responsive Crispy layout for a django-filter FilterSet.
+    Aligns fields dynamically using Bootstrap 5 flexbox and appends a filter button.
+    """
+    from crispy_forms.helper import FormHelper
+    from crispy_forms.layout import Layout, Div, Field, HTML
+    
+    helper = FormHelper()
+    helper.form_method = 'get'
+    helper.form_class = 'row g-2 align-items-end mb-3'
+    
+    # Dynamically build layout based on fields
+    fields = list(filter_instance.form.fields.keys())
+    divs = []
+    
+    # Calculate col width (try to fit up to 4 fields)
+    col_class = 'col-sm-6 col-md-3 col-lg-auto flex-grow-1'
+    
+    for f in fields:
+        divs.append(Div(Field(f, wrapper_class='mb-0'), css_class=col_class))
+    
+    # Determine clear URL by preserving structural GET parameters
+    clear_url = "?"
+    if request and request.GET:
+        import urllib.parse
+        preserve_keys = ['type', 'sort', 'per_page', 'export_type', 'model', 'page']
+        clear_params = {k: v for k, v in request.GET.items() if k in preserve_keys}
+        qs = urllib.parse.urlencode(clear_params, doseq=True)
+        if qs:
+            clear_url = f"?{qs}"
+
+    # Translate button or use default icon
+    search_btn = '<button type="submit" class="btn btn-secondary rounded-start-pill rounded-end-0 flex-grow-1"><i class="bi bi-search"></i></button>'
+    clear_btn = f'<a href="{clear_url}" class="btn btn-warning rounded-end-pill rounded-start-0 px-3"><i class="bi bi-x-lg"></i></a>'
+    btn_html = f'<div class="d-flex w-100">{search_btn}{clear_btn}</div>'
+    
+    divs.append(
+        Div(
+            HTML(btn_html),
+            css_class='col-sm-12 col-md-2 col-lg-auto'
+        )
+    )
+    
+    helper.layout = Layout(*divs)
+    filter_instance.form.helper = helper
+    
+    # Apply set_field_attrs for placeholders and translation
+    set_field_attrs(filter_instance.form, request)
+
+# Form Helper — Renames the first choice in a Selection menu
+def set_first_choice(field, placeholder):
+    """Set the first choice of a specified field safely without overwriting data."""
+    if hasattr(field, 'empty_label'):
+        field.empty_label = placeholder
+        return
+
+    if not hasattr(field, 'choices') or not field.choices:
+        return
+        
+    choices = list(field.choices)
+    if choices and choices[0][0] in ('', None):
+        choices[0] = ('', placeholder)
+    else:
+        choices.insert(0, ('', placeholder))
+        
+    field.choices = choices
+
+
+# Form Helper — Translates a choices list using MS_TRANS choice_ prefix
+def translate_choices(choices, ms_trans):
+    """
+    Translate a choices list using MS_TRANS choice_ prefix.
+    Expects choices in format [(value, label), ...]
+    """
+    translated = []
+    for value, label in choices:
+        if value == '' or value is None:
+            # Keep placeholder as is (or '---' if not set)
+            translated.append((value, label or '---'))
+        else:
+            translated.append((value, ms_trans.get(f'choice_{value}', label)))
+    return translated
+

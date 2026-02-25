@@ -207,12 +207,14 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 - **User Detail View**: Detailed page for user profile, activity, and last login.
 - **Dynamic Auxiliary Model Detection**: Zero-Boilerplate Zero-Code Detection of auxiliary models using model attrs.
 - **Dynamic Forms, Filters and Tables**: Automatically detects and registers or creates forms, filters and tables to auxiliary models.
+- **Dynamic Modal Manager**: Universal AJAX-driven modal system for managing any model with a combined List + Form UI.
 - **Global Autofill**: Dynamic Smart Autofill tool that fills form fields based on related FK models, or model last entry.
 - **Universal Fetcher**: Global, Smart single-file and multi-file Downloader, and data-driven Excel Exporter for querysets.
 - **Automated Logging**: Full automatic activity tracking (CRUD, Login/Logout) via Signals with **Detailed Diff Tracking** and **Smart Deduplication**.
 - **Dynamic Sidebar**: Auto-discovery of list views and customizable, reorderable menu items.
 - **Dynamic Titlebar**: Show-Hide autofill-toggle, dynamic home url, and title.
 - **Context Menu**: Easy to use context menu for quick actions.
+- **Two-Factor Authentication**: Email OTP and TOTP Authenticator App support with backup codes.
 - **Options View**: Options view to enable, disable, and configure system features and details.
 - **Language Selector**: Native Arabic support with dynamic language switching with optional additional languages (RTL/LTR).
 - **Themes & Accessibility**: Bootstrap5 integration with built-in dark/light modes and accessibility tools (High Contrast, Zoom, etc.).
@@ -226,11 +228,13 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 ### 👤 User Management
 
 1. Profile Access
-`microsys` automatically creates a `Profile` for every user via signals.
+`microsys` automatically creates a `Profile` for every user via a `post_save` signal — no manual creation needed.
 ```python
 # Accessing profile data
 phone = user.profile.phone
 scope = user.profile.scope
+preferences = user.profile.preferences  # JSONField dict
+is_2fa = user.profile.is_2fa_enabled    # Property
 ```
 
 2. Grouped Permissions
@@ -238,11 +242,33 @@ Microsys provides a custom, intuitive UI for managing permissions. Permissions a
 
 3. Automated Activity Logging
 Every action (CRUD, Login/Logout, etc.) is automatically recorded in the `UserActivityLog`.
-- **Global Middleware**: Tracks IP address and User Agent.
+- **Global Middleware**: Tracks IP address and User Agent via thread-local storage.
 - **Signal-Based**: Captures changes even from the Django Admin.
-- **Detailed Diffs**: Logs specific field changes (e.g., `phone: old -> new`) and masked password updates.
+- **Detailed Diffs**: Logs specific field changes as JSON (e.g., `{"phone": {"old": "123", "new": "456"}}`) and masked password updates.
 - **Smart Merging**: Concurrent updates to `User` and `Profile` are intelligently merged into a single "User Update" log entry to reduce noise.
 - **Searchable**: View and filter activity logs directly from the system dashboard.
+- **Deduplication**: `UserActivityLog.safe_log()` prevents duplicate entries within a 2-second window.
+
+**Programmatic Logging:**
+```python
+from microsys.models import UserActivityLog
+
+# Deduplication-safe logging (recommended)
+UserActivityLog.safe_log(
+    user=request.user,
+    action='EXPORT',
+    model_name='Invoice',
+    object_id=42,
+    details={'filename': 'report.xlsx', 'count': 100},
+    ip_address='192.168.1.1',
+)
+
+# Or use the helper for signal-like logging in views
+from microsys.utils import log_user_action
+log_user_action(request, instance, 'CREATE', 'mymodel')
+```
+
+> **Note**: Sensitive fields (`password`, `backup_codes`, `token`, `secret`) are automatically masked as `********` in log details.
 
 4. Unified Preferences
 User UI settings (Theme, Language, Sidebar State, Autofill status) are persisted in the database (`Profile.preferences`), ensuring a consistent experience across different browsers and devices.
@@ -261,10 +287,60 @@ class MyModel(ScopedModel):
     # ... your fields
 ```
 
-- **Data Isolation**: Automatically partitions data by the user's assigned `Scope`.
-- **Zero-Boilerplate Filtering**: The `ScopedManager` ensures users only see authorized data without manual `.filter(scope=...)` calls.
-- **Soft-Delete**: Deleting a record sets a `deleted_at` timestamp instead of removing the row, allowing for easy recovery and audit trails.
-- **Deep Integration**: `ScopedModel` allows the system to automatically handle complex relationships, section discovery, and subsection management flawlessly.
+That's it. Your model now has:
+
+| Built-in Field | Type | Behavior |
+|---|---|---|
+| `scope` | ScopeForeignKey | Auto-hidden from forms when scopes are disabled |
+| `created_at` | DateTimeField | Auto-set on creation (`auto_now_add`) |
+| `updated_at` | DateTimeField | Auto-set on every save (`auto_now`) |
+| `created_by` | ForeignKey(User) | Auto-populated from current user via middleware |
+| `updated_by` | ForeignKey(User) | Auto-populated from current user via middleware |
+| `deleted_at` | DateTimeField | Set automatically when `delete()` is called |
+| `deleted_by` | ForeignKey(User) | Auto-populated from current user on delete |
+
+> **All audit fields are `editable=False`** — they are automatically excluded from ModelForms, including auto-generated Section and Modal forms. No `form_exclude` needed.
+
+- **Zero-Config Audit Trail**
+All 4 actor fields (`created_by`, `updated_by`, `deleted_by`) are **auto-populated** from the current user via the `ActivityLogMiddleware` thread-local. No manual assignment is needed in views:
+```python
+# These are set AUTOMATICALLY by ScopedModel.save() — no code needed:
+instance.created_by   # set on first save
+instance.updated_by   # set on every save
+instance.deleted_by   # set on delete()
+```
+
+- **Global Soft-Delete**
+Every call to `instance.delete()` on a ScopedModel performs a **soft-delete** (sets `deleted_at` + `deleted_by`). The row is never removed from the database:
+```python
+record.delete()            # Soft-delete (sets deleted_at, auto-detects user)
+record.soft_delete()       # Alias for delete()
+record.restore()           # Undo soft-delete (clears deleted_at + deleted_by)
+record.hard_delete()       # PERMANENT removal (escape hatch)
+```
+
+- **Dual Managers**
+
+| Manager | Behavior |
+|---|---|
+| `MyModel.objects` | Default. Filters by user scope + hides soft-deleted records |
+| `MyModel.all_objects` | Raw Django manager — **no** scope or soft-delete filtering |
+
+```python
+# Normal use (scope-aware, hides deleted)
+MyModel.objects.all()
+
+# Admin/migration scripts (bypass all filtering)
+MyModel.all_objects.filter(deleted_at__isnull=False)  # see soft-deleted records
+```
+
+- **ScopeForeignKey**
+
+`ScopedModel` uses `ScopeForeignKey` for its scope field. This is a standard `ForeignKey` that **automatically hides itself** from ModelForms when the Scope system is globally disabled — no conditional form logic needed:
+```python
+# This field auto-hides from forms when scopes are turned off
+scope = ScopeForeignKey('microsys.Scope', on_delete=models.PROTECT, null=True, blank=True)
+```
 
 ---
 
@@ -284,6 +360,7 @@ Microsys offers a powerful "Zero-Boilerplate" CRUD interface for managing auxili
    - Add/Edit Modals (using Crispy Forms)
    - Delete protection (checks for related records)
    - Filters (Keyword search + Date ranges if applicable)
+   - Context menu on every row (View, Edit, Delete) with permission checks
 
    > **Note**: You can customize the auto-generated components by adding `form_exclude` and `table_exclude` lists to your model:
    > ```python
@@ -292,6 +369,44 @@ Microsys offers a powerful "Zero-Boilerplate" CRUD interface for managing auxili
    >     form_exclude = ['internal_notes']
    >     table_exclude = ['internal_notes', 'created_at']
    > ```
+
+- **Custom Form / Table / Filter Classes**
+
+The system follows a **resolution order** when looking for Form, Table, and Filter classes:
+
+| Priority | Method | Example |
+|---|---|---|
+| 1 | **Convention import** | `forms.py` → `DepartmentForm`, `tables.py` → `DepartmentTable` |
+| 2 | **Model method** | `get_form_class()`, `get_table_class()`, `get_filter_class()` |
+| 3 | **String path method** | `get_form_class_path()` → `'myapp.forms.CustomForm'` |
+| 4 | **Auto-generation** | Built at runtime from model introspection |
+
+```python
+class Department(ScopedModel):
+    is_section = True
+    name = models.CharField(...)
+
+    # Option A: Define methods that return the class directly
+    @classmethod
+    def get_form_class(cls):
+        from .forms import DepartmentForm
+        return DepartmentForm
+
+    # Option B: Return a dotted import path
+    @classmethod
+    def get_table_class_path(cls):
+        return 'myapp.tables.DepartmentTable'
+```
+
+> **Tip**: If you simply name your classes following the convention (`<Model>Form`, `<Model>Table`, `<Model>Filter`) in the standard module files (`forms.py`, `tables.py`, `filters.py`), the system finds them automatically — no model method needed.
+
+- **What Auto-Generated Components Include**
+
+| Component | Features |
+|---|---|
+| **Form** | All fields (respects `form_exclude`), autofill widgets on FKs, scope auto-hidden when disabled |
+| **Table** | All columns (respects `table_exclude`), sorting, pagination, context menu per row |
+| **Filter** | Keyword search across text/numeric fields, date range pickers (flatpickr), year dropdown |
 
 - **Auto Subsections (Parent-Child Relations)**
 If a Section model has a `ManyToManyField` to another model that is **not** a standalone section (i.e. a "child" model), the system automatically nests it:
@@ -383,12 +498,18 @@ def export_view(request):
 
 3.  **Global Toggle**:
     -   A toggle switch automatically appears in the top-right title bar whenever autofill is available on the page.
-    -   The state (ON/OFF) is saved in your browser's local storage.
+    -   The state (ON/OFF) is saved in user preferences (DB-backed).
 
 - **How to Use**
 
 1. **Foreign Key Autofill (Zero Config)**
-The system automatically detects standard Django ForeignKey widgets and injects the necessary `data-autofill-source` attributes. **It works out of the box.**
+The system automatically detects standard Django ForeignKey widgets and injects the necessary `data-autofill-source` attributes during form generation. **It works out of the box** for any model managed via Sections or Dynamic Modals.
+
+The injected attribute looks like:
+```html
+<select name="user" data-autofill-source="auth.user">
+```
+When a value is selected, the JS engine calls the detail API to fetch related fields and populates matching form inputs.
 
 > **Note**: Only works for fields that have a corresponding input in the form with a matching name (e.g., `User.email` -> `<input name="email">`).
 
@@ -400,6 +521,16 @@ To enable the "Clone Last Entry" feature for a specific form, simply add the `da
     <!-- ... fields ... -->
 </form>
 ```
+
+- **Autofill API Endpoints**
+
+These are the REST endpoints powering autofill behind the scenes:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/sys/api/details/<app>/<model>/<pk>/` | GET | Fetch a specific record's data (recursive FK/O2O traversal) |
+| `/sys/api/details/<app>/<model>/empty_schema/` | GET | Get empty field structure (for clearing forms) |
+| `/sys/api/last-entry/<app>/<model>/` | GET | Get the last created record (for Sticky Forms) |
 
 ---
 
@@ -415,6 +546,7 @@ SIDEBAR_AUTO = {
     'ENABLED': True,                    # Enable auto-discovery
     'URL_PATTERNS': ['list'],           # Keywords to match in URL names
     'EXCLUDE_APPS': ['admin', 'auth'],  # Apps to exclude from sidebar
+    'EXCLUDE_MODELS': [],               # Specific models to exclude (e.g., ['myapp.mymodel'])
     'CACHE_TIMEOUT': 3600,              # Cache timeout in seconds
     'DEFAULT_ICON': 'bi-list',          # Default Bootstrap icon
     'SYSTEM_GROUP_ENABLED': True,       # Toggle the built-in "System Management" group
@@ -482,6 +614,55 @@ A global, data-driven context menu that can be attached to any element to provid
   - **Standardized**: Used by system tables (Users, Sections) for a consistent experience.
   - **Double Click**: Supports double-click actions (e.g. View) if `dblclick: true` is set on an action.
   - **Smart Actions**: Includes "View Content" and "Smart Delete" handling for Sections using dynamic modals.
+  - **Permission-Based**: Actions can require permissions — users without them won't see the action.
+
+- **Action Schema**
+
+| Key | Type | Description |
+|---|---|---|
+| `label` | string | Display text |
+| `icon` | string | Bootstrap Icon class (e.g. `bi bi-pencil`) |
+| `url` | string | Navigation URL (for `"type": "url"`) |
+| `type` | string | `"url"` (default), `"event"`, or `"divider"` |
+| `event` | string | Custom JS event name (for `"type": "event"`) |
+| `data` | object | Payload dispatched with the event |
+| `dblclick` | bool | Also trigger on double-click |
+| `textClass` | string | CSS class for text (e.g. `"text-danger"`) |
+| `permissions` | list | Required Django permissions (e.g. `["myapp.delete_item"]`) |
+| `permission` | string | Single required permission (shorthand) |
+
+- **Event-Based Actions**
+
+Instead of navigating to a URL, actions can dispatch custom JavaScript events:
+```python
+{
+    "label": "View Details",
+    "icon": "bi bi-eye",
+    "type": "event",
+    "event": "micro:section:view",
+    "data": {"model": "department", "id": record.pk},
+    "dblclick": True
+}
+```
+You can listen for these events in your own JS:
+```javascript
+document.addEventListener('micro:section:view', function(e) {
+    console.log(e.detail);  // {model: 'department', id: 5}
+});
+```
+
+- **Permission Filtering**
+
+Actions with `permissions` are automatically hidden from users who lack the required permissions. Use `filter_context_actions` in your backend code:
+
+```python
+from microsys.utils import filter_context_actions
+
+# In your table __init__ or view:
+actions = filter_context_actions(request.user, actions)
+```
+
+> **Note**: Auto-generated section tables already apply permission filtering automatically — no extra code needed.
 
 - **Usage with Django Tables2**
 
@@ -516,7 +697,8 @@ class MyTable(tables.Table):
                     "label": "Delete", 
                     "icon": "bi bi-trash", 
                     "url": reverse('my_delete', args=[record.pk]),
-                    "textClass": "text-danger"
+                    "textClass": "text-danger",
+                    "permissions": ["myapp.delete_mymodel"]
                 }
             ]
             return json.dumps(actions)
@@ -560,6 +742,197 @@ MS_TRANSLATIONS = {
 }
 ```
 Then in templates: `{{ MS_TRANS.my_key }}`
+
+---
+
+### 🏷️ Template Tags Reference
+
+Microsys provides several custom template tags and filters. Load them in your templates as needed.
+
+**Sidebar Tags** (`{% load sidebar_tags %}`)
+| Tag | Usage | Description |
+|---|---|---|
+| `{% auto_sidebar %}` | Inclusion tag | Renders all auto-discovered sidebar navigation items |
+| `{% extra_sidebar %}` | Inclusion tag | Renders extra sidebar groups defined in `EXTRA_ITEMS` |
+| `{% sidebar_item_class 'url_name' %}` | Simple tag | Returns `'active'` if current path matches the URL name |
+
+**Microsys Tags** (`{% load microsys_tags %}`)
+| Tag | Usage | Description |
+|---|---|---|
+| `{% ms_timesince value %}` | Simple tag | Translated relative timestamp (e.g., "9 ساعات و 52 دقيقة") |
+| `{% include_if_exists 'path/to/template.html' %}` | Simple tag | Safely includes a template only if it exists — no error if missing |
+
+**Translation Tags** (`{% load microsys_translation %}`)
+| Tag | Usage | Description |
+|---|---|---|
+| `{% translate_log_value value 'action' %}` | Simple tag | Translates log values using `MS_TRANS` (e.g., `action_login` key) |
+| `{% format_log_details details %}` | Simple tag | Renders a JSON diff dict as styled HTML badges |
+
+```html
+<!-- Example: translated relative time -->
+{% load microsys_tags %}
+<span>{% ms_timesince user.last_login %}</span>
+
+<!-- Example: activity log with translated action and formatted diffs -->
+{% load microsys_translation %}
+<td>{% translate_log_value log.action 'action' %}</td>
+<td>{% format_log_details log.details %}</td>
+```
+
+---
+
+### 🔲 Dynamic Modal Manager
+
+The Dynamic Modal Manager provides a **universal, AJAX-driven modal** for managing any model's records (List + Form) without writing custom views or templates.
+
+- **How it works**
+
+1.  **Include the Modal Template**: Add the modal shell to any template that extends `base.html`:
+    ```html
+    {% include 'microsys/includes/dynamic_modal.html' %}
+    ```
+    This adds a hidden Bootstrap modal and loads the `dynamic_modals.js` script.
+
+2.  **Wire URLs**: In your `urls.py`, register the class-based views for your model:
+    ```python
+    from microsys.views import DynamicModalManagerView, DynamicModalDeleteView
+
+    urlpatterns = [
+        # Combined List + Form (GET = load, POST = save)
+        path('my-model/modal/', DynamicModalManagerView.as_view(), name='mymodel_modal'),
+        path('my-model/modal/<int:pk>/', DynamicModalManagerView.as_view(), name='mymodel_modal'),
+        # Delete endpoint
+        path('my-model/modal/delete/<int:pk>/', DynamicModalDeleteView.as_view(), name='mymodel_modal_delete'),
+    ]
+    ```
+
+3.  **Trigger the Modal**: Add a button with `data-dynamic-modal` pointing to your URL:
+    ```html
+    <button data-dynamic-modal="{% url 'mymodel_modal' %}"
+            data-modal-title="Manage Items">
+        <i class="bi bi-gear"></i> Manage
+    </button>
+    ```
+
+- **Features**
+  - **Combined View**: The modal shows an **Add/Edit form** at the top and a **paginated table** at the bottom.
+  - **Inline CRUD**: Edit and delete records without leaving the modal — the list auto-refreshes.
+  - **Auto Form/Table**: Uses the same resolution system as Sections (convention → model method → auto-generation).
+  - **Delete Protection**: `DynamicModalDeleteView` checks for related records before deletion and returns localized error messages.
+  - **Edit Buttons**: The table renders `.dynamic-edit-btn` and `.dynamic-delete-btn` buttons with `data-pk` attributes, handled automatically by the JS.
+  - **Flatpickr**: Date fields inside the modal are auto-initialized with flatpickr if available.
+
+- **Specifying a Fixed Model**
+
+You can hardcode the model in your URL configuration:
+```python
+path('zones/modal/', DynamicModalManagerView.as_view(model=Zone), name='zone_modal'),
+path('zones/modal/<int:pk>/', DynamicModalManagerView.as_view(model=Zone), name='zone_modal'),
+path('zones/modal/delete/<int:pk>/', DynamicModalDeleteView.as_view(model=Zone), name='zone_modal_delete'),
+```
+
+Or pass it dynamically via query parameter:
+```
+/my-model/modal/?model=zone
+```
+
+- **Programmatic Control (Context Menu Integration)**
+
+You can also open the modal natively from JavaScript or the Context Menu by dispatching the `micro:dynamic_modal:open` event.
+
+**Context Menu Example:**
+```json
+{
+    "label": "Review details",
+    "icon": "bi bi-eye",
+    "event": "micro:dynamic_modal:open",
+    "data": {
+        "url": "/my-model/modal/1/",
+        "title": "Modal Title"
+    }
+}
+```
+
+**JavaScript Example:**
+```javascript
+const event = new CustomEvent('micro:dynamic_modal:open', {
+    bubbles: true,
+    detail: { data: { url: '/my-model/modal/1/', title: 'Manage items' } }
+});
+document.body.dispatchEvent(event);
+```
+
+- **Creating Custom Modal endpoints**
+
+If you bypass `DynamicModalManagerView` and create your own views (like invoice item processing) returning a `JsonResponse({'html': ...})` structure during GET, ensure that on POST requests your custom backend endpoint returns exactly:
+- `JsonResponse({'success': True})` for a successful form submission, or
+- `JsonResponse({'error': 'Error message'})` if validation fails.
+This strict JSON signature is required for the `dynamic_modals.js` interceptor to gracefully capture and handle the result!
+
+---
+
+### 🔐 Two-Factor Authentication (2FA)
+
+microsys includes built-in Two-Factor Authentication with multiple methods.
+
+- **Supported Methods**
+
+| Method | How It Works |
+|---|---|
+| **Email OTP** | Sends a 6-digit code to the user's email address |
+| **TOTP App** | Generates time-based codes via authenticator apps (Google Authenticator, Authy, etc.) |
+| **Backup Codes** | 10 one-time recovery codes for account recovery |
+
+- **How It Works**
+  - Users enable/disable 2FA methods from their **Profile** page.
+  - When **Email OTP** is enabled, the system sends a verification code on login.
+  - When **TOTP** is enabled, the system shows a QR code that the user scans with their authenticator app.
+  - **Backup codes** can be generated as a fallback if the primary method is unavailable.
+  - 2FA status is stored in the `Profile` model (`is_email_2fa_enabled`, `is_totp_2fa_enabled`).
+
+- **URL Routes**
+
+| Route | Purpose |
+|---|---|
+| `/sys/2fa/enable/?method=email` | Start enabling Email 2FA |
+| `/sys/2fa/setup/totp/` | Generate TOTP secret + QR code |
+| `/sys/2fa/verify/login/` | Verify OTP during login |
+| `/sys/2fa/verify/enable/` | Verify OTP to confirm method activation |
+| `/sys/2fa/disable/` | Disable a 2FA method |
+| `/sys/2fa/backup-codes/generate/` | Generate new backup codes |
+| `/sys/2fa/resend/<intent>/` | Resend OTP code |
+
+> **Note**: Email-based 2FA requires a configured `EMAIL_BACKEND` in your Django settings.
+
+---
+
+### 🔒 Double-Submit Prevention
+
+microsys includes a **global JavaScript** mechanism that prevents accidental double form submissions.
+
+- **How it works**: When any form's submit button is clicked, it is immediately **disabled** to block rapid successive clicks.
+- **Scope**: Applies automatically to all forms managed by microsys templates (login, user management, sections, modals, profile).
+- **No configuration needed** — it's built into the base template.
+
+---
+
+### 🔧 Preferences API
+
+The Preferences API allows real-time persistence of user UI settings.
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/sys/api/preferences/update/` | POST | Update individual preference keys |
+| `/sys/api/preferences/reset/` | POST | Reset all preferences to defaults |
+
+**Payload format** (for update):
+```json
+{"key": "theme", "value": "dark"}
+```
+
+**Supported keys**: `theme`, `lang`, `sidebar_collapsed`, `sidebar_accordions`, `sidebar_order`, `autofill_enabled`.
+
+> **Note**: Preferences are stored in `Profile.preferences` (a `JSONField`). The API handles both session and database persistence.
 
 ---
 
@@ -640,28 +1013,53 @@ The dashboard now includes a built-in activity chart powered by **Plotly.js**:
 
 ```
 microsys/
-├── management/             # Custom Management commands.
+├── management/             # Custom Management commands (microsys_setup, microsys_check).
 ├── migrations/             # App Migrations.
 ├── static/                 # microsys/ (js/css/img).
-├── templates/              # microsys/ (flattened structure).
+│   └── microsys/
+│       ├── autofill/       # Autofill engine JS.
+│       ├── context_menu/   # Context menu JS/CSS.
+│       ├── js/             # dynamic_modals.js.
+│       ├── main/           # Core CSS (themes, layouts, fonts) and JS.
+│       ├── sidebar/        # Sidebar JS/CSS.
+│       ├── themes/         # Theme CSS variants (dark, royal, etc.).
+│       └── tutorial/       # Tutorial engine JS/CSS.
+├── templates/              # microsys/ templates.
+│   └── microsys/
+│       ├── includes/       # Reusable partials (dashboard, dynamic_modal, titlebar, etc.).
+│       ├── sections/       # Section management templates.
+│       ├── users/          # User management templates.
+│       └── base.html       # Main layout template.
 ├── templatetags/           # Custom template tags.
-├── tests/                  # Development tests.
+│   ├── microsys_tags.py        # ms_timesince, include_if_exists.
+│   ├── microsys_translation.py # translate_log_value, format_log_details.
+│   └── sidebar_tags.py         # auto_sidebar, extra_sidebar, sidebar_item_class.
+├── views/                  # Modular view package.
+│   ├── __init__.py         # Re-exports all views for backward compatibility.
+│   ├── general.py          # Dashboard, Options.
+│   ├── users.py            # User CRUD, Login, Detail views.
+│   ├── twofa.py            # 2FA setup, verification, backup codes.
+│   ├── sections.py         # Section CRUD, DynamicModalManagerView, DynamicModalDeleteView.
+│   ├── scopes.py           # Scope management.
+│   ├── activitylog.py      # Activity log views.
+│   ├── profile.py          # Profile view and edit.
+│   └── sidebar.py          # Sidebar toggle.
 ├── admin.py                # Admin Panel Registration.
-├── api.py                  # Autofill Api Configuration, Permission Checker, Serializer.
+├── api.py                  # Autofill API, Preferences API, Permission Checker.
 ├── apps.py                 # Django App configuration.
 ├── context_processors.py   # Branding, Scope, Sidebar order and Themes.
 ├── discovery.py            # Sidebar auto-discovery logic.
-├── fetcher.py              # Universal Dynamic Downlolader.
+├── fetcher.py              # Universal Dynamic Downloader and Excel Exporter.
 ├── filters.py              # User and ActivityLog filters.
-├── forms.py                # User, Profile, Permissions, and Section forms
-├── managers.py             # ScopedModel Manager.
-├── middleware.py           # ActivityLog middleware.
-├── models.py               # Profile, Scope, Logs.
-├── signals.py              # Auto-create profile logic, Auto soft-delete logic, ActivityLog.
+├── forms.py                # User, Profile, Permissions, and Section forms.
+├── managers.py             # ScopedManager (scope + soft-delete filtering).
+├── middleware.py            # ActivityLog middleware (thread-local user/request).
+├── models.py               # Profile, Scope, ScopedModel, ScopeForeignKey, UserActivityLog.
+├── signals.py              # Auto-create profile, Auto activity logging (CRUD/Login/Logout).
 ├── tables.py               # User, ActivityLog, and Scope tables.
+├── translations.py         # Built-in AR/EN translation strings.
 ├── urls.py                 # URL routing.
-├── utils.py                # Helping Dynamic functions.
-└── views.py                # User and Scope management, Dynamic Zero-Boilerplate Section management.
+└── utils.py                # Discovery, form/table/filter resolution, helpers.
 ```
 
 ## 📜 Version History
@@ -702,3 +1100,9 @@ microsys/
 | v1.7.12  | • **Offline Twemoji Flags**: Added local hosting for the Twemoji Country Flags web font polyfill to ensure flag emojis render correctly on Windows without external CDN dependencies. |
 | v1.8.0   | • **Dynamic Multi-Language Tutorial**: Completely refactored the guided tutorial system. The tutorial is now fully dynamic based on the current URL path (`/sys/`, `/sys/sections/`, `/sys/users/`, etc.), supports full English/Arabic translations, and intelligently targets elements even if they change positions. |
 | v1.8.1   | • **Auto Profile Creation**: Added a post-save signal to automatically create a Profile instance whenever a new User is created to prevent profile missing errors. <br> • **Sidebar Accordions State**: Updated sidebar accordions to decouple from the active URL and each other, strictly persisting each accordion's open/close state independently based purely on user interaction. |
+| v1.9.0   | • **Dynamic Modal Reconstruction**: Successfully restored the deleted `DynamicModalManagerView` and `DynamicModalDeleteView` functionality. <br> • Standardized dynamic modals with a unified AJAX-driven combined view (List + Form) for auxiliary models. <br> • Integrated related-record protection in deletion views with localized error messaging. |
+| v1.9.1   | • **Views Modularization**: Refactored monolithic `views.py` into a `views/` package with dedicated modules: `general.py`, `users.py`, `twofa.py`, `sections.py`, `scopes.py`, `activitylog.py`, `profile.py`, `sidebar.py` <br> • Added role-distinguishing top comments to all functions and classes |
+| v1.9.2   | • **Comprehensive README Overhaul**: Added extensive developer how-to documentation for Dynamic Modal Manager, 2FA, Template Tags, Double-Submit Prevention, Preferences API <br> • Expanded ScopedModel docs (dual managers, ScopeForeignKey, soft-delete), Section Mode (class resolution order, customization hooks), Context Menu (permission filtering, event actions, action schema), Autofill (API endpoints), and Activity Logging (safe_log, diffs, masking) <br> • Updated file structure to reflect views/ package refactor |
+| v1.10.0  | • **ScopedModel Audit Trail**: Added 6 built-in fields (`created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_by`) with `editable=False` to ScopedModel <br> • **Auto-Populated Actors**: `save()` override auto-populates `created_by`/`updated_by` from thread-local middleware <br> • **Global Soft-Delete**: `delete()` overridden to perform soft-delete; added `soft_delete()`, `restore()`, `hard_delete()` methods <br> • **UserActivityLog Refactor**: Removed redundant `user`/`timestamp` fields in favor of inherited `created_by`/`created_at` with backward-compat properties <br> • **Centralized Logging**: Enhanced `log_user_action()` utility — replaced all manual `UserActivityLog.objects.create()` calls across signals, fetcher, and views <br> • Removed all `hasattr` guards in views (fields always exist now) <br> • Simplified `ScopedManager` (no conditional `deleted_at` check) |
+| v1.10.1  | • **Sidebar Accordion Refinement**: Added dashboard navigation behavior to the built-in "System" group header, matching the split-accordion behavior of other functional groups. |
+| v1.11.0  | • **Sidebar Parent Reordering**: Enabled reordering for entire accordion groups with dedicated persistence and FOUC prevention. <br> • **Premium Dark Theme Legibility**: Comprehensive overhaul of contrast, outlines, and visibility for all UI components in dark mode. <br> • **Improved Text Contrast**: Enforced high-contrast labels and text utility classes for maximum readability on dark backgrounds. <br> • **Preserved Utility Borders**: Protected Bootstrap `border-*` classes from global theme overrides. |

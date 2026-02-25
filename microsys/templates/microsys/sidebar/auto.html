@@ -6,10 +6,11 @@
     <i class="bi {{ item.icon }} me-2" style="font-size: 24px;"></i>
     <span>{{ item.label }}</span>
 </a>
-{% empty %}
+{% endfor %}
+{% if not items and not has_extra %}
 <div class="p-3 text-center text-muted small">
     <i class="bi bi-inbox mb-2" style="font-size: 24px;"></i>
     <p class="mb-0">{{ MS_TRANS.no_items }}</p>
 </div>
-{% endfor %}
+{% endif %}
 </div>

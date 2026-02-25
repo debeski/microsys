@@ -91,14 +91,14 @@ class UserActivityLogFilter(django_filters.FilterSet):
         label='',
     )
     year = django_filters.ChoiceFilter(
-        field_name="timestamp__year",
+        field_name="created_at__year",
         lookup_expr="exact",
         choices=[],
         empty_label="السنة",
     )
     scope = django_filters.ModelChoiceFilter(
         queryset=apps.get_model('microsys', 'Scope').objects.all(),
-        field_name='user__profile__scope', # Updated lookup
+        field_name='created_by__profile__scope',
         label="النطاق",
         empty_label="الكل",
         required=False
@@ -106,7 +106,7 @@ class UserActivityLogFilter(django_filters.FilterSet):
     class Meta:
         model = apps.get_model('microsys', 'UserActivityLog')
         fields = {
-            'timestamp': ['gte', 'lte'],
+            'created_at': ['gte', 'lte'],
         }
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -117,7 +117,7 @@ class UserActivityLogFilter(django_filters.FilterSet):
         self.filters['scope'].extra['empty_label'] = s.get('filter_all', 'الكل')
         self.filters['scope'].label = s.get('filter_scope', 'النطاق')
         
-        years = self.Meta.model.objects.dates('timestamp', 'year').distinct()
+        years = self.Meta.model.objects.dates('created_at', 'year').distinct()
         self.filters['year'].extra['choices'] = [(year.year, year.year) for year in years]
         self.filters['year'].field.widget.attrs.update({
             'class': 'auto-submit-filter'
@@ -172,8 +172,8 @@ class UserActivityLogFilter(django_filters.FilterSet):
             Column(Field('year', placeholder=s.get('filter_year', 'السنة'), dir="rtl"), css_class='form-group col-auto'),
             Column(
                 Row(
-                    Column(Field('timestamp__gte', css_class='flatpickr', placeholder=s.get('filter_from', 'من ')), css_class='col-6'),
-                    Column(Field('timestamp__lte', css_class='flatpickr', placeholder=s.get('filter_to', 'إلى ')), css_class='col-6'),
+                    Column(Field('created_at__gte', css_class='flatpickr', placeholder=s.get('filter_from', 'من ')), css_class='col-6'),
+                    Column(Field('created_at__lte', css_class='flatpickr', placeholder=s.get('filter_to', 'إلى ')), css_class='col-6'),
                 ), 
                 css_class='col-auto flex-fill'
             ),
@@ -183,9 +183,9 @@ class UserActivityLogFilter(django_filters.FilterSet):
         self.form.helper.layout.append(Row(*row_fields, css_class='form-row'))
     def filter_keyword(self, queryset, name, value):
         return queryset.filter(
-            Q(user__username__icontains=value) |
-            Q(user__email__icontains=value) |
-            Q(user__profile__phone__icontains=value) | # Updated lookup
+            Q(created_by__username__icontains=value) |
+            Q(created_by__email__icontains=value) |
+            Q(created_by__profile__phone__icontains=value) |
             Q(action__icontains=value) |
             Q(model_name__icontains=value) |
             Q(number__icontains=value) |

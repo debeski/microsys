@@ -5,6 +5,9 @@ from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
 import json
 from datetime import date, datetime
+import logging
+# Project imports
+from .utils import log_user_action
 
 def _can_view_model(user, app_label, model_name):
     """Check if user has permission to view the model."""
@@ -143,3 +146,89 @@ def get_model_details(request, app_label, model_name, pk):
 
     instance = get_object_or_404(model, pk=pk)
     return JsonResponse(_serialize_instance(instance))
+
+# Preferences API — Updates user preferences (theme, sidebar, language, etc.)
+@login_required
+def update_preferences(request):
+    if request.method == "POST":
+        try:
+             # Support both JSON body and Form data
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+            else:
+                data = request.POST
+
+            # 1. Get or create profile
+            Profile = apps.get_model('microsys', 'Profile')
+            profile, created = Profile.all_objects.get_or_create(user=request.user)
+
+            # 2. Get existing prefs safely
+            current_prefs = profile.preferences
+            if not isinstance(current_prefs, dict):
+                if isinstance(current_prefs, str) and current_prefs.strip():
+                    try:
+                        current_prefs = json.loads(current_prefs)
+                    except:
+                        current_prefs = {}
+                else:
+                    current_prefs = {}
+            
+            # Start with a clean dict for merging
+            prefs = dict(current_prefs)
+            
+            # 3. Update with new data
+            logger = logging.getLogger('microsys')
+            
+            for key, value in data.items():
+                if key != 'csrfmiddlewaretoken':
+                    prefs[key] = value
+                    
+                    # Sync sidebar state to session for server-side consistency
+                    if key == 'sidebar_collapsed':
+                         val = value
+                         if isinstance(val, str):
+                             val = val.lower() == 'true'
+                         request.session['sidebarCollapsed'] = val
+
+            # 4. Save
+            profile.preferences = prefs
+            profile.save(update_fields=['preferences'])
+            request.session.modified = True
+            
+            logger.debug(f"Preferences updated for {request.user.username}: {prefs}")
+            return JsonResponse({'status': 'success', 'preferences': profile.preferences})
+        except Exception as e:
+            error_msg = f"Error updating preferences for {request.user.username}: {str(e)}"
+            logging.getLogger('microsys').error(error_msg)
+            return JsonResponse({'status': 'error', 'message': error_msg}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
+
+# Preferences API — Resets all user preferences to defaults
+@login_required
+def reset_preferences(request):
+    """
+    Reset all user preferences to default.
+    Clears Profile.preferences and session keys.
+    """
+    if request.method == "POST":
+        try:
+            # 1. Clear Profile preferences
+            Profile = apps.get_model('microsys', 'Profile')
+            profile, created = Profile.all_objects.get_or_create(user=request.user)
+            profile.preferences = {}
+            profile.save()
+            
+            # 2. Clear Session keys related to preferences
+            session_keys_to_clear = ['django_language', 'sidebarCollapsed', 'enable_prefill']
+            for key in session_keys_to_clear:
+                if key in request.session:
+                    del request.session[key]
+            
+            # Log action
+            log_user_action(request, "RESET", instance=request.user, model_name="preferences")
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False}, status=400)

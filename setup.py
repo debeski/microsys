@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="django_microsys",
-    version="1.8.0",
+    version="1.8.1",
     author="DeBeski",
     author_email="debeski1@gmail.com",
     description="Django micro (System Integration Service) - Multilingual Django Starter Pack, Packed with Features.",

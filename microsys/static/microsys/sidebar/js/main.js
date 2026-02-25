@@ -117,18 +117,87 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Save state on change
     accordions.forEach(acc => {
-        acc.addEventListener('shown.bs.collapse', saveAccordionState);
-        acc.addEventListener('hidden.bs.collapse', saveAccordionState);
+        acc.addEventListener('shown.bs.collapse', (e) => saveAccordionState(e));
+        acc.addEventListener('hidden.bs.collapse', (e) => saveAccordionState(e));
     });
 
-    function saveAccordionState() {
+    function saveAccordionState(event) {
         const openItems = Array.from(document.querySelectorAll('.sidebar .accordion-collapse.show'))
             .map(el => el.id)
             .filter(id => id); // Filter out empty IDs
-        
+            
         window.updatePreferences({ open_accordions: openItems });
         if (window.USER_PREFS) window.USER_PREFS.open_accordions = openItems;
+        
+        // Check for overflow and handle it
+        handleSidebarOverflow(event);
     }
+
+    function handleSidebarOverflow(event) {
+        const sidebar = document.getElementById('sidebar');
+        const scrollContainer = document.querySelector('.sidebar-items-wrapper');
+        if (!sidebar || !scrollContainer || sidebar.classList.contains('collapsed')) return;
+        
+        // 1. Ignore hidden events - we only care about overflows when something opens or screen resizes
+        if (event && event.type === 'hidden.bs.collapse') return;
+
+        // 2. Check for real overflow in the items wrapper
+        const isOverflowing = scrollContainer.scrollHeight > (scrollContainer.clientHeight + 10);
+        if (!isOverflowing) return;
+
+        // 3. Determine priority accordion (the one that MUST stay open)
+        let priorityAcc = null;
+        
+        // Priority choice: The one that just triggered a 'shown' event
+        if (event && event.type === 'shown.bs.collapse') {
+            priorityAcc = event.target;
+        } 
+        
+        // Fallback: the one containing the active navigation item
+        if (!priorityAcc) {
+            priorityAcc = document.querySelector('.sidebar .accordion-collapse.show .list-group-item.active')?.closest('.accordion-collapse');
+        }
+
+        // Final fallback: the first visible accordion (if any)
+        if (!priorityAcc) {
+            priorityAcc = document.querySelector('.sidebar .accordion-collapse.show');
+        }
+        
+        if (!priorityAcc) return;
+
+        // 4. Enforce mutual exclusion: collapse all EXCEPT the priority one
+        const openAccordions = document.querySelectorAll('.sidebar .accordion-collapse.show');
+        openAccordions.forEach(acc => {
+            if (acc !== priorityAcc) {
+                // Use the Bootstrap API to ensure events are fired and state is tracked
+                const bsCollapse = bootstrap.Collapse.getInstance(acc) || new bootstrap.Collapse(acc, { toggle: false });
+                bsCollapse.hide();
+            }
+        });
+    }
+
+    // Check overflow on resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(handleSidebarOverflow, 250);
+    });
+
+    // 3. Accordion Button Navigation
+    // Navigate to the group dashboard while simultaneously natively toggling the accordion
+    // Only navigates if user is not already on that page
+    const splitAccordionBtns = document.querySelectorAll('.split-accordion-btn');
+    splitAccordionBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const url = this.getAttribute('data-group-url');
+            if (!url) return; // Standard behavior if no URL
+
+            // Only navigate if not already on the dashboard page
+            if (window.location.pathname !== url && !window.location.pathname.startsWith(url.replace(/\/$/, '') + '/')) {
+                window.location.href = url;
+            }
+        });
+    });
 });
 
 // Close sidebar when clicking outside (only for small screens)

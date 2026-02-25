@@ -14,7 +14,7 @@ def _get_config_hash(config):
     config_str = json.dumps(config_copy, sort_keys=True)
     return hashlib.md5(config_str.encode()).hexdigest()[:8]
 
-def _process_extra_items(config, request, user_prefs=None):
+def _process_extra_items(config, request, user_prefs=None, ms_trans=None):
     """
     Process EXTRA_ITEMS config into sidebar-ready format.
     
@@ -23,13 +23,30 @@ def _process_extra_items(config, request, user_prefs=None):
     from django.utils.text import slugify
     if user_prefs is None:
         user_prefs = {}
+    if ms_trans is None:
+        ms_trans = {}
     open_accordions = user_prefs.get('open_accordions', [])
 
     extra_items = config.get('EXTRA_ITEMS', {})
     processed_groups = {}
     
     for group_name, group_config in extra_items.items():
+        # Prefer the explicitly provided 'label' in config, then translation, then group_name itself
+        translated_group_name = group_config.get('label', ms_trans.get(group_name, group_name))
         group_icon = group_config.get('icon', 'bi-gear')
+        
+        group_url_name = group_config.get('url_name', '')
+        group_url = '#'
+        try:
+            if group_url_name:
+                group_url = reverse(group_url_name)
+        except NoReverseMatch:
+            import logging
+            logging.getLogger('microsys').warning(
+                f"SIDEBAR_AUTO EXTRA_ITEMS: Could not resolve url_name '{group_url_name}' "
+                f"for group '{group_name}'. Check the URL name exists and includes the correct namespace."
+            )
+            
         items = []
         
         for item in group_config.get('items', []):
@@ -60,19 +77,29 @@ def _process_extra_items(config, request, user_prefs=None):
                 url = '#'
                 active = False
             
+            raw_label = item.get('label', url_name)
+            translated_label = ms_trans.get(raw_label, raw_label)
+            
             items.append({
                 'url_name': url_name,
                 'url': url,
-                'label': item.get('label', url_name),
+                'label': translated_label,
                 'icon': item.get('icon', 'bi-link'),
                 'active': active,
             })
         
         if items:  # Only add group if it has visible items
             group_id = f"extraGroup-{slugify(group_name)}"
-            is_open = group_id in open_accordions
-            processed_groups[group_name] = {
+            has_active = any(item['active'] for item in items)
+            is_open = (group_id in open_accordions) or has_active
+            
+            # Auto-expand if the group's dashboard URL is currently active
+            if group_url != '#' and request.path == group_url:
+                is_open = True
+            
+            processed_groups[translated_group_name] = {
                 'icon': group_icon,
+                'url': group_url,
                 'items': items,
                 'has_active': any(item['active'] for item in items),
                 'is_open': is_open,
@@ -205,7 +232,7 @@ def microsys_context(request):
             sidebar_items = visible
         
         # Process extra items for authenticated users
-        extra_groups = _process_extra_items(config, request, user_prefs)
+        extra_groups = _process_extra_items(config, request, user_prefs, ms_trans)
     
     context['sidebar_auto_items'] = sidebar_items
     context['sidebar_extra_groups'] = extra_groups

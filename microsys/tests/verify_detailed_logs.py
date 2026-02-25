@@ -49,7 +49,7 @@ def run_test():
     _thread_locals.REQUEST = None 
     
     # Verify Profile Creation Log (Signal)
-    logs = UserActivityLog.objects.filter(user=user, action="CREATE", model_name="Profile")
+    logs = UserActivityLog.objects.filter(created_by=user, action="CREATE", model_name="Profile")
     if logs.exists():
         print("✅ Profile Creation Logged (Signal)")
     else:
@@ -60,7 +60,7 @@ def run_test():
     user.first_name = "ChangedName"
     user.save()
     
-    log = UserActivityLog.objects.filter(user=user, action="UPDATE", model_name="user").last()
+    log = UserActivityLog.objects.filter(created_by=user, action="UPDATE", model_name="user").last()
     if log:
         print(f"✅ User Update Logged: {log.details}")
         if 'first_name' in log.details and log.details['first_name']['new'] == "ChangedName":
@@ -75,8 +75,8 @@ def run_test():
     user.set_password("newpassword123")
     user.save()
     
-    log = UserActivityLog.objects.filter(user=user, action="UPDATE", model_name="user").order_by('-timestamp').first()
-    # Note: timestamp might be identical, fetch latest
+    log = UserActivityLog.objects.filter(created_by=user, action="UPDATE", model_name="user").order_by('-created_at').first()
+    # Note: created_at might be identical, fetch latest
     
     if log and 'password' in log.details:
         print(f"✅ Password Update Logged: {log.details}")
@@ -110,7 +110,7 @@ def run_test():
     profile.is_email_2fa_enabled = True
     profile.save()
     
-    log = UserActivityLog.objects.filter(user=user, action="UPDATE", model_name="Profile").last()
+    log = UserActivityLog.objects.filter(created_by=user, action="UPDATE", model_name="Profile").last()
     if log:
         print(f"✅ Profile Update Logged: {log.details}")
         if 'is_email_2fa_enabled' in log.details:
@@ -133,7 +133,7 @@ def run_test():
     profile.save()
     
     # Check logs: Should only be ONE log in the last few seconds (or merged details)
-    recent_logs = UserActivityLog.objects.filter(user=user, action="UPDATE").order_by('-timestamp')[:2]
+    recent_logs = UserActivityLog.objects.filter(created_by=user, action="UPDATE").order_by('-created_at')[:2]
     print(f"Recent Logs Count: {len(recent_logs)}")
     
     first_log = recent_logs[0]

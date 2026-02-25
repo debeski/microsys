@@ -22,10 +22,10 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(UserActivityLog)
 class UserActivityLogAdmin(admin.ModelAdmin):
-    list_display = ('user', 'action', 'model_name', 'object_id', 'timestamp', 'ip_address')
-    list_filter = ('action', 'model_name', 'timestamp')
-    search_fields = ('user__username', 'model_name', 'object_id', 'ip_address')
-    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'number', 'ip_address', 'user_agent', 'timestamp')
+    list_display = ('created_by', 'action', 'model_name', 'object_id', 'created_at', 'ip_address')
+    list_filter = ('action', 'model_name', 'created_at')
+    search_fields = ('created_by__username', 'model_name', 'object_id', 'ip_address')
+    readonly_fields = ('created_by', 'action', 'model_name', 'object_id', 'number', 'ip_address', 'user_agent', 'created_at')
 
     def has_add_permission(self, request):
         return False

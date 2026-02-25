@@ -1,0 +1,60 @@
+# Views Package — Re-exports all view functions and classes
+# so that `from . import views` and `views.XYZ` in urls.py keeps working.
+
+# General / Dashboard / Preferences
+from .general import dashboard, options_view
+
+# Authentication & User Management
+from .users import (
+    CustomLoginView,
+    UserListView,
+    UserDetailView,
+    UserDetailModalView,
+    create_user,
+    edit_user,
+    delete_user,
+    reset_password,
+)
+
+# 2FA
+from .twofa import (
+    send_otp,
+    verify_otp_logic,
+    get_2fa_config,
+    verify_otp_view,
+    setup_totp,
+    enable_2fa,
+    disable_2fa,
+    resend_otp,
+    generate_backup_codes,
+)
+
+# Section Management
+from .sections import (
+    core_models_view,
+    add_subsection,
+    edit_subsection,
+    delete_subsection,
+    delete_section,
+    get_section_details,
+    DynamicModalManagerView,
+    DynamicModalDeleteView,
+)
+
+# Scope Management
+from .scopes import (
+    manage_scopes,
+    get_scope_form,
+    save_scope,
+    delete_scope,
+    toggle_scopes,
+)
+
+# Activity Log
+from .activitylog import (
+    UserActivityLogView,
+    ActivityLogDetailView,
+)
+
+# Profile
+from .profile import user_profile, edit_profile

@@ -126,16 +126,17 @@ class UserTable(tables.Table):
 class UserActivityLogTable(tables.Table):
     timestamp = tables.DateColumn(
         format="H:i Y-m-d ",
-        verbose_name="وقت العملية"
+        verbose_name="وقت العملية",
+        accessor='created_at'  # Use inherited field via accessor
     )
     full_name = tables.Column(
         verbose_name="الاسم الكامل",
-        accessor='user.profile.full_name', # Updated accessor
-        order_by='user__first_name'
+        accessor='created_by.profile.full_name',
+        order_by='created_by__first_name'
     )
     scope = tables.Column(
         verbose_name="النطاق",
-        accessor='user.profile.scope.name', # Updated accessor
+        accessor='created_by.profile.scope.name',
         default='عام'
     )
     # Explicitly declare to prevent django-tables2 from using get_FOO_display()
@@ -154,6 +155,8 @@ class UserActivityLogTable(tables.Table):
         # Also translate auto-generated model field headers
         if 'user' in self.columns:
             self.columns['user'].column.verbose_name = s.get('tbl_username', 'اسم المستخدم')
+        if 'created_by' in self.columns:
+            self.columns['created_by'].column.verbose_name = s.get('tbl_username', 'اسم المستخدم')
         if 'model_name' in self.columns:
             self.columns['model_name'].column.verbose_name = s.get('tbl_model_name', 'النموذج')
         if 'action' in self.columns:
@@ -217,8 +220,8 @@ class UserActivityLogTable(tables.Table):
     class Meta:
         model = apps.get_model('microsys', 'UserActivityLog')
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("timestamp", "user", "full_name", "model_name", "action", "object_id", "number", "scope")
-        exclude = ("id", "ip_address", "user_agent")
+        fields = ("timestamp", "created_by", "full_name", "model_name", "action", "object_id", "number", "scope")
+        exclude = ("id", "ip_address", "user_agent", "created_at", "updated_at", "updated_by", "deleted_at", "deleted_by")
         attrs = {'class': 'table table-hover align-middle'}
         # row_attrs is handled in __init__ to allow dynamic behavior
 
