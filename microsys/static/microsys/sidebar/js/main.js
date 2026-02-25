@@ -183,21 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {
         resizeTimer = setTimeout(handleSidebarOverflow, 250);
     });
 
-    // 3. Accordion Button Navigation
-    // Navigate to the group dashboard while simultaneously natively toggling the accordion
-    // Only navigates if user is not already on that page
-    const splitAccordionBtns = document.querySelectorAll('.split-accordion-btn');
-    splitAccordionBtns.forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            const url = this.getAttribute('data-group-url');
-            if (!url) return; // Standard behavior if no URL
 
-            // Only navigate if not already on the dashboard page
-            if (window.location.pathname !== url && !window.location.pathname.startsWith(url.replace(/\/$/, '') + '/')) {
-                window.location.href = url;
-            }
-        });
-    });
 });
 
 // Close sidebar when clicking outside (only for small screens)

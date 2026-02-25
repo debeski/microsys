@@ -94,9 +94,7 @@ def _process_extra_items(config, request, user_prefs=None, ms_trans=None):
             is_open = (group_id in open_accordions) or has_active
             
             # Auto-expand if the group's dashboard URL is currently active
-            if group_url != '#' and request.path == group_url:
-                is_open = True
-            
+            # (Behavior removed: we now rely solely on 'active' inner items or explicit user 'open_accordions' state)
             processed_groups[translated_group_name] = {
                 'icon': group_icon,
                 'url': group_url,

@@ -246,3 +246,32 @@
 /* Direction-aware hover shift variable */
 [dir="rtl"] .sidebar { --hover-shift: -1; }
 [dir="ltr"] .sidebar { --hover-shift: 1; }
+
+/* Sidebar Accordion URL Button */
+.sidebar .accordion-header.has-url-btn .accordion-button {
+    padding-inline-end: 8px !important;
+}
+
+.sidebar .group-url-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 8px;
+    margin: 4px 0;
+    margin-inline-end: var(--sidebar-item-px);
+    color: #8c98a4;
+    border-radius: 12px;
+    text-decoration: none;
+    flex-shrink: 0;
+    font-size: 0.95rem;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.sidebar .group-url-btn:hover {
+    color: #5a6474;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.sidebar.collapsed .group-url-btn {
+    display: none !important;
+}

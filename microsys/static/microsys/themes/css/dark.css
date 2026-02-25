@@ -331,6 +331,11 @@
     border-color: transparent !important;
 }
 
+:root.theme-dark .sidebar .group-url-btn:hover {
+    color: #f8f9fa !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 :root.theme-dark .titlebar .login-title-btn {
     border-color: transparent !important;
     background-color: transparent !important;
