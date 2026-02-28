@@ -65,4 +65,8 @@ urlpatterns = [
     path('sys/api/details/<str:app_label>/<str:model_name>/<int:pk>/', api.get_model_details, name='api_get_model_details'),
     path('sys/api/preferences/update/', api.update_preferences, name='update_preferences'),
     path('sys/api/preferences/reset/', api.reset_preferences, name='reset_preferences'),
+
+    # Dynamic Modal CRUD
+    path('sys/modals/manager/<str:app_label>/<str:model_name>/<str:pk>/', views.DynamicModalManagerView.as_view(), name='modal_manager'),
+    path('sys/modals/delete/<str:app_label>/<str:model_name>/<int:pk>/', views.DynamicModalDeleteView.as_view(), name='modal_delete'),
 ]

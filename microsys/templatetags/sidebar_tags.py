@@ -37,7 +37,14 @@ def auto_sidebar(context):
             item['url'] = '#'
             item['active'] = False
     
-    return {'items': items, 'request': request, 'has_extra': has_extra}
+    return {
+        'items': items, 
+        'request': request, 
+        'has_extra': has_extra,
+        'CURRENT_DIR': context.get('CURRENT_DIR'),
+        'CURRENT_LANG': context.get('CURRENT_LANG'),
+        'MS_TRANS': context.get('MS_TRANS'),
+    }
 
 
 @register.simple_tag(takes_context=True)
@@ -72,5 +79,11 @@ def extra_sidebar(context):
     """
     groups = context.get('sidebar_extra_groups', {})
     request = context.get('request')
-    return {'groups': groups, 'request': request}
+    return {
+        'groups': groups, 
+        'request': request,
+        'CURRENT_DIR': context.get('CURRENT_DIR'),
+        'CURRENT_LANG': context.get('CURRENT_LANG'),
+        'MS_TRANS': context.get('MS_TRANS'),
+    }
 

@@ -33,47 +33,9 @@ class UserFilter(django_filters.FilterSet):
         fields = []
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        s = _get_filter_strings(getattr(self, 'request', None))
-        self.form.helper = FormHelper()
-        self.form.helper.form_method = 'GET'
-        self.form.helper.form_class = 'form-inline'
-        self.form.helper.form_show_labels = False
-        self.form.helper.layout = Layout()
-        
-        if 'sort' in self.data:
-            self.form.helper.layout.append(Hidden('sort', self.data['sort']))
-        
-        clear_url = '{% url "manage_users" %}'
-        query_params = []
-        if 'sort' in self.data:
-            query_params.append(f"sort={self.data['sort']}")
-        
-        if query_params:
-            clear_url += "?" + "&".join(query_params)
+        # Placeholder for setup_filter_helper which handles layout
+        pass
 
-        ignore_params = ['sort', 'page']
-        has_active_filters = any(key for key in self.data if key not in ignore_params)
-        
-        if has_active_filters:
-            search_btn = '<button type="submit" class="btn btn-secondary rounded-start-pill rounded-end-0"><i class="bi bi-search"></i></button>'
-            clear_btn = f'<a href="{clear_url}" class="btn btn-warning rounded-end-pill rounded-start-0"><i class="bi bi-x-lg"></i></a>'
-            buttons_html = [
-                Column(HTML(search_btn), css_class='form-group col-auto pe-0'),
-                Column(HTML(clear_btn), css_class='form-group col-auto ps-0'),
-            ]
-        else:
-            search_btn = '<button type="submit" class="btn btn-secondary rounded-pill"><i class="bi bi-search"></i></button>'
-            buttons_html = [
-                Column(HTML(search_btn), css_class='form-group col-auto text-center'),
-            ]
-
-        self.form.helper.layout.append(
-            Row(
-                Column(Field('keyword', placeholder=s.get('filter_search', 'البحث'), css_class='form-control glass-input h-100'), css_class='form-group col-auto flex-fill'),
-                *buttons_html,
-                css_class='form-row align-items-stretch'
-            ),
-        )
     def filter_keyword(self, queryset, name, value):
         return queryset.filter(
             Q(username__icontains=value) |
@@ -129,58 +91,9 @@ class UserActivityLogFilter(django_filters.FilterSet):
         if self.request and hasattr(self.request.user, 'profile') and self.request.user.profile.scope:
             del self.filters['scope']
         
-        self.form.helper = FormHelper()
-        self.form.helper.form_method = 'GET'
-        self.form.helper.form_class = 'form-inline'
-        self.form.helper.form_show_labels = False
-        
-        self.form.helper.layout = Layout()
-        if 'sort' in self.data:
-            self.form.helper.layout.append(Hidden('sort', self.data['sort']))
-            
-        row_fields = [
-            Column(Field('keyword', placeholder=s.get('filter_search', 'البحث')), css_class='form-group col-auto flex-fill'),
-        ]
-        if is_scope_enabled():
-            # Check profile for scope
-            if not (self.request and hasattr(self.request.user, 'profile') and self.request.user.profile.scope):
-                row_fields.append(Column(Field('scope', placeholder=s.get('filter_scope', 'النطاق'), dir="rtl"), css_class='form-group col-auto'))
+        # Layout handled by setup_filter_helper in the view
+        pass
 
-        clear_url = '{% url "user_activity_log" %}'
-        query_params = []
-        if 'sort' in self.data:
-            clear_url += f"?sort={self.data['sort']}"
-        if query_params:
-            clear_url += "?" + "&".join(query_params)
-        ignore_params = ['sort', 'page']
-        has_active_filters = any(key for key in self.data if key not in ignore_params)
-        
-        if has_active_filters:
-            search_btn = '<button type="submit" class="btn btn-secondary rounded-start-pill rounded-end-0"><i class="bi bi-search"></i></button>'
-            clear_btn = f'<a href="{clear_url}" class="btn btn-warning rounded-end-pill rounded-start-0"><i class="bi bi-x-lg"></i></a>'
-            buttons_html = [
-                Column(HTML(search_btn), css_class='form-group col-auto pe-0'),
-                Column(HTML(clear_btn), css_class='form-group col-auto ps-0'),
-            ]
-        else:
-            search_btn = '<button type="submit" class="btn btn-secondary rounded-pill"><i class="bi bi-search"></i></button>'
-            buttons_html = [
-                Column(HTML(search_btn), css_class='form-group col-auto text-center'),
-            ]
-        
-        row_fields.extend([
-            Column(Field('year', placeholder=s.get('filter_year', 'السنة'), dir="rtl"), css_class='form-group col-auto'),
-            Column(
-                Row(
-                    Column(Field('created_at__gte', css_class='flatpickr', placeholder=s.get('filter_from', 'من ')), css_class='col-6'),
-                    Column(Field('created_at__lte', css_class='flatpickr', placeholder=s.get('filter_to', 'إلى ')), css_class='col-6'),
-                ), 
-                css_class='col-auto flex-fill'
-            ),
-            *buttons_html,
-        ])
-
-        self.form.helper.layout.append(Row(*row_fields, css_class='form-row'))
     def filter_keyword(self, queryset, name, value):
         return queryset.filter(
             Q(created_by__username__icontains=value) |

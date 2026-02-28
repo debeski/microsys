@@ -15,7 +15,7 @@ from django_tables2 import RequestConfig, SingleTableView
 from django.views.generic.detail import DetailView
 
 # Project imports
-from ..utils import is_scope_enabled, _get_request_translations, is_staff, is_superuser, log_user_action, get_client_ip
+from ..utils import is_scope_enabled, _get_request_translations, is_staff, is_superuser, log_user_action, get_client_ip, get_user_linked_models
 from .twofa import send_otp
 
 
@@ -130,6 +130,9 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, FilterView, SingleTa
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_filter = self.get_filterset(self.filterset_class)
+        from ..utils import setup_filter_helper
+        setup_filter_helper(user_filter, self.request)
+        
         scope_enabled = is_scope_enabled()
         
         context["filter"] = user_filter
@@ -155,6 +158,8 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, FilterView, SingleTa
 @user_passes_test(is_staff)
 def create_user(request):
     CustomUserCreationForm = import_string('microsys.forms.CustomUserCreationForm')
+    linked_models = get_user_linked_models()
+    
     if request.method == "POST":
         form = CustomUserCreationForm(request.POST or None, user=request.user)
         if form.is_valid():
@@ -165,13 +170,29 @@ def create_user(request):
                 pass 
                 
             user = form.save() # Saves user + profile
+            
+            # --- Dynamic Profile Auto-Enrollment ---
+            for lm in linked_models:
+                checkbox_name = f"create_profile_{lm['app_label']}_{lm['model_name']}"
+                if request.POST.get(checkbox_name) == 'on':
+                    model_class = apps.get_model(lm['app_label'], lm['model_name'])
+                    kwargs = {lm['field_name']: user}
+                    
+                    # Try to populate 'name' if defined on the model
+                    field_names = [f.name for f in model_class._meta.get_fields()]
+                    if 'name' in field_names:
+                        kwargs['name'] = user.get_full_name() or user.username
+                        
+                    model_class.objects.get_or_create(**kwargs)
+            # ---------------------------------------
+            
             return redirect("manage_users")
         else:
-            return render(request, "microsys/users/user_form.html", {"form": form})
+            return render(request, "microsys/users/user_form.html", {"form": form, "linked_models": linked_models})
     else:
         form = CustomUserCreationForm(user=request.user)
     
-    return render(request, "microsys/users/user_form.html", {"form": form})
+    return render(request, "microsys/users/user_form.html", {"form": form, "linked_models": linked_models})
 
 
 # User Management — Handles user editing with superuser/scope protection

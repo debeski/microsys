@@ -10,7 +10,7 @@
 <!-- <div class="sidebar-ghost"></div> -->
 
 <!-- sidebar.html -->
-<div class="col-2 flex-column shadow-sm sidebar {% if sidebar_collapsed %}collapsed{% endif %} no-print" 
+<div class="col-auto flex-column shadow-sm sidebar {% if sidebar_collapsed %}collapsed{% endif %} no-print" 
      id="sidebar" 
      data-toggle-url="{% url 'toggle_sidebar' %}"
      data-session-collapsed="{{ sidebar_collapsed|yesno:'true,false' }}">

@@ -32,6 +32,7 @@ from ..utils import (
     _get_m2m_through_defaults,
     _create_minimal_instance_from_post,
     log_user_action,
+    setup_filter_helper,
 )
 
 User = get_user_model()
@@ -130,9 +131,9 @@ def core_models_view(request):
     
     # Create filter and queryset
     queryset = selected_model.objects.all()
-    filter_obj = None
     if FilterClass:
         filter_obj = FilterClass(request.GET or None, queryset=queryset)
+        setup_filter_helper(filter_obj, request)
         queryset = filter_obj.qs
     
     # Introspect table __init__ to see if it accepts model_name kwarg or **kwargs
@@ -692,6 +693,17 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
     def get_model(self):
         if self.model:
             return self.model
+        
+        # 1. Check kwargs from URL capture
+        app_label = self.kwargs.get('app_label')
+        model_name = self.kwargs.get('model_name')
+        if app_label and model_name:
+            try:
+                return apps.get_model(app_label, model_name)
+            except (LookupError, ValueError):
+                pass
+        
+        # 2. Fallback to query param
         model_name = self.request.GET.get('model')
         if model_name:
             return resolve_model_by_name(model_name)
@@ -712,6 +724,8 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
         # Filter (optional)
         if classes['filter']:
             f = classes['filter'](request.GET, queryset=queryset)
+            from microsys.utils import setup_filter_helper
+            setup_filter_helper(f, request)
             queryset = f.qs
         else:
             f = None
@@ -725,7 +739,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
         # 3. Handle Form (Edit or Create)
         instance = None
         pk = kwargs.get('pk') or request.GET.get('id')
-        if pk:
+        if pk and pk != 'new':
             instance = get_object_or_404(model, pk=pk)
         
         form_class = classes['form']
@@ -751,7 +765,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
 
         instance = None
         pk = kwargs.get('pk') or request.GET.get('id')
-        if pk:
+        if pk and pk != 'new':
             instance = get_object_or_404(model, pk=pk)
 
         classes = get_model_classes(model._meta.model_name, app_label=model._meta.app_label)
@@ -798,8 +812,19 @@ class DynamicModalDeleteView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         model_class = self.model
         if not model_class:
-            model_name = request.GET.get('model')
-            model_class = resolve_model_by_name(model_name)
+            # 1. Check kwargs from URL capture
+            app_label = kwargs.get('app_label')
+            model_name = kwargs.get('model_name')
+            if app_label and model_name:
+                try:
+                    model_class = apps.get_model(app_label, model_name)
+                except (LookupError, ValueError):
+                    pass
+            
+            # 2. Fallback to query param
+            if not model_class:
+                model_name = request.GET.get('model')
+                model_class = resolve_model_by_name(model_name)
         
         pk = kwargs.get('pk')
         if not model_class or not pk:

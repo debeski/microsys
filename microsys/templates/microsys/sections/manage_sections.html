@@ -85,9 +85,9 @@
         </div> -->
         <div class="card-body mt-2">
             {% if filter %}
-            <form method="get" class="py-2 g-2 no-print">
+            <div class="py-2 no-print">
                 {% crispy filter.form %}
-            </form>
+            </div>
             {% endif %}
             <div class="table-responsive">
                 {% render_table table %}

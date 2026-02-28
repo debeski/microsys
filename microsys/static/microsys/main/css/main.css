@@ -253,6 +253,10 @@ form label {
     overflow-y: auto;
 }
 
+#globalFormCard > .card-header {
+    min-height: 60px;
+}
+
 .disabler {
     pointer-events: none !important;
     cursor: not-allowed !important;

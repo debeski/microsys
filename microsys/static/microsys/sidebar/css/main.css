@@ -16,6 +16,19 @@
     --sidebar-icon-width: 40px;
 }
 
+@media (min-width: 992px) {
+    .sidebar:not(.collapsed) {
+        width: auto !important;
+        min-width: fit-content !important;
+    }
+}
+
+.sidebar.collapsed {
+    width: 65px !important;
+    min-width: 65px !important;
+}
+
+
 .sidebar-items-wrapper {
     flex-grow: 1;
     overflow-y: auto;
@@ -237,10 +250,13 @@
     bottom: 0;
     inset-inline-start: 0;
     width: 100%;
-    background: transparent;
-    pointer-events: none; /* Let clicks pass through to content if needed, but we override for items */
+    /* Glassmorphism for visibility over scrolling content */
+    background: linear-gradient(to top, rgba(225, 239, 253, 0.95), rgba(225, 239, 253, 0));
+    backdrop-filter: blur(2px);
+    z-index: 1050; /* Ensure it's above scrolling accordion items */
+    pointer-events: none; /* Let clicks pass through to content if needed */
     display: flex;
-    justify-content: flex-end
+    justify-content: flex-end;
 }
 
 /* Direction-aware hover shift variable */
@@ -251,6 +267,23 @@
 .sidebar .accordion-header.has-url-btn .accordion-button {
     padding-inline-end: 8px !important;
 }
+
+[dir="rtl"] .sidebar .accordion-button::after {
+    margin-right: auto;
+    margin-left: 0;
+    transform: rotate(-180deg);
+}
+
+[dir="rtl"] .sidebar .accordion-button:not(.collapsed)::after {
+    transform: rotate(-270deg);
+}
+
+[dir="rtl"] .sidebar .accordion-button,
+[dir="rtl"] .sidebar .list-group-item {
+    padding-right: var(--sidebar-item-px) !important;
+    padding-left: 4px !important; /* Reduce inner padding to pull chevron/items closer */
+}
+
 
 .sidebar .group-url-btn {
     display: flex;

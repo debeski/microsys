@@ -58,7 +58,10 @@ class UserActivityLogView(LoginRequiredMixin, UserPassesTestMixin, SingleTableMi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Handle the filter object
+        # Standardize Filter Layout
+        from ..utils import setup_filter_helper
+        setup_filter_helper(self.filterset, self.request)
+        
         context['filter'] = self.filterset
         return context
 

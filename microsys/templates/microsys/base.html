@@ -79,11 +79,11 @@
 
     {% block layout %}
     <div class="col overflow-hidden">
-        <div class="row g-0 m-0 d-flex flex-grow-1">
+        <div class="row g-0 m-0 d-flex flex-grow-1 flex-nowrap">
             <!-- Sidebar -->
                 {% include 'microsys/includes/sidebar_items.html' %} 
             <!-- Main Content -->
-            <div class="col-10 p-3 flex-column flex-fill p-4" id="mainContent">
+            <div class="col p-3 flex-column flex-fill p-4" id="mainContent">
                     {% if messages %}
                         <div class="alert-container position-absolute top-0 start-0 w-100">
                             {% for message in messages %}
@@ -138,11 +138,7 @@
             });
         });
     </script>
-    <!-- {% include 'includes/scan.html' %} -->
     {% include 'microsys/includes/micro_context_menu.html' %}
     {% include 'microsys/includes/dynamic_modal.html' %}
-    <!-- Themes logic moved to sidebar app -->
-    <!-- <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" nonce="{{ request.csp_nonce }}"></script> -->
-
 </body>
 </html>

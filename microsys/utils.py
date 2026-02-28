@@ -200,31 +200,42 @@ def _resolve_model_class(model, getter_name):
 # Model Resolution — Dynamically imports model, form, table, and filter classes by name
 def get_model_classes(model_name, app_label=None):
     """
-    Dynamically import model, form, table, and filter classes for a given model.
+    Dynamically import model, form, table, and filter classes for a given model
+    following standard naming conventions.
     """
     if not model_name:
         return None
     
+    # Resolve Model
     model = resolve_model_by_name(model_name, app_label=app_label)
     if not model:
-        return None
+        # Try to resolve by model_name directly if it might be a full path
+        if '.' in model_name:
+            try:
+                model = apps.get_model(model_name)
+            except:
+                return None
+        else:
+            return None
     
-    # We can use discover_section_models to find it or just resolve manually
-    # For now, manually resolution based on conventions
     meta = model._meta
     
-    # Form
-    form_class = resolve_form_class_for_model(model)
+    # 1. Resolve Form
+    form_class = _import_by_convention(model, "forms", "Form")
+    if not form_class:
+        form_class = resolve_form_class_for_model(model)
         
-    # Table
+    # 2. Resolve Table
     table_class = _import_by_convention(model, "tables", "Table")
     if not table_class:
          table_class = _resolve_model_class(model, "get_table_class")
     if not table_class:
          table_class = _build_generic_table_class(model)
 
-    # Filter
+    # 3. Resolve Filter
     filter_class = _import_by_convention(model, "filters", "Filter")
+    if not filter_class:
+         filter_class = _resolve_model_class(model, "get_filter_class")
     if not filter_class and django_filters:
          filter_class = _build_generic_filter_class(model)
 
@@ -233,9 +244,37 @@ def get_model_classes(model_name, app_label=None):
         'form': form_class,
         'table': table_class,
         'filter': filter_class,
-        'ar_name': meta.verbose_name,
-        'ar_names': meta.verbose_name_plural,
+        'verbose_name': meta.verbose_name,
+        'verbose_name_plural': meta.verbose_name_plural,
     }
+
+
+def get_user_linked_models():
+    """
+    Finds all models across the Django project that have a OneToOneField 
+    pointing to settings.AUTH_USER_MODEL, excluding microsys.Profile.
+    Returns: list of dicts with model identifiers.
+    """
+    from django.apps import apps
+    from django.contrib.auth import get_user_model
+    linked_models = []
+    
+    User = get_user_model()
+    for model in apps.get_models():
+        # Exclude the internal microsys profile since it's already auto-created
+        if model._meta.app_label == 'microsys' and model.__name__ == 'Profile':
+            continue
+            
+        for field in model._meta.get_fields():
+            if field.is_relation and field.one_to_one:
+                if field.related_model == User:
+                    linked_models.append({
+                        'app_label': model._meta.app_label,
+                        'model_name': model.__name__,
+                        'verbose_name': model._meta.verbose_name,
+                        'field_name': field.name,
+                    })
+    return linked_models
 
 # Model Resolution — Dynamically Resolves a Model by Name
 def resolve_model_by_name(model_name, app_label=None):
@@ -300,6 +339,11 @@ def resolve_form_class_for_model(model):
             from django.forms import Select
             widgets[field.name] = Select(attrs={'data-autofill-source': source})
 
+    try:
+        has_scope_field = model._meta.get_field("scope") is not None
+    except Exception:
+        has_scope_field = False
+
     if form_class:
         # Wrap custom form to inject widgets
         # We explicitly pass fields=None to let it infer from the base form
@@ -318,21 +362,24 @@ def resolve_form_class_for_model(model):
         else:
             raw_exclude = list(raw_exclude)
 
-        try:
-            has_scope_field = model._meta.get_field("scope") is not None
-        except Exception:
-            has_scope_field = False
+        # Default exclusions for audit fields
+        audit_fields = ['created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'deleted_by']
+        raw_exclude.extend([f for f in audit_fields if f not in raw_exclude])
 
-        if has_scope_field and not is_scope_enabled():
-            exclude = ["scope", *raw_exclude]
-            # Remove duplicates while preserving order
-            exclude = list(dict.fromkeys(exclude))
-            form_class = modelform_factory(model, exclude=exclude, widgets=widgets)
-        elif raw_exclude:
+        if raw_exclude:
             exclude = list(dict.fromkeys(raw_exclude))
             form_class = modelform_factory(model, exclude=exclude, widgets=widgets)
         else:
             form_class = modelform_factory(model, fields='__all__', widgets=widgets)
+
+    if has_scope_field:
+        class ScopeDynamicForm(form_class):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                if 'scope' in self.fields and not is_scope_enabled():
+                    del self.fields['scope']
+        form_class = ScopeDynamicForm
+
     return form_class
 
 # Related Objects Inspector — Introspects all related objects for Smart Delete/View
@@ -400,13 +447,16 @@ def _build_generic_table_class(model):
     else:
         raw_exclude = list(raw_exclude)
 
+    # Default exclusions for audit fields
+    audit_fields = ['created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'deleted_by']
+    raw_exclude.extend([f for f in audit_fields if f not in raw_exclude])
+
     try:
         has_scope_field = model._meta.get_field("scope") is not None
     except Exception:
         has_scope_field = False
 
-    if has_scope_field and not is_scope_enabled():
-        raw_exclude.append("scope")
+    # Scope exclusion deferred to runtime in __init__
 
     meta_attrs = {
         "model": model,
@@ -422,6 +472,13 @@ def _build_generic_table_class(model):
         },
     }
     def __init__(self, *args, translations=None, request=None, **kwargs):
+        if has_scope_field and not is_scope_enabled():
+            exclude_kwargs = kwargs.get('exclude', tuple(raw_exclude))
+            if isinstance(exclude_kwargs, list):
+                exclude_kwargs = tuple(exclude_kwargs)
+            if 'scope' not in exclude_kwargs:
+                kwargs['exclude'] = exclude_kwargs + ('scope',)
+                
         model_name = kwargs.pop('model_name', None)
         super(self.__class__, self).__init__(*args, **kwargs)
         if model_name:
@@ -522,62 +579,8 @@ def _build_generic_filter_class(model):
             })
 
         if not hasattr(self.form, 'helper') or self.form.helper is None:
-            from crispy_forms.helper import FormHelper
-            from crispy_forms.layout import Layout, Row, Column, Field, HTML, Hidden
-
-            self.form.helper = FormHelper()
-            self.form.helper.form_method = 'GET'
-            self.form.helper.form_class = 'form-inline'
-            self.form.helper.form_show_labels = False
-            self.form.helper.layout = Layout()
-
-            if 'sort' in self.data:
-                self.form.helper.layout.append(Hidden('sort', self.data['sort']))
-            if 'model' in self.data:
-                self.form.helper.layout.append(Hidden('model', self.data['model']))
-
-            row_fields = [
-                Column(Field('keyword', placeholder="البحث"), css_class='form-group col-auto flex-fill'),
-            ]
-            # Date range pickers (flatpickr auto-inits via CSS class)
-            if date_field:
-                if 'date_gte' in self.filters:
-                    row_fields.append(Column(Field('date_gte', placeholder="من تاريخ"), css_class='form-group col-auto'))
-                if 'date_lte' in self.filters:
-                    row_fields.append(Column(Field('date_lte', placeholder="إلى تاريخ"), css_class='form-group col-auto'))
-            if date_field and 'year' in self.filters:
-                row_fields.append(Column(Field('year', placeholder="السنة", dir="rtl"), css_class='form-group col-auto'))
-
-            clear_url = '{% url "manage_sections" %}'
-            query_params = []
-            if 'model' in self.data:
-                query_params.append(f"model={self.data['model']}")
-            if 'sort' in self.data:
-                query_params.append(f"sort={self.data['sort']}")
-            if 'id' in self.data:
-                query_params.append(f"id={self.data['id']}")
-            
-            if query_params:
-                clear_url += "?" + "&".join(query_params)
-
-            ignore_params = ['sort', 'page', 'model', 'id']
-            has_active_filters = any(key for key in self.data if key not in ignore_params)
-
-            if has_active_filters:
-                search_btn = '<button type="submit" class="btn btn-secondary rounded-start-pill rounded-end-0"><i class="bi bi-search"></i></button>'
-                clear_btn = f'<a href="{clear_url}" class="btn btn-warning rounded-end-pill rounded-start-0"><i class="bi bi-x-lg"></i></a>'
-                buttons_html = [
-                    Column(HTML(search_btn), css_class='form-group col-auto pe-0'),
-                    Column(HTML(clear_btn), css_class='form-group col-auto ps-0'),
-                ]
-            else:
-                search_btn = '<button type="submit" class="btn btn-secondary rounded-pill"><i class="bi bi-search"></i></button>'
-                buttons_html = [
-                    Column(HTML(search_btn), css_class='form-group col-auto text-center'),
-                ]
-
-            row_fields.extend(buttons_html)
-            self.form.helper.layout.append(Row(*row_fields, css_class='form-row'))
+            # Layout handled by setup_filter_helper in the view
+            pass
 
     def _filter_keyword(self, queryset, name, value, text_fields=text_fields, int_fields=int_fields, num_fields=num_fields):
         if not value:
@@ -628,6 +631,10 @@ def _build_generic_filter_class(model):
             choices=[],
             empty_label="السنة",
         )
+
+    # Apply same default exclusions to filters to avoid clutter
+    audit_fields = ['created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'deleted_by']
+    meta_attrs["exclude"] = audit_fields
 
     return type(f"{model.__name__}AutoFilter", (django_filters.FilterSet,), attrs)
 
@@ -900,12 +907,13 @@ def is_scope_enabled():
     Returns:
         bool: True if enabled, False otherwise.
     """
+    from django.db.utils import ProgrammingError, OperationalError
     try:
         ScopeSettings = apps.get_model('microsys', 'ScopeSettings')
         return ScopeSettings.load().is_enabled
-    except LookupError:
-        # Fallback if model shouldn't be loaded yet (e.g. migration)
-        return True
+    except (LookupError, ProgrammingError, OperationalError):
+        # Fallback if model or table isn't ready (e.g., during migrations or empty DB)
+        return False
 
 # Deletion Safety — Checks if an instance has related records (lock/protect logic)
 def has_related_records(instance, ignore_relations=None):
@@ -1028,15 +1036,42 @@ def set_field_attrs(form, request=None):
         field = form.fields.get(field_name)
         # Try to get label from MS_TRANS if it looks like a key, or use verbose name
         label_key = f"label_{field_name}"
-        label = ms_trans.get(label_key) or field.label or field_name.replace('_', ' ').title()
+        label = ms_trans.get(label_key)
         
+        if not label:
+            # Handle auto-generated filter suffixes (gte/lte) for cleaner Arabic translation
+            clean_name = field_name
+            suffix = ""
+            if "__gte" in field_name:
+                clean_name = field_name.replace("__gte", "")
+                suffix = f" ({ms_trans.get('from', 'من')})"
+            elif "__lte" in field_name:
+                clean_name = field_name.replace("__lte", "")
+                suffix = f" ({ms_trans.get('to', 'إلى')})"
+            
+            # Try to resolve base label (e.g. label_created_at)
+            base_label = ms_trans.get(f"label_{clean_name}") or field.label
+            
+            # If default field.label is messy (auto-generated English), clean it
+            if not base_label or 'is greater than' in base_label or 'is less than' in base_label:
+                base_label = clean_name.replace('_', ' ').split('.')[-1].title()
+                # Secondary lookup for core field name in translations
+                base_label = ms_trans.get(f"label_{base_label.lower()}") or base_label
+            
+            label = f"{base_label}{suffix}"
+
         # Common attributes
         field.widget.attrs['placeholder'] = label
         field.widget.attrs['dir'] = direction  # Set text direction dynamically
         
         # Inject Bootstrap classes based on widget type
         existing_class = field.widget.attrs.get('class', '')
-        if isinstance(field.widget, (forms.Select, forms.SelectMultiple, forms.NullBooleanSelect)):
+        if isinstance(field.widget, (forms.Select, forms.NullBooleanSelect)):
+            if 'form-select' not in existing_class:
+                field.widget.attrs['class'] = f"{existing_class} form-select".strip()
+            # Automatically apply label as first choice (placeholder) for dropdowns
+            set_first_choice(field, label)
+        elif isinstance(field.widget, (forms.SelectMultiple)):
             if 'form-select' not in existing_class:
                 field.widget.attrs['class'] = f"{existing_class} form-select".strip()
         elif isinstance(field.widget, (forms.CheckboxInput, forms.RadioSelect)):
@@ -1046,45 +1081,73 @@ def set_field_attrs(form, request=None):
             if 'form-control' not in existing_class:
                 field.widget.attrs['class'] = f"{existing_class} form-control".strip()
             
+        # 3. Inject Flatpickr for date/datetime fields
+        # Check by widget, field name, or existing library classes (like datetimeinput from crispy)
+        is_date = any(kw in field_name.lower() for kw in ['date', 'time', 'since', 'until']) or \
+                  isinstance(field.widget, (forms.DateInput, forms.DateTimeInput)) or \
+                  'datetimeinput' in existing_class
+        
+        if is_date and 'flatpickr' not in field.widget.attrs.get('class', ''):
+            current_class = field.widget.attrs.get('class', '')
+            field.widget.attrs['class'] = f"{current_class} flatpickr".strip()
+
         field.label = ''  # Clear the label for crispy layouts that use placeholders
 
 
-def setup_filter_helper(filter_instance, request=None):
+def setup_filter_helper(filter_instance, request=None, preserve_keys=None):
     """
     Sets up a modern, responsive Crispy layout for a django-filter FilterSet.
     Aligns fields dynamically using Bootstrap 5 flexbox and appends a filter button.
     """
     from crispy_forms.helper import FormHelper
-    from crispy_forms.layout import Layout, Div, Field, HTML
+    from crispy_forms.layout import Layout, Div, Field, HTML, Hidden
     
     helper = FormHelper()
     helper.form_method = 'get'
-    helper.form_class = 'row g-2 align-items-end mb-3'
+    helper.form_tag = True
+    helper.form_class = 'no-print'
     
+    # Determine which keys to preserve in the URL and form state
+    if preserve_keys is None:
+        preserve_keys = ['type', 'sort', 'per_page', 'export_type', 'model', 'id']
+        
+    layout_hidden = []
+    if request and request.GET:
+        for key in preserve_keys:
+            if key in request.GET:
+                val = request.GET.get(key)
+                layout_hidden.append(Hidden(key, val))
+
     # Dynamically build layout based on fields
     fields = list(filter_instance.form.fields.keys())
     divs = []
     
-    # Calculate col width (try to fit up to 4 fields)
+    # Calculate col width
     col_class = 'col-sm-6 col-md-3 col-lg-auto flex-grow-1'
     
     for f in fields:
         divs.append(Div(Field(f, wrapper_class='mb-0'), css_class=col_class))
     
-    # Determine clear URL by preserving structural GET parameters
+    # Determine if we have active filters
+    has_active_filters = False
     clear_url = "?"
+    
     if request and request.GET:
         import urllib.parse
-        preserve_keys = ['type', 'sort', 'per_page', 'export_type', 'model', 'page']
+        has_active_filters = any(k not in preserve_keys + ['page'] and v for k, v in request.GET.items())
         clear_params = {k: v for k, v in request.GET.items() if k in preserve_keys}
         qs = urllib.parse.urlencode(clear_params, doseq=True)
         if qs:
             clear_url = f"?{qs}"
 
-    # Translate button or use default icon
-    search_btn = '<button type="submit" class="btn btn-secondary rounded-start-pill rounded-end-0 flex-grow-1"><i class="bi bi-search"></i></button>'
-    clear_btn = f'<a href="{clear_url}" class="btn btn-warning rounded-end-pill rounded-start-0 px-3"><i class="bi bi-x-lg"></i></a>'
-    btn_html = f'<div class="d-flex w-100">{search_btn}{clear_btn}</div>'
+    # Build button group
+    if has_active_filters:
+        search_btn = '<button type="submit" class="btn btn-secondary rounded-start-pill rounded-end-0 flex-grow-1"><i class="bi bi-search"></i></button>'
+        clear_btn = f'<a href="{clear_url}" class="btn btn-warning rounded-end-pill rounded-start-0 px-3"><i class="bi bi-x-lg"></i></a>'
+        btn_html = f'<div class="d-flex w-100">{search_btn}{clear_btn}</div>'
+    else:
+        search_btn = '<button type="submit" class="btn btn-secondary rounded-pill flex-grow-1"><i class="bi bi-search"></i></button>'
+        btn_html = f'<div class="d-flex w-100">{search_btn}</div>'
     
     divs.append(
         Div(
@@ -1093,7 +1156,11 @@ def setup_filter_helper(filter_instance, request=None):
         )
     )
     
-    helper.layout = Layout(*divs)
+    # Wrap divs in a row container for consistent layout even if form tag is missing
+    helper.layout = Layout(
+        *layout_hidden, 
+        Div(*divs, css_class='row g-2 align-items-center mb-0')
+    )
     filter_instance.form.helper = helper
     
     # Apply set_field_attrs for placeholders and translation
@@ -1102,17 +1169,33 @@ def setup_filter_helper(filter_instance, request=None):
 # Form Helper — Renames the first choice in a Selection menu
 def set_first_choice(field, placeholder):
     """Set the first choice of a specified field safely without overwriting data."""
+    # 1. Handle fields with explicit empty_label (ModelChoiceField, etc.)
     if hasattr(field, 'empty_label'):
         field.empty_label = placeholder
         return
 
-    if not hasattr(field, 'choices') or not field.choices:
+    # 2. Handle ChoiceFields or fields with a choices attribute
+    if not hasattr(field, 'choices'):
         return
         
     choices = list(field.choices)
-    if choices and choices[0][0] in ('', None):
-        choices[0] = ('', placeholder)
+    
+    # Check if the first choice looks like an empty placeholder
+    is_empty = False
+    if choices:
+        val, lbl = choices[0]
+        # Common empty values: None, '', 0
+        # Common empty labels: empty string, or Django's default '---------'
+        if val in ('', None) or (isinstance(val, int) and val == 0 and not lbl):
+             is_empty = True
+        elif lbl and ('---' in str(lbl) or str(lbl).strip() == ''):
+             is_empty = True
+
+    if is_empty:
+        val = choices[0][0]
+        choices[0] = (val, placeholder)
     else:
+        # Otherwise insert a standard empty string choice
         choices.insert(0, ('', placeholder))
         
     field.choices = choices
