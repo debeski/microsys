@@ -240,6 +240,20 @@ is_2fa = user.profile.is_2fa_enabled    # Property
 2. Grouped Permissions
 Microsys provides a custom, intuitive UI for managing permissions. Permissions are automatically grouped by **Application**, **Model**, and **Action** (View, Add, Change, Delete), making it easy to manage complex access controls.
 
+**Programmatic Permission Filtering:**
+You can dynamically filter UI actions based on user permissions using the `filter_context_actions` helper.
+```python
+from microsys.utils import filter_context_actions
+
+def my_view(request):
+    actions = [
+        {"label": "View", "url": "/view/"}, 
+        {"label": "Edit", "url": "/edit/", "permissions": ["storage.change_asset"]}, 
+    ]
+    # Only keeps the "Edit" button if the user has the 'change_asset' permission
+    safe_actions = filter_context_actions(request.user, actions)
+```
+
 3. Automated Activity Logging
 Every action (CRUD, Login/Logout, etc.) is automatically recorded in the `UserActivityLog`.
 - **Global Middleware**: Tracks IP address and User Agent via thread-local storage.
@@ -249,29 +263,69 @@ Every action (CRUD, Login/Logout, etc.) is automatically recorded in the `UserAc
 - **Searchable**: View and filter activity logs directly from the system dashboard.
 - **Deduplication**: `UserActivityLog.safe_log()` prevents duplicate entries within a 2-second window.
 
-**Programmatic Logging:**
+**Accessing Middleware Context:**
+Use these helpers to grab the active user or request anywhere (e.g., in `save()` or signals):
 ```python
-from microsys.models import UserActivityLog
+from microsys.middleware import get_current_user, get_current_request
 
-# Deduplication-safe logging (recommended)
-UserActivityLog.safe_log(
-    user=request.user,
-    action='EXPORT',
-    model_name='Invoice',
-    object_id=42,
-    details={'filename': 'report.xlsx', 'count': 100},
-    ip_address='192.168.1.1',
-)
+class Asset(ScopedModel):
+    def save(self, *args, **kwargs):
+        user = get_current_user()
+        if user and user.is_authenticated:
+            self.last_modified_by = user
+        super().save(*args, **kwargs)
+```
 
-# Or use the helper for signal-like logging in views
+**Manual Logging:**
+The `log_user_action` helper is the primary way to maintain an audit trail. It automatically extracts metadata (PK, verbose name) and client context.
+```python
 from microsys.utils import log_user_action
-log_user_action(request, instance, 'CREATE', 'mymodel')
+
+def my_view(request, pk):
+    asset = Asset.objects.get(pk=pk)
+    # Perform some logic...
+    log_user_action(request, 'MAINTENANCE_LOG', instance=asset, details={'notes': 'Oil changed'})
 ```
 
 > **Note**: Sensitive fields (`password`, `backup_codes`, `token`, `secret`) are automatically masked as `********` in log details.
 
 4. Unified Preferences
 User UI settings (Theme, Language, Sidebar State, Autofill status) are persisted in the database (`Profile.preferences`), ensuring a consistent experience across different browsers and devices.
+
+---
+
+### 🔐 Two-Factor Authentication (2FA)
+
+microsys includes built-in Two-Factor Authentication with multiple methods.
+
+- **Supported Methods**
+
+| Method | How It Works |
+|---|---|
+| **Email OTP** | Sends a 6-digit code to the user's email address |
+| **TOTP App** | Generates time-based codes via authenticator apps (Google Authenticator, Authy, etc.) |
+| **Backup Codes** | 10 one-time recovery codes for account recovery |
+
+- **How It Works**
+  - Users enable/disable 2FA methods from their **Profile** page.
+  - When **Email OTP** is enabled, the system sends a verification code on login.
+  - When **TOTP** is enabled, the system shows a QR code that the user scans with their authenticator app.
+  - **Backup codes** can be generated as a fallback if the primary method is unavailable.
+  - 2FA status is stored in the `Profile` model (`is_email_2fa_enabled`, `is_totp_2fa_enabled`).
+
+- **URL Routes**
+
+| Route | Purpose |
+|---|---|
+| `/sys/2fa/enable/?method=email` | Start enabling Email 2FA |
+| `/sys/2fa/setup/totp/` | Generate TOTP secret + QR code |
+| `/sys/2fa/verify/login/` | Verify OTP during login |
+| `/sys/2fa/verify/enable/` | Verify OTP to confirm method activation |
+| `/sys/2fa/disable/` | Disable a 2FA method |
+| `/sys/2fa/backup-codes/generate/` | Generate new backup codes |
+| `/sys/2fa/resend/<intent>/` | Resend OTP code |
+
+> **Note**: Email-based 2FA requires a configured `EMAIL_BACKEND` in your Django settings.
 
 ---
 
@@ -344,7 +398,102 @@ scope = ScopeForeignKey('microsys.Scope', on_delete=models.PROTECT, null=True, b
 
 ---
 
+### 🧩 Core Utilities
+
+- **`get_model_classes` Helper function**
+The `get_model_classes` function acts as a unified factory for resolving your application's `Form`, `Table`, and `Filter` classes using standard naming conventions (`ModelNameForm`, `ModelNameTable`, etc.).
+
+**How it works**
+By default, the function searches within the specified model's app for matching forms, tables, and filters. If found, it returns them inside a `LazyModelClasses` object. If none are explicitly provided, it will dynamically generate default ones at runtime.
+
+**Key Features:**
+- **Caching**: Results are memoized so the discovery process only happens once per app lifecycle, achieving 0.0001ms fetch times on subsequent visits.
+- **Lazy Loading**: If you only ask for the `model` or the `form`, the function will not evaluate or generate the `Table` or `Filter` classes. This prevents unnecessary database queries (e.g. filter year aggregations) and speeds up your views.
+- **Convention Overrides**: If your form does not match the standard `ModelForm` naming convention (e.g., `AdminAssetForm`), you can easily explicitly override it.
+
+**Usage:**
+
+```python
+from microsys.utils import get_model_classes
+
+def my_view(request):
+    # Retrieve the classes
+    classes = get_model_classes('Asset')
+    
+    # 1. Accessing values resolves them lazily
+    AssetModel = classes.get('model')
+    AssetForm = classes.get('form')
+    
+    # 2. Providing custom overrides at the request level
+    admin_classes = get_model_classes('Asset', overrides={'form': 'storage.forms.AdminAssetForm'})
+```
+
+**Model-Level Overrides:**
+Instead of passing `overrides` in every view, you can permanently register exceptions in your model definition:
+```python
+class Asset(ScopedModel):
+    name = models.CharField(...)
+    
+    model_classes_overrides = {
+        'form': 'storage.forms.AdminAssetForm',
+        'table': 'storage.tables.CompactAssetTable'
+    }
+```
+
+- **`resolve_model_by_name` Helper function**
+Dynamically resolves a Django model class from a string, allowing you to build decoupled, dynamic views without hardcoded model imports.
+
+**Usage:**
+```python
+from microsys.utils import resolve_model_by_name
+
+# Checks if full path is provided, otherwise searches globally across all apps
+model = resolve_model_by_name('Invoice') 
+
+# Or restrict to a specific app
+model = resolve_model_by_name('Asset', app_label='storage')
+```
+
+- **`has_related_records` & `collect_related_objects` Helper functions**
+Data introspection utilities for understanding model dependencies at runtime. Perfect for building custom "Smart Delete" warnings, dependency analysis, or "Usage Info" panels without having to know the exact field relationships in advance.
+
+**Usage:**
+```python
+from microsys.utils import has_related_records, collect_related_objects
+
+def check_delete(request, pk):
+    instance = MyModel.objects.get(pk=pk)
+    
+    # 1. Fast boolean check (often used to lock records from deletion or editing)
+    # the ignore_relations param skips accessors you do not care about.
+    is_locked = has_related_records(instance, ignore_relations=['logs'])
+    
+    if is_locked:
+        # 2. Detailed introspection (returns dict of e.g. {'Invoices': ['INV-01', 'INV-02']})
+        blocking_items = collect_related_objects(instance)
+        print("Cannot delete, used in:", blocking_items)
+```
+
+- **`setup_filter_helper` Helper function**
+Instantly transforms a standard `django-filter` instance into a modern, responsive search bar with a "Clear" button that only appears when filters are active.
+
+**Usage:**
+```python
+from microsys.utils import setup_filter_helper
+
+def asset_list(request):
+    filter_instance = AssetFilter(request.GET, queryset=Asset.objects.all())
+    # 1. Configures Crispy Layout and Hidden parameters (sort, page, per_page)
+    # 2. Handles the Search/Clear button UI alignment
+    setup_filter_helper(filter_instance, request)
+    
+    return render(request, 'my_template.html', {'filter': filter_instance})
+```
+
+---
+
 ### 📂 Dynamic Section Mode
+
 
 Microsys offers a powerful "Zero-Boilerplate" CRUD interface for managing auxiliary data models (like Departments, Categories, etc.).
 
@@ -425,6 +574,13 @@ class MainUnit(ScopedModel): # Parent section
 - You can **Add/Edit/Delete** `SubUnits` directly from the `MainUnit` modal via AJAX.
 - This creates a seamless "Master-Detail" management experience without writing a single view or form.
 
+- **Section Discovery Tool**
+The `discover_section_models` helper function is the engine behind the "Zero-Boilerplate" dashboard. It scans your apps for any model marked with `is_section = True` and returns a complete metadata package (resolved Forms, Tables, Filters, and M2M Subsections).
+```python
+from microsys.utils import discover_section_models
+sections = discover_section_models(app_name='storage')
+```
+
 Notes:
 - These attributes apply only to the auto-generated form/table.
 - If you provide a custom Form/Table class, it takes full precedence.
@@ -466,19 +622,15 @@ from microsys.fetcher import fetch_excel
 def export_view(request):
     qs = MyModel.objects.all()
     
-    return fetch_excel(
-        request, 
-        qs, 
-        # Optional: Completely remove fields
-        exclude_fields=['id', 'internal_notes'],
-        # Optional: Hide columns (Auto-hides IDs, file paths, and system timestamps by default)
-        hidden_fields=['salary_grade']
     )
 ```
 
-**Features**:
-- **Smart Introspection**: Automatically finds the best "Identifier" (e.g. `number`, `code`, `pk`) and "Date" field for filenames.
-- **Smart Hiding**: `fetch_excel` automatically hides `FileField` paths and system timestamps (`created_at`) to keep the sheet clean, while keeping the data accessible.
+- **Smart Fetcher Logic**
+The system automatically handles:
+- **Single Instance**: Serves the file directly with appropriate headers.
+- **Lists/QuerySets**: Generates a ZIP file containing all non-empty `FileFields` found on the objects.
+- **Smart Metadata**: Automatically finds the best "Identifier" (e.g. `number`, `code`, `pk`) and "Date" field for clean filenames.
+- **Smart Excel Hiding**: `fetch_excel` automatically hides sensitive system columns (IDs, file paths, timestamps) to keep the exported sheet professional.
 
 ---
 
@@ -531,6 +683,18 @@ These are the REST endpoints powering autofill behind the scenes:
 | `/sys/api/details/<app>/<model>/<pk>/` | GET | Fetch a specific record's data (recursive FK/O2O traversal) |
 | `/sys/api/details/<app>/<model>/empty_schema/` | GET | Get empty field structure (for clearing forms) |
 | `/sys/api/last-entry/<app>/<model>/` | GET | Get the last created record (for Sticky Forms) |
+
+**Programmatic Integration:**
+You can manually trigger or configure autofill in your forms:
+```python
+class InvoiceForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 1. Manually set the source for FK lookup
+        self.fields['customer'].widget.attrs['data-autofill-source'] = 'crm.Customer'
+        # 2. Or use the set_field_attrs helper to auto-detect all FKs
+        set_field_attrs(self)
+```
 
 ---
 
@@ -871,41 +1035,6 @@ This strict JSON signature is required for the `dynamic_modals.js` interceptor t
 
 ---
 
-### 🔐 Two-Factor Authentication (2FA)
-
-microsys includes built-in Two-Factor Authentication with multiple methods.
-
-- **Supported Methods**
-
-| Method | How It Works |
-|---|---|
-| **Email OTP** | Sends a 6-digit code to the user's email address |
-| **TOTP App** | Generates time-based codes via authenticator apps (Google Authenticator, Authy, etc.) |
-| **Backup Codes** | 10 one-time recovery codes for account recovery |
-
-- **How It Works**
-  - Users enable/disable 2FA methods from their **Profile** page.
-  - When **Email OTP** is enabled, the system sends a verification code on login.
-  - When **TOTP** is enabled, the system shows a QR code that the user scans with their authenticator app.
-  - **Backup codes** can be generated as a fallback if the primary method is unavailable.
-  - 2FA status is stored in the `Profile` model (`is_email_2fa_enabled`, `is_totp_2fa_enabled`).
-
-- **URL Routes**
-
-| Route | Purpose |
-|---|---|
-| `/sys/2fa/enable/?method=email` | Start enabling Email 2FA |
-| `/sys/2fa/setup/totp/` | Generate TOTP secret + QR code |
-| `/sys/2fa/verify/login/` | Verify OTP during login |
-| `/sys/2fa/verify/enable/` | Verify OTP to confirm method activation |
-| `/sys/2fa/disable/` | Disable a 2FA method |
-| `/sys/2fa/backup-codes/generate/` | Generate new backup codes |
-| `/sys/2fa/resend/<intent>/` | Resend OTP code |
-
-> **Note**: Email-based 2FA requires a configured `EMAIL_BACKEND` in your Django settings.
-
----
-
 ### 🔒 Double-Submit Prevention
 
 microsys includes a **global JavaScript** mechanism that prevents accidental double form submissions.
@@ -956,6 +1085,19 @@ You can extend this template in your own views to maintain consistent layout and
 {% block scripts %}
     <!-- Extra JS scripts -->
 {% endblock %}
+```
+
+### 🏷️ Microsys Template Tags
+Microsys provides several global template tags built for dynamic, multi-language UI rendering. Load them using `{% load microsys_tags %}`.
+
+- **`{% ms_timesince %}`**: A translated relative timestamp (e.g., "9 hours" -> "9 ساعات").
+- **`{% include_if_exists %}`**: Safely includes a template only if it exists — fails silently if missing.
+
+### 🪄 Design Helper: `set_field_attrs`
+The `set_field_attrs` utility instantly makes any Django form compatible with the Microsys design system, adding Bootstrap 5 classes, RTL/LTR support, and Flatpickr date pickers.
+```python
+from microsys.utils import set_field_attrs
+set_field_attrs(form, request)
 ```
 
 > **Note:** The base template automatically handles the sidebar, title bar, messages, and theme loading. Replacing it entirely will break core system functionality.
@@ -1062,6 +1204,8 @@ microsys/
 └── utils.py                # Discovery, form/table/filter resolution, helpers.
 ```
 
+---
+
 ## 📜 Version History
 
 | Version  | Changes |
@@ -1111,5 +1255,4 @@ microsys/
 | v1.11.3  | • **Dynamic Sidebar Width**: Converted sidebar layout to `col-auto` with `fit-content` min-width on large screens, allowing it to adapt to the longest item or accordion parent. <br> • **Flexible Content Layout**: Updated the main content area to utilize fluid grid sizing, ensuring it seamlessly fills the workspace adjacent to the dynamic sidebar. |
 | v1.11.4  | • **Smart Filter Controls**: Enhanced `setup_filter_helper` to conditionally render the reset (cancel) button. It now only appears when active filters with non-empty values are present, reducing UI clutter. <br> • **Alignment Refinement**: Standardized global filter alignment to `start` for improved visual hierarchy. |
 | v1.11.5  | • **Universal Filter Standardization**: Migrated `Users`, `Sections`, and `Activity Log` views to the unified `setup_filter_helper` utility. All core lists now benefit from conditional clear buttons, `Hidden` GET parameter preservation, and consistent responsive layouts. |
-
-
+| v1.12.0  | • **`get_model_classes` Performance Enhancement**: Upgraded `get_model_classes` utility to use dictionary caching and `LazyModelClasses` for lazy evaluation, reducing module import overhead during the request loop. <br> • **`get_model_classes` Overrides**: Added support for explicit convention overrides via the `overrides` argument or the model-level `model_classes_overrides` attribute. |

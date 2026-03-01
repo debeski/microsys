@@ -197,14 +197,110 @@ def _resolve_model_class(model, getter_name):
 
     return None
 
+# System Variables for Model Classes Caching
+_MODEL_CLASSES_CACHE = {}
+
+class LazyModelClasses(dict):
+    """
+    Lazy dictionary that only resolves model classes (form, table, filter)
+    when they are explicitly requested, and caches them for subsequent accesses.
+    """
+    def __init__(self, model, overrides=None):
+        self._model = model
+        
+        # Merge model-level registry/overrides with explicit overrides
+        model_overrides = getattr(model, 'model_classes_overrides', {})
+        self._overrides = {**model_overrides, **(overrides or {})}
+        
+        super().__init__({
+            'model': model,
+            'verbose_name': model._meta.verbose_name,
+            'verbose_name_plural': model._meta.verbose_name_plural,
+        })
+        
+    def __getitem__(self, key):
+        if super().__contains__(key):
+            return super().__getitem__(key)
+            
+        if key == 'form':
+            val = self._resolve_form()
+        elif key == 'table':
+            val = self._resolve_table()
+        elif key == 'filter':
+            val = self._resolve_filter()
+        else:
+            raise KeyError(key)
+            
+        self[key] = val
+        return val
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __contains__(self, key):
+        if super().__contains__(key):
+            return True
+        return key in ('form', 'table', 'filter')
+
+    def _get_override_or_none(self, key):
+        if key in self._overrides:
+            val = self._overrides[key]
+            if isinstance(val, str):
+                try:
+                    return import_string(val)
+                except Exception:
+                    pass
+            return val
+        return None
+
+    def _resolve_form(self):
+        override = self._get_override_or_none('form')
+        if override: return override
+        
+        form_class = _import_by_convention(self._model, "forms", "Form")
+        if not form_class:
+            form_class = resolve_form_class_for_model(self._model)
+        return form_class
+        
+    def _resolve_table(self):
+        override = self._get_override_or_none('table')
+        if override: return override
+        
+        table_class = _import_by_convention(self._model, "tables", "Table")
+        if not table_class:
+             table_class = _resolve_model_class(self._model, "get_table_class")
+        if not table_class:
+             table_class = _build_generic_table_class(self._model)
+        return table_class
+        
+    def _resolve_filter(self):
+        override = self._get_override_or_none('filter')
+        if override: return override
+        
+        filter_class = _import_by_convention(self._model, "filters", "Filter")
+        if not filter_class:
+             filter_class = _resolve_model_class(self._model, "get_filter_class")
+        if not filter_class and django_filters:
+             filter_class = _build_generic_filter_class(self._model)
+        return filter_class
+
 # Model Resolution — Dynamically imports model, form, table, and filter classes by name
-def get_model_classes(model_name, app_label=None):
+def get_model_classes(model_name, app_label=None, overrides=None):
     """
     Dynamically import model, form, table, and filter classes for a given model
-    following standard naming conventions.
+    following standard naming conventions. Uses lazy loading and caching.
     """
     if not model_name:
         return None
+        
+    cache_key = f"{app_label or 'any'}:{model_name}"
+    
+    # Check cache first if no explicit request-level overrides are provided
+    if not overrides and cache_key in _MODEL_CLASSES_CACHE:
+        return _MODEL_CLASSES_CACHE[cache_key]
     
     # Resolve Model
     model = resolve_model_by_name(model_name, app_label=app_label)
@@ -217,36 +313,13 @@ def get_model_classes(model_name, app_label=None):
                 return None
         else:
             return None
+            
+    lazy_classes = LazyModelClasses(model, overrides=overrides)
     
-    meta = model._meta
-    
-    # 1. Resolve Form
-    form_class = _import_by_convention(model, "forms", "Form")
-    if not form_class:
-        form_class = resolve_form_class_for_model(model)
+    if not overrides:
+        _MODEL_CLASSES_CACHE[cache_key] = lazy_classes
         
-    # 2. Resolve Table
-    table_class = _import_by_convention(model, "tables", "Table")
-    if not table_class:
-         table_class = _resolve_model_class(model, "get_table_class")
-    if not table_class:
-         table_class = _build_generic_table_class(model)
-
-    # 3. Resolve Filter
-    filter_class = _import_by_convention(model, "filters", "Filter")
-    if not filter_class:
-         filter_class = _resolve_model_class(model, "get_filter_class")
-    if not filter_class and django_filters:
-         filter_class = _build_generic_filter_class(model)
-
-    return {
-        'model': model,
-        'form': form_class,
-        'table': table_class,
-        'filter': filter_class,
-        'verbose_name': meta.verbose_name,
-        'verbose_name_plural': meta.verbose_name_plural,
-    }
+    return lazy_classes
 
 
 def get_user_linked_models():
