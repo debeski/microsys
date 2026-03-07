@@ -64,12 +64,96 @@ def log_user_action(request, action, instance=None, model_name=None, details=Non
         user_agent=request.META.get("HTTP_USER_AGENT", ""),
     )
 
+def get_system_config():
+    """
+    Returns the deeply merged system configuration.
+    1. Default config
+    2. settings.MICROSYS_CONFIG (host project codebase)
+    3. SystemSettings Singleton (database UI overrides)
+    """
+    # Default configuration
+    default_config = {
+        'name': 'microsys',
+        'verbose_name': 'ادارة النظام',
+        'logo': '/static/img/base_logo.png',
+        'login_logo': '/static/img/login_logo.webp',
+        'favicon': '/static/favicon.ico',
+        'home_url': '/sys/',
+        'default_language': 'en',
+        'languages': {
+            'ar': {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'},
+            'en': {'name': 'English', 'dir': 'ltr', 'flag': '🇬🇧'},
+        },
+        'translations': {}
+    }
+
+    # Project settings
+    user_config = getattr(settings, 'MICROSYS_CONFIG', {})
+    
+    # DB settings
+    db_config = {}
+    try:
+        from microsys.models import SystemSettings
+        sys_settings = SystemSettings.load()
+        # Only pull non-empty values from DB (since UI can leave text fields empty or json fields empty dict/array)
+        # Avoid overriding with defaults if user hasn't explicitly set them
+        if sys_settings.name and sys_settings.name not in ['microsys', 'ادارة النظام']:
+            db_config['name'] = sys_settings.name
+        if sys_settings.name_en:
+            db_config['name_en'] = sys_settings.name_en
+        if sys_settings.logo:
+            db_config['logo'] = sys_settings.logo.url
+        if sys_settings.favicon:
+            db_config['favicon'] = sys_settings.favicon.url
+        if sys_settings.home_url != '/sys/':
+            db_config['home_url'] = sys_settings.home_url
+        if sys_settings.default_language != 'ar':
+            db_config['default_language'] = sys_settings.default_language
+        if sys_settings.languages:
+            db_config['languages'] = sys_settings.languages
+        if sys_settings.translations_override:
+            db_config['translations'] = sys_settings.translations_override
+    except Exception:
+        pass
+
+    # Merge
+    final_config = default_config.copy()
+    final_config.update({k:v for k,v in user_config.items() if k not in ['languages', 'translations']})
+    final_config.update({k:v for k,v in db_config.items() if k not in ['languages', 'translations']})
+    
+    # Preemptively strip localized overrides if the base key was explicitly provided by DB
+    for db_k in db_config.keys():
+        if db_k not in ['languages', 'translations']:
+            for lang_code in final_config.get('languages', {}).keys():
+                final_config.pop(f"{db_k}_{lang_code}", None)
+    
+    # Deep merge languages
+    langs = default_config['languages'].copy()
+    if 'languages' in user_config:
+        langs.update(user_config['languages'])
+    if 'languages' in db_config:
+        langs.update(db_config['languages'])
+    final_config['languages'] = langs
+    
+    # Deep merge translations
+    trans = default_config['translations'].copy()
+    for layer in [user_config.get('translations', {}), db_config.get('translations', {})]:
+        if layer:
+            for lang, keys in layer.items():
+                if lang not in trans:
+                    trans[lang] = {}
+                trans[lang].update(keys)
+    final_config['translations'] = trans
+
+    return final_config
+
+
 # Translation Helper — Retrieves default translation strings using system language config
 def _get_default_strings():
     """Helper to get default global strings dict"""
-    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
-    lang = ms_config.get('default_language', 'ar')
-    overrides = ms_config.get('translations', None)
+    config = get_system_config()
+    lang = config.get('default_language', 'en')
+    overrides = config.get('translations', None)
     return get_strings(lang, overrides=overrides)
 
 # Translation Helper — Resolves the current user's language code
@@ -81,8 +165,8 @@ def _get_request_lang(request=None):
     2. Session 'lang' or 'django_language' key
     3. System Default (microsys config or LANGUAGE_CODE)
     """
-    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
-    default_lang = ms_config.get('default_language', settings.LANGUAGE_CODE)
+    config = get_system_config()
+    default_lang = config.get('default_language', settings.LANGUAGE_CODE)
     lang = None
     
     if request:
@@ -103,8 +187,8 @@ def _get_request_lang(request=None):
 def _get_request_translations(request=None):
     """Resolve the current user's language and return translation strings."""
     lang = _get_request_lang(request)
-    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
-    overrides = ms_config.get('translations', None)
+    config = get_system_config()
+    overrides = config.get('translations', None)
     return get_strings(lang, overrides=overrides)
 
 # Context Menu Helper — Filters context menu actions based on user permissions
@@ -505,6 +589,77 @@ def collect_related_objects(instance):
                 
     return related_data
 
+from django.db.models.fields.files import FieldFile
+from django.db.models.fields.related import ManyToManyField
+def _build_generic_detail_context(instance, request=None):
+    """
+    Dynamically generates a list of {'label': ..., 'value': ...} dictionaries 
+    from a model instance for zero-boilerplate detail views.
+    Respects translations and the 'is_scope_enabled' global setting.
+    """
+    from microsys.utils import is_scope_enabled
+    from microsys.translations import get_strings
+
+    s = _get_default_strings()
+    if request and request.user.is_authenticated and hasattr(request.user, 'profile'):
+        lang = request.user.profile.preferences.get('language', 'en') if request.user.profile.preferences else 'en'
+        s = get_strings(lang)
+
+    fields_data = []
+    
+    # Audit fields and passwords shouldn't generally be shown in generic detail views
+    exclude_fields = ['password', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'deleted_by']
+    
+    if not is_scope_enabled():
+        exclude_fields.append('scope')
+
+    for field in instance._meta.get_fields():
+        if field.name in exclude_fields:
+            continue
+            
+        # Ignore reverse relations to keep it clean, only show direct fields and M2M
+        if field.auto_created and not field.concrete and not field.many_to_many:
+            continue
+
+        try:
+            value = getattr(instance, field.name, None)
+            
+            # Formatting
+            if isinstance(field, ManyToManyField):
+                if value is not None:
+                    # evaluate M2M manager
+                    qs = value.all()
+                    value = ", ".join(str(item) for item in qs)
+                    if not value:
+                        value = "-"
+            elif isinstance(value,FieldFile):
+                if value and value.name:
+                    value = f'<a href="{value.url}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> {s.get("btn_download", "تحميل")}</a>'
+                else:
+                    value = "-"
+            elif isinstance(value, bool):
+                value = f'<i class="bi bi-check-circle-fill text-success"></i>' if value else f'<i class="bi bi-x-circle text-danger"></i>'
+            elif value is None or value == "":
+                value = "-"
+            elif hasattr(field, 'choices') and field.choices:
+                # get display value for choices
+                display_func = getattr(instance, f"get_{field.name}_display", None)
+                if display_func:
+                    value = display_func()
+            
+            label = getattr(field, 'verbose_name', field.name)
+            
+            fields_data.append({
+                'label': str(label).capitalize(),
+                'value': value,
+                'is_html': isinstance(value, str) and ('<a' in value or '<i' in value)
+            })
+        except Exception:
+            pass
+
+    return fields_data
+
+
 # Dynamic Table Builder — Generates a django-tables2 Table class at runtime
 def _build_generic_table_class(model):
     """
@@ -567,7 +722,7 @@ def _build_generic_table_class(model):
                     "label": s.get('view_label', 'عرض المحتوى'), # View Details
                     "icon": "bi bi-eye",
                     "type": "event",
-                    "event": "micro:section:view", 
+                    "event": "micro:record:view", 
                     "data": {"model": model._meta.model_name, "id": record.pk, "name": str(record)},
                     "dblclick": True
                 },
@@ -575,15 +730,16 @@ def _build_generic_table_class(model):
                 {
                     "label": s.get('edit_label', 'تعديل'), # Edit
                     "icon": "bi bi-pencil",
-                    "url": f"?model={model._meta.model_name}&id={record.pk}",
-                    "type": "url",
+                    "type": "event",
+                    "event": "micro:record:edit",
+                    "data": {"model": model._meta.model_name, "id": record.pk, "name": str(record)},
                     "permissions": [f"microsys.change_{model._meta.model_name}"]
                 },
                 {
                     "label": s.get('delete_label', 'حذف'), # Delete
                     "icon": "bi bi-trash",
                     "type": "event",
-                    "event": "micro:section:delete", 
+                    "event": "micro:record:delete", 
                     "data": {"model": model._meta.model_name, "id": record.pk, "name": str(record)},
                     "textClass": "text-danger",
                     "permissions": [f"microsys.delete_{model._meta.model_name}"]

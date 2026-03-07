@@ -13,12 +13,14 @@ from difflib import get_close_matches
 def get_sidebar_config(lang_code=None):
     """Get sidebar configuration from Django settings with defaults."""
     from .translations import get_strings
+    from .utils import get_system_config
 
-    # Resolve language for sidebar labels
-    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
+    config_dict = get_system_config()
+    default_lang = config_dict.get('default_language', 'ar')
+    project_overrides = config_dict.get('translations', None)
+
     if lang_code is None:
-        lang_code = ms_config.get('default_language', 'ar')
-    project_overrides = ms_config.get('translations', None)
+        lang_code = default_lang
     strings = get_strings(lang_code, overrides=project_overrides)
 
     system_group = {

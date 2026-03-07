@@ -18,7 +18,7 @@
         {% crispy filter.form %}
     </div>
 
-    <div class="card border-light shadow-sm">
+    <div class="card border-0 shadow-sm">
         <div class="card-body p-0 table-responsive-lg">
             <!-- Render the table -->
             {% render_table table %}
@@ -26,9 +26,10 @@
     </div>
 
     <div class="d-flex align-items-center mt-3">
-        <a href="{% url 'create_user' %}" class="btn btn-primary rounded-pill no-print" title="{{ MS_TRANS.add_user }}">
+        <button type="button" class="btn btn-primary rounded-pill no-print" title="{{ MS_TRANS.add_user }}"
+                data-dynamic-modal="{% url 'modal_user' %}" data-modal-title="{{ MS_TRANS.add_user }}">
             <i class="bi bi-person-plus-fill me-2 h4"></i> {{ MS_TRANS.add_user }}
-        </a>
+        </button>
     
         {% if scope_enabled and request.user.is_superuser %}
         <button type="button" class="btn btn-info rounded-pill no-print ms-2" title="{{ MS_TRANS.manage_scopes_btn }}" id="btn-manage-scopes" data-url="{% url 'manage_scopes' %}">
@@ -200,7 +201,18 @@
             }
         });
 
-        // 2. Handle Password Reset Event from Context Menu
+        // 2. Handle Edit User Event from Context Menu — open in dynamic modal
+        document.addEventListener('micro:record:edit', function(e) {
+            const data = e.detail.data;
+            if (!data || !data.id) return;
+            const editUrl = '{% url "modal_user" %}' + data.id + '/';
+            const title = '{{ MS_TRANS.edit_label|default:"تعديل" }}' + ' ' + (data.name || '');
+            document.body.dispatchEvent(new CustomEvent('micro:dynamic_modal:open', {
+                detail: { data: { url: editUrl, title: title } }
+            }));
+        });
+
+        // 3. Handle Password Reset Event from Context Menu
         document.addEventListener('micro:reset-password', function(e) {
             const eventData = e.detail.data; 
             if (!eventData || !eventData.url) return;
@@ -219,7 +231,7 @@
             }
         });
 
-        // 3. Handle Soft Delete Event from Context Menu
+        // 4. Handle Soft Delete Event from Context Menu
         document.addEventListener('micro:soft-delete', function(e) {
             const eventData = e.detail.data;
             if (!eventData || !eventData.url) return;
@@ -240,4 +252,5 @@
     });
     </script>
     <script src="{% static 'microsys/users/js/manage_users.js' %}" nonce="{{ request.csp_nonce }}"></script>
+{% include 'microsys/includes/dynamic_modal.html' %}
 {% endblock %}

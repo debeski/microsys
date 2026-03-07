@@ -4,8 +4,8 @@
 <div class="modal-header border-0 pb-0">
     <h5 class="modal-title fw-bold text-primary">
         <i class="bi bi-info-circle me-2"></i>
-        {% if log.model_name %}
-             {% translate_log_value log.model_name 'model' %}
+        {% if object.model_name %}
+             {{ object.model_name|translate_log:'model' }}
         {% else %}
              {{ MS_TRANS.activity_details|default:"Activity Details" }}
         {% endif %}
@@ -18,34 +18,32 @@
         <div class="col-md-6">
             <div class="mb-2">
                 <div class="info-label">{{ MS_TRANS.label_user|default:"User" }}</div>
-                <div class="info-value">{{ log.user.username|default:"-" }} {% if log.user.get_full_name %}({{ log.user.get_full_name }}){% endif %}</div>
+                <div class="info-value">{{ object.user.username|default:"-" }} {% if object.user.get_full_name %}({{ object.user.get_full_name }}){% endif %}</div>
             </div>
         </div>
         <div class="col-md-6">
             <div class="mb-2">
                 <div class="info-label">{{ MS_TRANS.label_timestamp|default:"Timestamp" }}</div>
-                <div class="info-value small">{{ log.timestamp|date:"Y-m-d H:i:s" }}</div>
+                <div class="info-value small">{{ object.timestamp|date:"Y-m-d H:i:s" }}</div>
             </div>
         </div>
         <div class="col-md-6">
             <div class="mb-2">
                 <div class="info-label">{{ MS_TRANS.label_action|default:"Action" }}</div>
-                <div class="info-value"><span class="badge bg-secondary">{% translate_log_value log.action 'action' %}</span></div>
+                <div class="info-value"><span class="badge bg-secondary">{{ object.action|translate_log:'action' }}</span></div>
             </div>
         </div>
         <div class="col-md-6">
             <div class="mb-2">
                 <div class="info-label">IP</div>
-                <div class="info-value">{{ log.ip_address|default:"-" }}</div>
+                <div class="info-value">{{ object.ip_address|default:"-" }}</div>
             </div>
         </div>
     </div>
 
-
-
     <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2"><i class="bi bi-pencil-square me-1"></i> {{ MS_TRANS.label_changes|default:"Changes / Details" }}</h6>
     <div class="bg-light p-3 rounded mb-3" style="max-height: 300px; overflow-y: auto;">
-        {% format_log_details log.details as details_html %}
+        {% format_log_details object.details as details_html %}
         {% if details_html %}
             {{ details_html|safe }}
         {% else %}

@@ -23,8 +23,10 @@ def ms_timesince(context, value, arg=None):
     except Exception:
         return ""
 
-    # Get labels from MS_TRANS
-    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
+    # Get default language from System Config
+    from microsys.utils import get_system_config
+    config_dict = get_system_config()
+    default_lang = config_dict.get('default_language', 'ar')
     
     # Use the language already resolved by context processor if available
     # This is critical because context_processors.py might determine lang differently than get_language()
@@ -32,7 +34,7 @@ def ms_timesince(context, value, arg=None):
     
     # Fallback if context var is missing
     if not current_lang:
-        current_lang = ms_config.get('default_language', 'ar')
+        current_lang = default_lang
         
         # Last resort check thread local
         from django.utils.translation import get_language
@@ -40,7 +42,7 @@ def ms_timesince(context, value, arg=None):
         if thread_lang and thread_lang in ['ar', 'en']:
             current_lang = thread_lang
     
-    project_overrides = ms_config.get('translations', None)
+    project_overrides = config_dict.get('translations', None)
     strings = get_strings(current_lang, overrides=project_overrides)
     
     # Normalize buffer (replace non-breaking spaces)

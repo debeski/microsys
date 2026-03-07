@@ -3,7 +3,9 @@
 
 <div class="row g-4">
     <!-- Form Section -->
+    {% if form %}
     <div class="col-12">
+        {% if table %}
         <div class="card glass-card shadow-sm border-0">
             <div class="card-header bg-transparent border-0 pt-3">
                 <h6 class="fw-bold mb-0">
@@ -16,12 +18,32 @@
                 </h6>
             </div>
             <div class="card-body">
+        {% else %}
+            <!-- If no table, we omit the inner card wrapper to avoid 'card inside a card' in modal -->
+            <div class="px-2">
+                <h5 class="fw-bold mb-4 text-primary">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    {% if instance %}
+                        {{ MS_TRANS.edit_label|default:"تعديل" }}
+                    {% else %}
+                        {{ MS_TRANS.add_label|default:"إضافة جديد" }}
+                    {% endif %}
+                </h5>
+        {% endif %}
+
                 {% include 'microsys/includes/dynamic_modal_form.html' %}
+
+        {% if table %}
             </div>
         </div>
+        {% else %}
+            </div>
+        {% endif %}
     </div>
+    {% endif %}
 
     <!-- List Section -->
+    {% if table %}
     <div class="col-12">
         <div class="card glass-card shadow-sm border-0">
             <div class="card-header bg-transparent border-0 pt-3">
@@ -35,4 +57,5 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>

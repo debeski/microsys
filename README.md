@@ -162,36 +162,15 @@ MIDDLEWARE = [
 
 ### 🖥️ App Configuration
 
-Customize branding and behavior by adding `MICROSYS_CONFIG` to your `settings.py`:
+Customize branding, default languages, and translation overrides directly from the **App Options** UI for Superusers. 
+
+Under the hood, microsys uses a database-backed **SystemSettings** singleton model (`microsys.models.SystemSettings`). This means NO manual configuration in `settings.py` is needed, and any changes apply instantly via cache.
 
 ```python
-MICROSYS_CONFIG = {
-    'name': 'My System Name',           # App title in navbar/pages
-    'verbose_name': 'ادارة النظام',      # App title in navbar/pages
-    'logo': '/static/img/logo.png',     # Base/logo shown in the titlebar
-    'login_logo': '/static/img/login_logo.webp',  # Logo on login screen
-    'description': 'System Desc',       # Optional description
-    'home_url': '/sys/',                 # Controls Titlebar home link AND default login redirect
-    
-    # ... branding fields only
-
-    # Language switching (optional, Arabic-only by default)
-    'languages': {
-        'ar': {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'},
-        'en': {'name': 'English', 'dir': 'ltr', 'flag': '🇬🇧'},
-    },
-    'default_language': 'ar',  # Fallback language
-
-    # Override or extend built-in translation strings (optional)
-    # 'translations': {
-    #     'en': {'dashboard_welcome': 'Welcome to My Custom System.'},
-    # },
-}
-
 # Auth redirects
 # 1. 'next' query param (highest priority)
 # 2. LOGIN_REDIRECT_URL in settings (if set)
-# 3. MICROSYS_CONFIG['home_url'] (if set)
+# 3. SystemSettings.home_url (configured in UI)
 # 4. '/sys/' (default fallback)
 LOGIN_REDIRECT_URL = '/sys/' 
 LOGOUT_REDIRECT_URL = '/accounts/login/'
@@ -216,7 +195,8 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 - **Context Menu**: Easy to use context menu for quick actions.
 - **Two-Factor Authentication**: Email OTP and TOTP Authenticator App support with backup codes.
 - **Options View**: Options view to enable, disable, and configure system features and details.
-- **Language Selector**: Native Arabic support with dynamic language switching with optional additional languages (RTL/LTR).
+- **Dynamic Translation Framework**: Intelligent zero-boilerplate translation with robust cascading fallbacks (defaults to English), transparent database content translation via `TranslationMixin`, `gettext` hijacking, and native JS client-side localization.
+- **Modern Dashboard UI**: Sleek, glass-like module cards with cascading entrance animations and an admin-exclusive System Setup shortcut.
 - **Themes & Accessibility**: Bootstrap5 integration with built-in dark/light modes and accessibility tools (High Contrast, Zoom, etc.).
 - **Native Mobile Support**: Responsive design for all screen sizes.
 - **Management Commands**: Built-in management commands for system setup and checks.
@@ -803,17 +783,35 @@ Instead of navigating to a URL, actions can dispatch custom JavaScript events:
     "label": "View Details",
     "icon": "bi bi-eye",
     "type": "event",
-    "event": "micro:section:view",
+    "event": "micro:record:view",
     "data": {"model": "department", "id": record.pk},
     "dblclick": True
 }
 ```
 You can listen for these events in your own JS:
 ```javascript
-document.addEventListener('micro:section:view', function(e) {
-    console.log(e.detail);  // {model: 'department', id: 5}
+document.addEventListener('micro:record:view', function(e) {
+    console.log(e.detail.data);  // {model: 'department', id: 5, name: '...'}
 });
 ```
+
+**Built-in Record Events (dispatched by AutoTable):**
+
+| Event | Triggered By |
+|---|---|
+| `micro:record:view` | Double-click or "View" context item |
+| `micro:record:edit` | "Edit" context item |
+| `micro:record:delete` | "Delete" context item |
+
+**Event Payload (`e.detail`):**
+
+| Key | Description |
+|---|---|
+| `e.detail.data.model` | Lowercase model name (e.g. `"employee"`) |
+| `e.detail.data.id` | Record primary key |
+| `e.detail.data.name` | String representation of the record |
+| `e.detail.originalTarget` | The DOM element that was right-clicked |
+| `e.detail.action` | Full action object (label, icon, permissions, etc.) |
 
 - **Permission Filtering**
 
@@ -878,7 +876,7 @@ class MyTable(tables.Table):
 
 ### 🌍 Translation Framework
  
-microsys ships with Arabic and English translations. Add more languages via `MICROSYS_CONFIG['languages']`.
+microsys ships with Arabic and English translations. Add more languages directly via the **System Settings** UI (available in the App Options page for superusers).
 
 **How it works:**
 - The system automatically discovers and loads translations from all installed apps.
@@ -979,32 +977,169 @@ The Dynamic Modal Manager provides a **universal, AJAX-driven modal** for managi
     ```
 
 - **Features**
-  - **Combined View**: The modal shows an **Add/Edit form** at the top and a **paginated table** at the bottom.
-  - **Inline CRUD**: Edit and delete records without leaving the modal — the list auto-refreshes.
-  - **Auto Form/Table**: Uses the same resolution system as Sections (convention → model method → auto-generation).
-  - **Delete Protection**: `DynamicModalDeleteView` checks for related records before deletion and returns localized error messages.
-  - **Edit Buttons**: The table renders `.dynamic-edit-btn` and `.dynamic-delete-btn` buttons with `data-pk` attributes, handled automatically by the JS.
-  - **Flatpickr**: Date fields inside the modal are auto-initialized with flatpickr if available.
+  - **Auto Form/Table**: Uses the same generic discovery system as Sections (convention → model method → auto-generation).
+  - **Inline CRUD**: Edit and delete records directly inside the modal — the list auto-refreshes seamlessly.
+  - **Smart Form Context**: Instantiates forms with `user` and `request` automatically if their `__init__` signature accepts them.
+  - **Delete Protection**: Checks for related records before deletion, blocking unsafe actions and displaying localized error messages.
 
-- **Specifying a Fixed Model**
+### 🎛️ Advanced Configuration
 
-You can hardcode the model in your URL configuration:
+`DynamicModalManagerView` provides powerful URL-level overrides to customize its behavior without writing new views.
+
 ```python
+# 1. Standard (Combined Form + Table)
 path('zones/modal/', DynamicModalManagerView.as_view(model=Zone), name='zone_modal'),
-path('zones/modal/<int:pk>/', DynamicModalManagerView.as_view(model=Zone), name='zone_modal'),
-path('zones/modal/delete/<int:pk>/', DynamicModalDeleteView.as_view(model=Zone), name='zone_modal_delete'),
+
+# 2. Form Only (No Table)
+path('users/modal/', DynamicModalManagerView.as_view(
+    model=User,
+    form_class=UserModalForm, # Form Override
+    show_table=False
+), name='user_modal'),
+
+# 3. Read-Only Detail View (Custom Template)
+path('logs/<int:pk>/modal/', DynamicModalManagerView.as_view(
+    model=UserActivityLog,
+    template_name='microsys/activity_detail_modal.html',
+    show_form=False, 
+    show_table=False
+), name='log_modal'),
 ```
 
-Or pass it dynamically via query parameter:
+**Attributes:**
+- `model`: Target model (Required).
+- `form_class`: Override auto-discovered form class.
+- `show_table`: Default `True`. Set `False` to hide the list section.
+- `show_form`: Default `True`. Set `False` to hide the form section.
+- `template_name`: Override the default `dynamic_modal_combined.html` shell.
+
+#### 🧠 `handles_save` Flag
+If your form performs complex saving logic (e.g. password hashing, nested M2M assignments, profile generation), set `handles_save = True` on your class. The ManagerView will bypass its generic save cycle and yield execution entirely to `form.save(commit=True)`.
+
+#### 🔗 Automated Detail Context (`get_modal_context`)
+When using custom templates (`show_form=False`, `show_table=False`), the view automatically resolves the `instance` (also available as `object`). If your model requires additional context (like resolving related objects), simply define `get_modal_context(self)` on the model:
+
+```python
+class MyModel(models.Model):
+    def get_modal_context(self):
+         return {'related_items': self.items.all()}
 ```
-/my-model/modal/?model=zone
+The view will auto-call this method and inject the returned dictionary natively into the template context. *Zero boilerplate.*
+
+#### 🪄 Zero-Boilerplate AutoDetail View
+If you request a read-only modal (`show_form=False`, `show_table=False`) and *do not provide a custom template*, `DynamicModalManagerView` will automatically generate a dynamic info-grid containing all the object's fields.
+
+The generator natively:
+- Skips audit fields (`created_at`, `updated_by`, etc.) and passwords.
+- Skips the `scope` field if scopes are universally disabled.
+- Evaluates `ManyToMany` fields into comma-separated lists.
+- Renders `FileField`/`ImageField` as downloadable buttons.
+- Translates `verbose_name` and `choices` values correctly.
+
+```python
+# Fully automated read-only detail view — No template required!
+path('logs/<int:pk>/modal/', DynamicModalManagerView.as_view(
+    model=UserActivityLog,
+    show_form=False, 
+    show_table=False
+), name='log_modal'),
 ```
 
-- **Programmatic Control (Context Menu Integration)**
+---
 
-You can also open the modal natively from JavaScript or the Context Menu by dispatching the `micro:dynamic_modal:open` event.
+### 🌐 Automatic Scope Management
 
-**Context Menu Example:**
+The `ScopedModel` is designed to be completely dynamic — if you turn off `is_scope_enabled()`, the `scope` field **automatically disappears** from every form, filter, and table across the entire app without any code edits.
+
+This is achieved through **auto-injection patches** applied at startup (`AppConfig.ready()`). There is **nothing** you need to do as a developer:
+
+```python
+# Just use ScopedModel. That's it. Scope is handled automatically.
+class MyModel(ScopedModel):
+    name = models.CharField(max_length=100)
+
+# Your forms, filters, and tables don't mention scope at all:
+class MyForm(forms.ModelForm):
+    class Meta:
+        model = MyModel
+        fields = ['name']  # scope is auto-injected + auto-managed
+
+class MyFilter(django_filters.FilterSet):
+    class Meta:
+        model = MyModel
+        fields = ['name']  # scope filter auto-injected when enabled
+
+class MyTable(tables.Table):
+    class Meta:
+        model = MyModel
+        fields = ('name',)  # scope column auto-injected when enabled
+```
+
+**How it works:**
+- **Forms**: Scope field auto-injected into `self.fields`. Auto-hidden when disabled. Auto-locked to user's profile scope for non-superusers.
+- **Filters**: Scope filter auto-injected into `self.filters`. Auto-removed when disabled or user is scope-locked.
+- **Tables**: Scope column auto-added via `extra_columns` when enabled. Auto-excluded when disabled.
+- **Model save**: `ScopedModel.save()` auto-sets scope from the user's profile (just like `created_by`).
+
+> **Opt-out**: If you explicitly add `'scope'` to `Meta.exclude`, the auto-injection is skipped.
+
+#### 🛡️ Relation Protection (`has_related_records`)
+`DynamicModalDeleteView` natively checks if a record has foreign key or M2M relations before allowing deletion. This powers the localized "Cannot delete because related records exist" error.
+
+This is powered by the `microsys.utils.has_related_records(instance, ignore_relations=None)` utility. 
+
+**Important Performance Note:**
+The context menu `Edit` and `Delete` buttons are **not** hidden when related records exist. Running `has_related_records()` on every row during table rendering would cause massive N+1 query bottlenecks on large datasets. 
+Instead:
+- The **Delete** button is always shown, but the deletion *attempt* is safely intercepted by `DynamicModalDeleteView`.
+- If you need to block **Editing** based on relations, call `has_related_records(self.instance)` inside your form's `clean()` method and raise a `ValidationError`.
+
+**Usage Examples:**
+
+*1. Blocking edits on records with relations:*
+```python
+from django import forms
+from django.core.exceptions import ValidationError
+from microsys.utils import has_related_records
+from myapp.models import BudgetChapter
+
+class BudgetChapterForm(forms.ModelForm):
+    class Meta:
+        model = BudgetChapter
+        fields = '__all__'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Only block editing on existing instances, not new creations
+        if self.instance.pk and has_related_records(self.instance):
+             raise ValidationError("This chapter cannot be edited because it has related records (e.g. distributed funds).")
+        return cleaned_data
+```
+
+*2. Safely deleting in a custom view (bypassing Dynamic Modals):*
+```python
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from microsys.utils import has_related_records
+
+def my_custom_delete_view(request, pk):
+    obj = get_object_or_404(MyModel, pk=pk)
+    
+    # You can pass a list of relation field names to ignore during the check
+    if has_related_records(obj, ignore_relations=['logs', 'temporary_drafts']):
+        return JsonResponse({'error': 'Cannot delete because related active records exist.'})
+        
+    obj.delete()
+    return JsonResponse({'success': True})
+```
+
+---
+
+### 🖱️ Programmatic & Context Menu Control
+
+You can trigger modals dynamically via JavaScript or the `AutoTable` Context Menu system.
+
+**Context Menu Example (Direct Open):**
 ```json
 {
     "label": "Review details",
@@ -1013,6 +1148,22 @@ You can also open the modal natively from JavaScript or the Context Menu by disp
     "data": {
         "url": "/my-model/modal/1/",
         "title": "Modal Title"
+    }
+}
+```
+
+**Context Menu Example (Global Edit Event):**
+Starting in v1.14.1, you can dispatch a decoupled `micro:record:edit` event. Standard `manage_sections.html` listeners natively catch this and pipe it into the Dynamic Modal system.
+```json
+{
+    "label": "Edit",
+    "icon": "bi bi-pencil",
+    "type": "event",
+    "event": "micro:record:edit",
+    "data": {
+        "model": "zone",
+        "id": 1,
+        "name": "Warehouse A"
     }
 }
 ```
@@ -1086,6 +1237,43 @@ You can extend this template in your own views to maintain consistent layout and
     <!-- Extra JS scripts -->
 {% endblock %}
 ```
+
+- **Global List Template**
+
+`microsys/helpers/global_list.html` is a ready-to-use, zero-boilerplate list page that renders a form, filter, and table from context. Any CBV list view can use it directly.
+
+**Required context variables:**
+
+| Variable | Type | Description |
+|---|---|---|
+| `page_title` | string | Page heading and `<title>` |
+| `form` | Django Form | The create/edit form (optional — card hidden if `None`) |
+| `filter` | django-filter FilterSet | The search/filter form (optional — card hidden if `None`) |
+| `table` | django-tables2 Table | The data table (optional — card hidden if `None`) |
+| `MS_TRANS` | dict | Translation strings dictionary |
+
+**Usage with a CBV:**
+```python
+class MyListView(LoginRequiredMixin, FilterView, SingleTableView):
+    template_name = 'microsys/helpers/global_list.html'
+    paginate_by = 10
+
+    @property
+    def table_class(self):
+        return get_model_classes('MyModel', app_label='myapp').get('table')
+
+    @property
+    def filterset_class(self):
+        return get_model_classes('MyModel', app_label='myapp').get('filter')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'My Records'
+        context['MS_TRANS'] = _get_request_translations(self.request)
+        return context
+```
+
+The template automatically loads `form_toggle.js` and renders everything in a consistent card layout with proper CSP nonces.
 
 ### 🏷️ Microsys Template Tags
 Microsys provides several global template tags built for dynamic, multi-language UI rendering. Load them using `{% load microsys_tags %}`.
@@ -1247,12 +1435,26 @@ microsys/
 | v1.9.0   | • **Dynamic Modal Reconstruction**: Successfully restored the deleted `DynamicModalManagerView` and `DynamicModalDeleteView` functionality. <br> • Standardized dynamic modals with a unified AJAX-driven combined view (List + Form) for auxiliary models. <br> • Integrated related-record protection in deletion views with localized error messaging. |
 | v1.9.1   | • **Views Modularization**: Refactored monolithic `views.py` into a `views/` package with dedicated modules: `general.py`, `users.py`, `twofa.py`, `sections.py`, `scopes.py`, `activitylog.py`, `profile.py`, `sidebar.py` <br> • Added role-distinguishing top comments to all functions and classes |
 | v1.9.2   | • **Comprehensive README Overhaul**: Added extensive developer how-to documentation for Dynamic Modal Manager, 2FA, Template Tags, Double-Submit Prevention, Preferences API <br> • Expanded ScopedModel docs (dual managers, ScopeForeignKey, soft-delete), Section Mode (class resolution order, customization hooks), Context Menu (permission filtering, event actions, action schema), Autofill (API endpoints), and Activity Logging (safe_log, diffs, masking) <br> • Updated file structure to reflect views/ package refactor |
-| v1.10.0  | • **ScopedModel Audit Trail**: Added 6 built-in fields (`created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_by`) with `editable=False` to ScopedModel <br> • **Auto-Populated Actors**: `save()` override auto-populates `created_by`/`updated_by` from thread-local middleware <br> • **Global Soft-Delete**: `delete()` overridden to perform soft-delete; added `soft_delete()`, `restore()`, `hard_delete()` methods <br> • **UserActivityLog Refactor**: Removed redundant `user`/`timestamp` fields in favor of inherited `created_by`/`created_at` with backward-compat properties <br> • **Centralized Logging**: Enhanced `log_user_action()` utility — replaced all manual `UserActivityLog.objects.create()` calls across signals, fetcher, and views <br> • Removed all `hasattr` guards in views (fields always exist now) <br> • Simplified `ScopedManager` (no conditional `deleted_at` check) |
-| v1.10.1  | • **Sidebar Accordion Refinement**: Added dashboard navigation behavior to the built-in "System" group header, matching the split-accordion behavior of other functional groups. |
-| v1.11.0  | • **Sidebar Parent Reordering**: Enabled reordering for entire accordion groups with dedicated persistence and FOUC prevention. <br> • **Premium Dark Theme Legibility**: Comprehensive overhaul of contrast, outlines, and visibility for all UI components in dark mode. <br> • **Improved Text Contrast**: Enforced high-contrast labels and text utility classes for maximum readability on dark backgrounds. <br> • **Preserved Utility Borders**: Protected Bootstrap `border-*` classes from global theme overrides. |
-| v1.11.1  | • **Separate Accordion URL Button**: Modified sidebar accordion headers to display a separate, non-intrusive URL button (`>`/`<`) for groups with dashboard links, preserving default accordion toggle behavior without JS routing conflicts. |
-| v1.11.2  | • **Sidebar RTL Precision**: Synchronized direction context with sidebar templatetags to ensure correct chevron mirroring in RTL layouts. <br> • **Padding Optimization**: Refined RTL padding for sidebar items and accordion buttons to pull navigation elements flush with the sidebar borders, eliminating "phantom" side gaps. |
-| v1.11.3  | • **Dynamic Sidebar Width**: Converted sidebar layout to `col-auto` with `fit-content` min-width on large screens, allowing it to adapt to the longest item or accordion parent. <br> • **Flexible Content Layout**: Updated the main content area to utilize fluid grid sizing, ensuring it seamlessly fills the workspace adjacent to the dynamic sidebar. |
-| v1.11.4  | • **Smart Filter Controls**: Enhanced `setup_filter_helper` to conditionally render the reset (cancel) button. It now only appears when active filters with non-empty values are present, reducing UI clutter. <br> • **Alignment Refinement**: Standardized global filter alignment to `start` for improved visual hierarchy. |
-| v1.11.5  | • **Universal Filter Standardization**: Migrated `Users`, `Sections`, and `Activity Log` views to the unified `setup_filter_helper` utility. All core lists now benefit from conditional clear buttons, `Hidden` GET parameter preservation, and consistent responsive layouts. |
-| v1.12.0  | • **`get_model_classes` Performance Enhancement**: Upgraded `get_model_classes` utility to use dictionary caching and `LazyModelClasses` for lazy evaluation, reducing module import overhead during the request loop. <br> • **`get_model_classes` Overrides**: Added support for explicit convention overrides via the `overrides` argument or the model-level `model_classes_overrides` attribute. |
+| v1.10.0  | • **ScopedModel Audit Trail**: Added 6 built-in fields (`created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_by`) with `editable=False` to ScopedModel <br> • **Auto-Populated Actors**: `save()` override auto-populates `created_by`/`updated_by` from thread-local middleware |
+| v1.10.1  | • **Global Soft-Delete**: `delete()` overridden to perform soft-delete; added `soft_delete()`, `restore()`, `hard_delete()` methods |
+| v1.10.2  | • **UserActivityLog Refactor**: Removed redundant `user`/`timestamp` fields in favor of inherited `created_by`/`created_at` with backward-compat properties <br> • **Centralized Logging**: Enhanced `log_user_action()` utility — replaced all manual `UserActivityLog.objects.create()` calls across signals, fetcher, and views |
+| v1.10.3  | • **Removed all `hasattr` guards** in views (fields always exist now) <br> • Simplified `ScopedManager` (no conditional `deleted_at` check) |
+| v1.11.0  | • **Sidebar Accordion Refinement**: Added dashboard navigation behavior to the built-in "System" group header, matching the split-accordion behavior of other functional groups |
+| v1.11.1  | • **Sidebar Parent Reordering**: Enabled reordering for entire accordion groups with dedicated persistence and FOUC prevention |
+| v1.11.2  | • **Premium Dark Theme Legibility**: Comprehensive overhaul of contrast, outlines, and visibility for all UI components in dark mode. <br> • **Improved Text Contrast**: Enforced high-contrast labels and text utility classes for maximum readability on dark backgrounds. <br> • **Preserved Utility Borders**: Protected Bootstrap `border-*` classes from global theme overrides |
+| v1.11.3  | • **Separate Accordion URL Button**: Modified sidebar accordion headers to display a separate, non-intrusive URL button (`>`/`<`) for groups with dashboard links, preserving default accordion toggle behavior without JS routing conflicts |
+| v1.11.4  | • **Sidebar RTL Precision**: Synchronized direction context with sidebar templatetags to ensure correct chevron mirroring in RTL layouts. <br> • **Padding Optimization**: Refined RTL padding for sidebar items and accordion buttons to pull navigation elements flush with the sidebar borders, eliminating "phantom" side gaps. |
+| v1.11.5  | • **Dynamic Sidebar Width**: Converted sidebar layout to `col-auto` with `fit-content` min-width on large screens, allowing it to adapt to the longest item or accordion parent. <br> • **Flexible Content Layout**: Updated the main content area to utilize fluid grid sizing, ensuring it seamlessly fills the workspace adjacent to the dynamic sidebar. |
+| v1.12.0  | • **Smart Filter Controls**: Enhanced `setup_filter_helper` to conditionally render the reset (cancel) button. It now only appears when active filters with non-empty values are present, reducing UI clutter. <br> • **Alignment Refinement**: Standardized global filter alignment to `start` for improved visual hierarchy. |
+| v1.12.1  | • **Universal Filter Standardization**: Migrated `Users`, `Sections`, and `Activity Log` views to the unified `setup_filter_helper` utility. All core lists now benefit from conditional clear buttons, `Hidden` GET parameter preservation, and consistent responsive layouts. |
+| v1.12.2  | • **`get_model_classes` Performance Enhancement**: Upgraded `get_model_classes` utility to use dictionary caching and `LazyModelClasses` for lazy evaluation, reducing module import overhead during the request loop. <br> • **`get_model_classes` Overrides**: Added support for explicit convention overrides via the `overrides` argument or the model-level `model_classes_overrides` attribute. |
+| v1.12.3  | • **Migrator Component Integration**: Integrated `migrator.py` into the `microsys/management/commands` package to centralize and reuse initial deployment logic across projects. Added `-mm` (make-migrations) flag to `migrator.py` to safely force makemigrations. |
+| v1.12.4  | • **Dynamic Connected Profiles Failsafe**: Universal `post_save` signal that introspects OneToOne User profiles globally and auto-creates them with type-safe dummy values, bypassing database requirements for flawless system-agnostic onboarding. |
+| v1.14.0  | • **HR Validation Overhaul**: Shipped powerful ProfileCompletionMiddleware and EmployeeSetupForm that globally trap unverified dummy users upon login, forcing them to complete their profiles before gaining system access. |
+| v1.14.1  | • **Global Context Menus**: Refactored AutoTable generic context menus to dispatch decoupled `micro:record:edit` events, empowering standard views to handle routing and Custom Views to pipe explicitly into Dynamic Modals without boilerplate code. |
+| v1.14.2  | • **Reusable Global List Template**: Added `microsys/helpers/global_list.html` to standardize form/filter/table list views project-wide. <br> • **Event Rename**: Renamed `micro:section:*` → `micro:record:*` for semantic accuracy across AutoTable, section_manager.js, and all consumer templates. |
+| v1.15.0  | • **User Modal CRUD**: Migrated User add/edit from separate pages into `DynamicModalManagerView`. <br> • **Smart Form Kwargs**: Auto-introspects form `__init__` signatures and passes `user`/`request` if accepted. <br> • **`form_class` / `template_name` Overrides**: URL-level customization of form class and template. <br> • **`show_table` / `show_form` Flags**: Render form-only, table-only, or combined. <br> • **`handles_save` Flag**: Forms managing their own save cycle (password hashing, M2M). <br> • **`get_modal_context()` Convention**: Models can define this method to auto-inject extra context into modals. <br> • **`UserModalForm`**: Smart proxy delegating to creation/change forms based on instance. |
+| v1.16.0  | • **Scope Auto-Injection**: Monkey-patches `ModelForm`, `FilterSet`, and `Table` in `AppConfig.ready()` to auto-inject and manage scope for any `ScopedModel`-based component — zero developer effort. <br> • Auto Scope on Save: `ScopedModel.save()` now auto-sets scope from user's profile (like `created_by`). <br> • ScopeForeignKey Fix: `formfield()` no longer returns `None` when scopes are disabled. |
+| v1.17.0  | • **Universal Auto-Translation**: Augmented `AppConfig.ready()` patches to automatically translate Table headers, Filter labels, and ModelForm field labels by looking up `verbose_name` or `label` in the project's translation dictionary. Supports `tbl_` and `label_` prefixes with zero developer effort. |
+| v1.17.1  | • **Translation Language Resolution Fix**: Rewrote `get_strings()` to use the same robust language fallback as `microsys_context`: user profile prefs → session → `MICROSYS_CONFIG['default_language']` → `get_language()` → `'ar'`. Previously the function skipped profile prefs and `default_language`, causing Django's default `en-us` to override the intended Arabic default. <br> • **Table Patch Kwargs Fix**: Fixed `TypeError` in `_patched_init` where microsys-specific kwargs (`translations`, `request`, `model_name`) were forwarded to django-tables2's `Table.__init__()`. |
+| v1.17.2  | • **Micro Context Menu Dark Mode Enhancement**: Updated hover background color for context menu items in dark mode to improve contrast and reduce visual harshness. |

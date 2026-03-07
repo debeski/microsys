@@ -15,12 +15,14 @@ User = get_user_model()
 
 def _get_filter_strings(request=None):
     """Get translation strings for filter labels/placeholders."""
-    ms_config = getattr(django_settings, 'MICROSYS_CONFIG', {})
-    lang = ms_config.get('default_language', 'ar')
+    from .utils import get_system_config
+    config_dict = get_system_config()
+    lang = config_dict.get('default_language', 'ar')
+    overrides = config_dict.get('translations', None)
+
     if request and request.user.is_authenticated and hasattr(request.user, 'profile'):
         prefs = request.user.profile.preferences or {}
         lang = prefs.get('language', lang)
-    overrides = ms_config.get('translations', None)
     return get_strings(lang, overrides=overrides)
 
 class UserFilter(django_filters.FilterSet):
@@ -76,20 +78,19 @@ class UserActivityLogFilter(django_filters.FilterSet):
 
         # Update labels from translations
         self.filters['year'].extra['empty_label'] = s.get('filter_year', 'السنة')
-        self.filters['scope'].extra['empty_label'] = s.get('filter_all', 'الكل')
-        self.filters['scope'].label = s.get('filter_scope', 'النطاق')
+        if 'scope' in self.filters:
+            self.filters['scope'].extra['empty_label'] = s.get('filter_all', 'الكل')
+            self.filters['scope'].label = s.get('filter_scope', 'النطاق')
         
         years = self.Meta.model.objects.dates('created_at', 'year').distinct()
         self.filters['year'].extra['choices'] = [(year.year, year.year) for year in years]
         self.filters['year'].field.widget.attrs.update({
             'class': 'auto-submit-filter'
         })
-        self.filters['scope'].field.widget.attrs.update({
-            'class': 'auto-submit-filter'
-        })
-
-        if self.request and hasattr(self.request.user, 'profile') and self.request.user.profile.scope:
-            del self.filters['scope']
+        if 'scope' in self.filters:
+            self.filters['scope'].field.widget.attrs.update({
+                'class': 'auto-submit-filter'
+            })
         
         # Layout handled by setup_filter_helper in the view
         pass

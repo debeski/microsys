@@ -46,10 +46,17 @@ class MicrosysConfig(AppConfig):
             from django.contrib.auth.models import Permission
             from .translations import get_strings
             
-            # Determine default language from config
-            ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
-            default_lang = ms_config.get('default_language', 'ar')
-            project_overrides = ms_config.get('translations', None)
+            # Determine default language from DB config (with fallback if tables aren't created yet)
+            try:
+                from microsys.models import SystemSettings
+                sys_settings = SystemSettings.load()
+                default_lang = sys_settings.default_language
+                project_overrides = sys_settings.translations_override
+            except Exception:
+                # Fallback during initial migrations or if DB is offline
+                default_lang = 'en'
+                project_overrides = None
+                
             strings = get_strings(default_lang, overrides=project_overrides)
             
             auth_config = apps.get_app_config('auth')
@@ -63,6 +70,11 @@ class MicrosysConfig(AppConfig):
 
         import microsys.signals
         import microsys.discovery
+
+        # Auto-inject scope handling into ModelForm / FilterSet / Table
+        from microsys.patches import apply_scoped_patches, apply_global_translation_patches
+        apply_scoped_patches()
+        apply_global_translation_patches()
 
     def _validate_configuration(self):
         """Validate microsys configuration at startup and emit warnings."""

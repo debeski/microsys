@@ -167,19 +167,3 @@ def user_profile(request):
 
     return render(request, 'microsys/profile/profile.html', context)
 
-
-# Profile View — Handles user profile editing (name, avatar, etc.)
-@login_required
-def edit_profile(request):
-    UserProfileEditForm = import_string('microsys.forms.UserProfileEditForm')
-    if request.method == 'POST':
-        form = UserProfileEditForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
-            user = form.save()
-            messages.success(request, 'تم حفظ التغييرات بنجاح')
-            return redirect('user_profile')
-        else:
-            messages.error(request, 'حدث خطأ أثناء حفظ التغييرات')
-    else:
-        form = UserProfileEditForm(instance=request.user)
-    return render(request, 'microsys/profile/profile_edit.html', {'form': form})

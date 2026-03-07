@@ -6,6 +6,7 @@
     <title>{{ APP_CONFIG.name|default:"microSYS" }} &nbsp;&nbsp; {% block title %}{% endblock %}</title>
     
     {{ user_preferences|json_script:"user-prefs-data" }}
+    {{ MS_TRANS|json_script:"ms-trans-data" }}
     <script nonce="{{ request.csp_nonce }}">
         (function() {
             try {
@@ -13,10 +14,15 @@
             } catch (e) {
                 window.USER_PREFS = {};
             }
+            try {
+                window.__MS_TRANS = JSON.parse(document.getElementById('ms-trans-data').textContent) || {};
+            } catch (e) {
+                window.__MS_TRANS = {};
+            }
             // Inject server-resolved language info for client-side use
             window.USER_PREFS._lang = '{{ CURRENT_LANG|default:"ar" }}';
             window.USER_PREFS._dir = '{{ CURRENT_DIR|default:"rtl" }}';
-
+            
             const savedTheme = window.USER_PREFS.theme || localStorage.getItem('appTheme');
             const savedAcc = window.USER_PREFS.accessibility || localStorage.getItem('accessibilityMode');
             
@@ -66,6 +72,7 @@
     <script src="{% static 'microsys/themes/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/accessibility/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/language/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+    <script src="{% static 'microsys/language/js/translations.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/autofill/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/main/js/prevent_double_submit.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 

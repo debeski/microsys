@@ -90,7 +90,7 @@
         // ---------------------------------------------------------
         // Smart Delete Handler
         // ---------------------------------------------------------
-        document.body.addEventListener('micro:section:delete', function(e) {
+        document.body.addEventListener('micro:record:delete', function(e) {
             const data = e.detail.data;
             if (!confirm('هل أنت متأكد من حذف: ' + data.name + ' ؟')) return;
 
@@ -144,7 +144,7 @@
         // ---------------------------------------------------------
         // Smart View Handler
         // ---------------------------------------------------------
-        document.body.addEventListener('micro:section:view', function(e) {
+        document.body.addEventListener('micro:record:view', function(e) {
             const data = e.detail.data;
             const url = `${sectionData.detailsUrl}?model=${data.model}&pk=${data.id}`;
 
@@ -193,6 +193,19 @@
                 console.error('View Error:', err);
                 alert('حدث خطأ أثناء جلب البيانات.');
             });
+        });
+
+        // ---------------------------------------------------------
+        // Smart Edit Handler (Fallback for generic Section Managers)
+        // ---------------------------------------------------------
+        document.body.addEventListener('micro:record:edit', function(e) {
+            const data = e.detail.data;
+            if (sectionData && sectionData.editUrlTemplate) {
+                const url = sectionData.editUrlTemplate.replace('{id}', data.id);
+                window.location.href = url;
+            } else {
+                window.location.href = `?model=${data.model}&id=${data.id}`;
+            }
         });
 
     });

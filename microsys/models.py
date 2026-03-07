@@ -3,6 +3,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.core.cache import cache
 from .managers import ScopedManager
 
 
@@ -37,6 +38,61 @@ class ScopeSettings(models.Model):
         return "إعدادات النطاق"
 
 
+class SingletonModel(models.Model):
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+        self.refresh_cache()
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls):
+        obj = cache.get(cls.__name__)
+        if not obj:
+            obj, created = cls.objects.get_or_create(pk=1)
+            if created:
+                # Seed from codebase MICROSYS_CONFIG if available
+                config = getattr(settings, 'MICROSYS_CONFIG', {})
+                if 'name' in config:
+                    obj.name = config.get('name')
+                if 'default_language' in config:
+                    obj.default_language = config.get('default_language')
+                if 'name_en' in config:
+                    obj.name_en = config.get('name_en')
+                if 'name_ar' in config:
+                    obj.name = config.get('name_ar')
+                obj.save()
+            cache.set(cls.__name__, obj, timeout=86400)
+        return obj
+
+    def refresh_cache(self):
+         cache.set(self.__class__.__name__, self, timeout=86400)
+
+
+class SystemSettings(SingletonModel):
+    name = models.CharField(max_length=255, default='ادارة النظام', verbose_name="اسم النظام (عربي)")
+    name_en = models.CharField(max_length=255, blank=True, null=True, verbose_name="اسم النظام (إنجليزي)")
+    logo = models.ImageField(upload_to='microsys/branding/', null=True, blank=True, verbose_name="شعار النظام (Logo)")
+    favicon = models.ImageField(upload_to='microsys/branding/', null=True, blank=True, verbose_name="أيقونة الموقع (Favicon)")
+    default_language = models.CharField(max_length=10, default='ar', verbose_name="اللغة الافتراضية")
+    home_url = models.CharField(max_length=255, default='/sys/', verbose_name="الرابط الرئيسي")
+    
+    languages = models.JSONField(default=dict, blank=True, verbose_name="اللغات المتوفرة")
+    translations_override = models.JSONField(default=dict, blank=True, verbose_name="تجاوز الترجمات")
+
+    class Meta:
+        verbose_name = "System Settings"
+        verbose_name_plural = "System Settings"
+
+    def __str__(self):
+        return "إعدادات النظام العامة"
+
+
 class ScopeForeignKey(models.ForeignKey):
     """
     ForeignKey that hides itself from ModelForms when scopes are disabled.
@@ -44,12 +100,8 @@ class ScopeForeignKey(models.ForeignKey):
     """
 
     def formfield(self, **kwargs):
-        try:
-            from .utils import is_scope_enabled
-            if not is_scope_enabled():
-                return None
-        except Exception:
-            pass
+        # Always return a real form field.
+        # Visibility is managed globally by microsys.patches.
         return super().formfield(**kwargs)
 
     def deconstruct(self):
@@ -95,13 +147,18 @@ class ScopedModel(models.Model):
         abstract = True
 
     def save(self, *args, **kwargs):
-        """Auto-populate created_by/updated_by from thread-local user."""
+        """Auto-populate created_by/updated_by and scope from thread-local user."""
         from .middleware import get_current_user
         user = get_current_user()
         if user and hasattr(user, 'is_authenticated') and user.is_authenticated:
             if not self.pk:
                 if not self.created_by_id:
                     self.created_by = user
+                # Auto-set scope from user's profile if not explicitly set
+                if not self.scope_id and hasattr(user, 'profile') and user.profile.scope_id:
+                    from .utils import is_scope_enabled
+                    if is_scope_enabled():
+                        self.scope_id = user.profile.scope_id
             self.updated_by = user
         super().save(*args, **kwargs)
 
@@ -243,6 +300,101 @@ class UserActivityLog(ScopedModel):
             user_agent=user_agent,
             scope=scope,
         )
+
+    def get_modal_context(self):
+        """Auto-resolve related object for dynamic modal detail view."""
+        related_object = None
+        if self.model_name and self.object_id:
+            try:
+                target_model = None
+                if '.' in self.model_name:
+                    try:
+                        target_model = apps.get_model(self.model_name)
+                    except LookupError:
+                        pass
+                if not target_model:
+                    import unicodedata
+                    def normalize(s):
+                        return unicodedata.normalize('NFKD', s).casefold() if s else ""
+                    log_model_norm = normalize(self.model_name)
+                    for model in apps.get_models():
+                        if normalize(model._meta.verbose_name) == log_model_norm or \
+                           normalize(model._meta.object_name) == log_model_norm:
+                            target_model = model
+                            break
+                if target_model:
+                    try:
+                        related_object = target_model.objects.get(pk=self.object_id)
+                    except target_model.DoesNotExist:
+                        pass
+            except Exception:
+                pass
+        return {
+            'related_object': related_object,
+            'related_object_model': related_object._meta.verbose_name if related_object else (self.model_name or "-"),
+        }
+
+class TranslationMixin:
+    """
+    Mixin for zero-boilerplate database content translation.
+    Usage example:
+        class Product(TranslationMixin, models.Model):
+            translated_fields = ['name', 'description']
+            name_en = models.CharField(...)
+            name_ar = models.CharField(...)
+        
+        # In template: {{ product.t_name }} prints 'Sample' or 'عينة' magically.
+    """
+    def __getattr__(self, name):
+        """
+        Intercepts field access. If name starts with 't_' and the base field is translated,
+        it fetches the correct variant based on the thread's language.
+        """
+        if name.startswith('t_'):
+            base_field = name[2:]
+            translated_fields = getattr(self.__class__, 'translated_fields', [])
+            
+            if base_field in translated_fields:
+                from microsys.middleware import get_current_request
+                from microsys.utils import _get_request_lang
+                lang = _get_request_lang(get_current_request())
+                
+                # Try fetching localized version
+                try:
+                    val = self.__getattribute__(f"{base_field}_{lang}")
+                    if val is not None and val != "":
+                        return val
+                except AttributeError:
+                    pass
+                
+                # Check default language (fallback 1)
+                try:
+                    from microsys.utils import get_system_config
+                    default_lang = get_system_config().get('default_language', 'en')
+                    val = self.__getattribute__(f"{base_field}_{default_lang}")
+                    if val is not None and val != "":
+                        return val
+                except AttributeError:
+                    pass
+                
+                # Fallback to English (fallback 2)
+                try:
+                    val = self.__getattribute__(f"{base_field}_en")
+                    if val is not None and val != "":
+                        return val
+                except AttributeError:
+                    pass
+
+                # Fallback to base (fallback 3)
+                try:
+                    val = self.__getattribute__(base_field)
+                    if val is not None:
+                        return val
+                except AttributeError:
+                    return ""
+                    
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
 
 class Section(models.Model):
     """Dummy Model for section permissions."""

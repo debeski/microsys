@@ -118,34 +118,21 @@ def microsys_context(request):
     context = {}
 
     # 1. Branding / App Config
-    # Default configuration
-    default_config = {
-        'name': 'microsys',
-        'verbose_name': 'ادارة النظام',
-        'logo': '/static/img/base_logo.png',
-        'login_logo': '/static/img/login_logo.webp',
-        'favicon': '/static/favicon.ico',
-        'home_url': '/sys/',  # Default home link in titlebar
-    }
-    
-    # Get user config from settings.py
-    user_config = getattr(settings, 'MICROSYS_CONFIG', {})
-    
-    # Merge configurations
-    final_config = default_config.copy()
-    final_config.update(user_config)
+    from .utils import get_system_config
+    final_config = get_system_config()
 
     # 4. Language / i18n (resolved BEFORE branding overrides so we know current_lang)
     from .translations import get_strings
 
-    # Available languages from config (default: Arabic only)
+    # Available languages from config (default: English and Arabic)
     default_languages = {
         'ar': {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'},
+        'en': {'name': 'English', 'dir': 'ltr', 'flag': '🇬🇧'},
     }
     languages = final_config.get('languages', default_languages)
 
-    # Resolve active language: user pref → session → config default → 'ar'
-    default_lang = final_config.get('default_language', 'ar')
+    # Resolve active language: user pref → session → config default → 'en'
+    default_lang = final_config.get('default_language', 'en')
     
     current_lang = None
     # 1. User Preference
@@ -166,7 +153,7 @@ def microsys_context(request):
 
     # Validate the resolved language exists in available languages
     if current_lang not in languages:
-        current_lang = default_lang if default_lang in languages else 'ar'
+        current_lang = default_lang if default_lang in languages else 'en'
 
     # DYNAMIC BRANDING: Look for [key]_[lang] overrides in final_config
     # (e.g. name_en, logo_ar) and promote them to the base keys
@@ -189,7 +176,7 @@ def microsys_context(request):
         user_prefs = request.user.profile.preferences or {}
     context['user_preferences'] = user_prefs # Injected for JS use
 
-    lang_config = languages.get(current_lang, {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'})
+    lang_config = languages.get(current_lang, {'name': 'English', 'dir': 'ltr', 'flag': '🇬🇧'})
     current_dir = lang_config.get('dir', 'rtl')
 
     # Get translated strings (with project-level overrides from config)

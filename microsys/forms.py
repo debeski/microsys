@@ -22,12 +22,14 @@ User = get_user_model()
 
 def _get_form_strings(user=None):
     """Get translation strings for forms."""
-    ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
-    lang = ms_config.get('default_language', 'ar')
+    from .utils import get_system_config
+    config_dict = get_system_config()
+    lang = config_dict.get('default_language', 'ar')
+    overrides = config_dict.get('translations', None)
+        
     if user and user.is_authenticated and hasattr(user, 'profile'):
         prefs = user.profile.preferences or {}
         lang = prefs.get('language', lang)
-    overrides = ms_config.get('translations', None)
     return get_strings(lang, overrides=overrides)
 
 def _attach_is_staff_permission(form, widget_id=None):
@@ -259,6 +261,7 @@ class GroupedPermissionWidget(ChoiceWidget):
         return mark_safe(render_to_string(self.template_name, context))
 
 
+
 # Custom User Creation form layout
 class CustomUserCreationForm(UserCreationForm):
     # Added fields from Profile
@@ -297,9 +300,6 @@ class CustomUserCreationForm(UserCreationForm):
         if self.user_context and not self.user_context.is_superuser:
             user_perms = self.user_context.user_permissions.all() | Permissions.objects.filter(group__user=self.user_context)
             self.fields['permissions'].queryset = self.fields['permissions'].queryset.filter(id__in=user_perms.values_list('id', flat=True))
-        
-        ScopeSettings = apps.get_model('microsys', 'ScopeSettings')
-        scope_enabled = ScopeSettings.load().is_enabled
 
         lock_scope = bool(
             self.user_context
@@ -307,13 +307,6 @@ class CustomUserCreationForm(UserCreationForm):
             and hasattr(self.user_context, 'profile')
             and self.user_context.profile.scope
         )
-
-        if not scope_enabled or lock_scope:
-            if lock_scope:
-                self.fields['scope'].initial = self.user_context.profile.scope
-            self.fields['scope'].disabled = True
-            self.fields['scope'].widget = forms.HiddenInput()
-            self.fields['scope'].required = False
 
         if lock_scope:
             # Security Fix: Hide manage_staff
@@ -381,8 +374,10 @@ class CustomUserCreationForm(UserCreationForm):
                 css_class="row"
             ),
         ]
-        if scope_enabled and not lock_scope:
+        
+        if 'scope' in self.fields and getattr(self.fields['scope'].widget, 'input_type', '') != 'hidden':
             layout_blocks.append(Row(Field("scope", css_class="form-control")))
+            
         layout_blocks.extend([
             HTML("<hr>"),
             Field("permissions", css_class="col-12"),
@@ -398,9 +393,9 @@ class CustomUserCreationForm(UserCreationForm):
                 ),
                 HTML(
                     f"""
-                    <a href="{{% url 'manage_users' %}}" class="btn btn-danger rounded-pill">
-                        <i class="bi bi-arrow-return-left text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
-                    </a>
+                    <button type="button" class="btn btn-danger rounded-pill" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
+                    </button>
                     """
                 )
             )
@@ -500,22 +495,12 @@ class CustomUserChangeForm(UserChangeForm):
         if user_instance:
             self.fields["permissions"].initial = user_instance.user_permissions.all()
 
-        ScopeSettings = apps.get_model('microsys', 'ScopeSettings')
-        scope_enabled = ScopeSettings.load().is_enabled
-
         lock_scope = bool(
             self.user_context
             and not self.user_context.is_superuser
             and hasattr(self.user_context, 'profile')
             and self.user_context.profile.scope
         )
-
-        if not scope_enabled or lock_scope:
-            if lock_scope:
-                self.fields['scope'].initial = self.user_context.profile.scope
-            self.fields['scope'].disabled = True
-            self.fields['scope'].widget = forms.HiddenInput()
-            self.fields['scope'].required = False
 
         # --- Foolproofing & Role-based logic ---
         if self.user_context and not self.user_context.is_superuser:
@@ -561,7 +546,7 @@ class CustomUserChangeForm(UserChangeForm):
             ),
         ]
         
-        if scope_enabled and not lock_scope:
+        if 'scope' in self.fields and getattr(self.fields['scope'].widget, 'input_type', '') != 'hidden':
             layout_blocks.append(Row(Field("scope", css_class="form-control")))
             
         layout_blocks.extend([
@@ -579,15 +564,8 @@ class CustomUserChangeForm(UserChangeForm):
                 ),
                 HTML(
                     f"""
-                    <a href="{{% url 'manage_users' %}}" class="btn btn-danger rounded-pill">
-                        <i class="bi bi-arrow-return-left text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
-                    </a>
-                    """
-                ),
-                HTML(
-                    f"""
-                    <button type="button" class="btn btn-warning rounded-pill" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
-                        <i class="bi bi-key-fill text-light me-1 h4"></i> {s.get('reset_password', 'إعادة تعيين كلمة المرور')}
+                    <button type="button" class="btn btn-danger rounded-pill" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
                     </button>
                     """
                 )
@@ -613,6 +591,35 @@ class CustomUserChangeForm(UserChangeForm):
             profile.save()
             
         return user
+
+
+class UserModalForm:
+    """
+    Smart proxy form for the Dynamic Modal system.
+    Delegates to CustomUserCreationForm (create) or CustomUserChangeForm (edit)
+    based on whether an instance with a PK is provided.
+    """
+    handles_save = True  # Tells DynamicModalManagerView to call save(commit=True) directly
+
+    def __new__(cls, *args, **kwargs):
+        instance = kwargs.get('instance')
+        user = kwargs.get('user')
+
+        if instance and instance.pk:
+            # Edit mode — use change form
+            form_cls = CustomUserChangeForm
+        else:
+            # Create mode — use creation form
+            form_cls = CustomUserCreationForm
+            # Remove instance for creation form (UserCreationForm doesn't expect it)
+            kwargs.pop('instance', None)
+
+        form = form_cls(*args, **kwargs)
+        form.handles_save = True
+        # Ensure no <form> tag in modal context (modal template provides it)
+        if hasattr(form, 'helper'):
+            form.helper.form_tag = False
+        return form
 
 
 # Custom User Reset Password form layout
@@ -653,14 +660,18 @@ class UserProfileEditForm(forms.ModelForm):
     phone = forms.CharField(max_length=15, required=False, label="رقم الهاتف")
     profile_picture = forms.ImageField(required=False, label="الصورة الشخصية")
 
+    handles_save = True  # Indicate to DynamicModalManagerView to call save(commit=True) directly
+
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name', 'email']
 
     def __init__(self, *args, **kwargs):
+        # Extract instance and pop 'user' before super().__init__
+        user_instance = kwargs.get('instance')
+        self.user_context = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        user_instance = kwargs.get('instance')
         s = _get_form_strings(user_instance)
 
         if user_instance and hasattr(user_instance, 'profile'):
@@ -677,6 +688,45 @@ class UserProfileEditForm(forms.ModelForm):
 
         
         self.fields["email"].required = False
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        
+        layout_blocks = [
+            Row(Field("username", css_class="form-control")),            
+            HTML("<hr>"),
+            Row(
+                Div(Field("first_name", css_class="form-control"), css_class="col-md-6"),
+                Div(Field("last_name", css_class="form-control"), css_class="col-md-6"),
+                css_class="row"
+            ),
+            Row(
+                Div(Field("phone", css_class="form-control"), css_class="col-md-6"),
+                Div(Field("email", css_class="form-control"), css_class="col-md-6"),
+                css_class="row"
+            ),
+            Row(Field("profile_picture", css_class="form-control")),
+            HTML("<hr>"),
+            FormActions(
+                HTML(
+                    f"""
+                    <button type="submit" class="btn btn-success rounded-pill">
+                        <i class="bi bi-save text-light me-1 h4"></i>
+                        {s.get('btn_update', 'تحديث')}
+                    </button>
+                    """
+                ),
+                HTML(
+                    f"""
+                    <button type="button" class="btn btn-danger rounded-pill" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
+                    </button>
+                    """
+                )
+            )
+        ]
+        
+        self.helper.layout = Layout(*layout_blocks)
 
     def clean_profile_picture(self):
         profile_picture = self.cleaned_data.get('profile_picture')
@@ -744,3 +794,113 @@ class ScopeForm(forms.ModelForm):
         self.helper.layout = Layout(
             Field('name', css_class='col-12'),
         )
+
+
+class SystemSettingsForm(forms.ModelForm):
+    languages = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4}),
+        required=False,
+    )
+    translations_override = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4}),
+        required=False,
+    )
+
+    class Meta:
+        model = apps.get_model('microsys', 'SystemSettings')
+        fields = ['name', 'name_en', 'logo', 'favicon', 'default_language', 'languages', 'translations_override']
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        self._user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Determine language context from user or request
+        user = self._user or (self.request.user if self.request else None)
+        s = _get_form_strings(user)
+        
+        # Support passing translations directly via kwargs in Dynamic Modal
+        if hasattr(self, 'translations') and self.translations:
+            s = self.translations
+
+        
+        # Languages and Translations Override
+        self.fields['languages'].label = s.get('form_sys_languages', "اللغات المتوفرة (JSON)")
+        self.fields['languages'].help_text = s.get('help_sys_languages', 'مثال: {"ar": "العربية", "en": "English"}')
+        
+        self.fields['translations_override'].label = s.get('form_sys_translations', "تجاوز الترجمات (JSON)")
+        self.fields['translations_override'].help_text = s.get('help_sys_translations', 'مثال: {"ar": {"app_microsys": "النظام"}}')
+        
+        self.fields['name'].label = s.get('form_sys_name_ar', "اسم النظام (عربي)")
+        self.fields['name_en'].label = s.get('form_sys_name_en', "اسم النظام (إنجليزي)")
+        self.fields['default_language'].label = s.get('form_sys_default_lang', "اللغة الافتراضية")
+        self.fields['logo'].label = s.get('form_sys_logo', "الشعار (Logo)")
+        self.fields['favicon'].label = s.get('form_sys_favicon', "أيقونة الموقع (Favicon)")
+
+        # Seed instance fields from config if not yet customized
+        from django.conf import settings
+        config = getattr(settings, 'MICROSYS_CONFIG', {})
+        if not self.instance.name or self.instance.name == 'ادارة النظام':
+             self.instance.name = config.get('name_ar', config.get('name', 'ادارة النظام'))
+        if not self.instance.name_en:
+             self.instance.name_en = config.get('name_en', '')
+        if not self.instance.default_language or self.instance.default_language == 'ar':
+             self.instance.default_language = config.get('default_language', 'ar')
+
+        # Convert JSON to string for textarea
+        if self.instance and self.instance.pk:
+            import json
+            if isinstance(self.instance.languages, dict):
+                self.initial['languages'] = json.dumps(self.instance.languages, ensure_ascii=False, indent=2)
+            if isinstance(self.instance.translations_override, dict):
+                self.initial['translations_override'] = json.dumps(self.instance.translations_override, ensure_ascii=False, indent=2)
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Row(
+                Div(Field('name', css_class='col-md-6'), css_class='col-md-6'),
+                Div(Field('name_en', css_class='col-md-6'), css_class='col-md-6'),
+            ),
+            Row(
+                Div(Field('logo', css_class='col-md-6'), css_class='col-md-6'),
+                Div(Field('favicon', css_class='col-md-6'), css_class='col-md-6'),
+                css_class='row'
+            ),
+            Row(Field('default_language', css_class='col-12')),
+            HTML("<hr>"),
+            Row(Field('languages', css_class='col-12 font-monospace', dir='ltr')),
+            Row(Field('translations_override', css_class='col-12 font-monospace', dir='ltr')),
+            HTML("<hr>"),
+            Div(
+                Submit('submit', s.get('btn_save', 'حفظ التعديلات'), css_class='btn btn-primary px-5 rounded-pill fw-bold'),
+                css_class='text-center mt-4 mb-2'
+            )
+        )
+
+    def clean_languages(self):
+        data = self.cleaned_data.get('languages')
+        if not data:
+            return {}
+        import json
+        try:
+            parsed = json.loads(data)
+            if not isinstance(parsed, dict):
+                raise ValidationError("Must be a valid JSON dictionary.")
+            return parsed
+        except json.JSONDecodeError:
+            raise ValidationError("Invalid JSON format.")
+
+    def clean_translations_override(self):
+        data = self.cleaned_data.get('translations_override')
+        if not data:
+            return {}
+        import json
+        try:
+            parsed = json.loads(data)
+            if not isinstance(parsed, dict):
+                raise ValidationError("Must be a valid JSON dictionary.")
+            return parsed
+        except json.JSONDecodeError:
+            raise ValidationError("Invalid JSON format.")
+

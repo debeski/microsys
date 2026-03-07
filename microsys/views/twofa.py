@@ -161,8 +161,12 @@ def verify_otp_view(request, intent='login'):
                 if next_url:
                     return redirect(next_url)
                 
-                ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
-                home_url = ms_config.get('home_url')
+                try:
+                    from microsys.utils import get_system_config
+                    config_dict = get_system_config()
+                    home_url = config_dict.get('home_url')
+                except Exception:
+                    home_url = None
                 if home_url:
                     return redirect(home_url)
                     

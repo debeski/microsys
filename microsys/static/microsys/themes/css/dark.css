@@ -57,7 +57,7 @@
 :root.theme-dark .card:not([class*="border-"]),
 :root.theme-dark .card-body:not([class*="border-"]),
 :root.theme-dark .dashboard-card:not([class*="border-"]),
-:root.theme-dark .option-section:not([class*="border-"]),
+/* :root.theme-dark .option-section:not([class*="border-"]), */
 :root.theme-dark .list-group-item:not([class*="border-"]),
 :root.theme-dark .modal-content:not([class*="border-"]),
 :root.theme-dark .chart-container-sys:not([class*="border-"]) {
@@ -779,4 +779,28 @@ html[dir="rtl"] :root.theme-dark .activity-timeline {
 :root.theme-dark .lang-toggle-container {
     background-color: #1e1e1e !important;
     border-color: #343a40 !important;
+}
+
+/* 25. Micro Context Menu Dark Mode Fix */
+:root.theme-dark .context-menu {
+    background-color: #1e1e1e !important;
+    border-color: #343a40 !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5) !important;
+}
+
+:root.theme-dark .context-menu-item {
+    color: #e9ecef !important;
+}
+
+:root.theme-dark .context-menu-item:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+
+:root.theme-dark .context-menu-item.text-danger:hover {
+    background-color: rgba(220, 53, 69, 0.2) !important;
+}
+
+:root.theme-dark .context-menu-divider {
+    border-top-color: #343a40 !important;
 }

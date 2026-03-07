@@ -11,7 +11,11 @@ urlpatterns = [
     path('accounts/login/', views.CustomLoginView.as_view(), name='login'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('accounts/profile/', views.user_profile, name='user_profile'),
-    path('accounts/profile/edit/', views.edit_profile, name='edit_profile'),
+    path('accounts/profile/edit/<str:pk>/modal/', views.DynamicModalManagerView.as_view(
+        model=views.User,
+        form_class=views.UserProfileEditForm,
+        show_table=False,
+    ), name='modal_profile_edit'),
     
     # System URLs (all prefixed with sys/)
     path('sys/', views.dashboard, name='sys_dashboard'),
@@ -69,4 +73,16 @@ urlpatterns = [
     # Dynamic Modal CRUD
     path('sys/modals/manager/<str:app_label>/<str:model_name>/<str:pk>/', views.DynamicModalManagerView.as_view(), name='modal_manager'),
     path('sys/modals/delete/<str:app_label>/<str:model_name>/<int:pk>/', views.DynamicModalDeleteView.as_view(), name='modal_delete'),
+
+    # User Modal CRUD (dedicated route with custom form)
+    path('sys/modals/users/', views.DynamicModalManagerView.as_view(
+        model=views.User,
+        form_class=views.UserModalForm,
+        show_table=False,
+    ), name='modal_user'),
+    path('sys/modals/users/<str:pk>/', views.DynamicModalManagerView.as_view(
+        model=views.User,
+        form_class=views.UserModalForm,
+        show_table=False,
+    ), name='modal_user_edit'),
 ]

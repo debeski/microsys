@@ -10,8 +10,8 @@
 <link rel="stylesheet" href="{% static 'microsys/users/css/profile.css' %}">
 
 
-<div class="row justify-content-center mt-4">
-    <div class="col-lg-10">
+<div class="row justify-content-center">
+    <div class="col-lg-12">
         <div class="glass-profile">
             <h1 class="page-title text-center display-6">
                 <i class="bi bi-person-circle me-2"></i> {{ MS_TRANS.profile }}
@@ -138,9 +138,9 @@
                                 <a href="{{ APP_CONFIG.home_url }}" class="btn btn-sm btn-light rounded-pill border action-btn" title="{{ MS_TRANS.btn_home }}">
                                     <i class="bi bi-house-door"></i> {{ MS_TRANS.btn_home }}
                                 </a>
-                                <a class="btn btn-sm btn-success rounded-pill action-btn" href="{% url 'edit_profile' %}" title="{{ MS_TRANS.btn_update_data }}">
+                                <button type="button" class="btn btn-sm btn-success rounded-pill action-btn" data-dynamic-modal="{% url 'modal_profile_edit' pk=user.pk %}" data-modal-title="{{ MS_TRANS.btn_edit_profile|default:'تعديل الملف الشخصي' }}" title="{{ MS_TRANS.btn_update_data }}">
                                     <i class="bi bi-pencil-square"></i> {{ MS_TRANS.btn_edit }}
-                                </a>
+                                </button>
                                 <button type="button" class="btn btn-sm btn-danger rounded-pill action-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal" title="{{ MS_TRANS.btn_change_password }}">
                                     <i class="bi bi-key"></i> {{ MS_TRANS.btn_change_password }}
                                 </button>
@@ -298,9 +298,9 @@
                                           <div class="timeline-content">
                                               <div class="timeline-time">{% ms_timesince log.timestamp %}</div>
                                               <div class="timeline-title">
-                                                  {% translate_log_value log.action 'action' %} - 
+                                                  {{ log.action|translate_log:'action' }} - 
                                                   {% if log.model_name %}
-                                                      {% translate_log_value log.model_name 'model' %}
+                                                      {{ log.model_name|translate_log:'model' }}
                                                   {% else %}
                                                       General
                                                   {% endif %}
@@ -331,7 +331,7 @@
                                           <div class="timeline-content">
                                               <div class="timeline-time">{{ log.timestamp|date }}</div>
                                               <div class="timeline-title">
-                                                  {% translate_log_value log.action 'action' %}
+                                                  {{ log.action|translate_log:'action' }}
                                               </div>
                                               {% format_log_details log.details as sys_details_html %}
                                               {% if sys_details_html %}
@@ -506,4 +506,5 @@
         </div>
     </div>
 </div>
+{% include 'microsys/includes/dynamic_modal.html' %}
 {% endblock %}

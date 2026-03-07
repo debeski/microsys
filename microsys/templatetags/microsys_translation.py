@@ -3,6 +3,9 @@ from microsys.translations import get_strings
 
 register = template.Library()
 
+from microsys.middleware import get_current_request
+from microsys.utils import _get_request_translations
+
 @register.filter
 def translate_log(value, prefix=''):
     """
@@ -13,48 +16,8 @@ def translate_log(value, prefix=''):
     if not value:
         return ""
         
-    # Get current language from context logic is tricky in a simple filter without context
-    # ideally we should use a simple_tag with takes_context=True, 
-    # but filters are cleaner in templates.
-    # However, get_strings needs a lang code. 
-    # Let's try to get it from the thread locals or assume 'ar' default if not passed.
-    # OR, we can rely on the view passing 'MS_TRANS' and just look up in that dictionary?
-    # BUT the user wants a filter. 
-    
-    # Better approach: The view already passes MS_TRANS.
-    # But wait, looking up dynamic keys in a massive dict in template is verbose:
-    # {{ MS_TRANS|get_item:log.action }} -> cumbersome if we need to prefix.
-    
-    # Let's stick to a filter that retrieves the thread language if possible, 
-    # or better yet, accepts the MS_TRANS dict as an arg? No that's ugly.
-    
-    # Let's use the thread local middleware approach if available? 
-    # No, let's keep it simple. We can try to access the language from the request 
-    # if we change this to takes_context=True simple_tag.
-    
-    # Wait, the user prompt implies a simple filter.
-    # Let's try to infer language or just use 'ar' as default for now, 
-    # as the system seems predominantly Arabic focused based on translations.py.
-    # Actually, let's try to get the language from the active translation object if possible.
-    
-    # Let's look at how `microsys.utils._get_request_translations` works.
-    # It gets lang from session. We don't have request here easily.
-    
-    # Alternative: Use a simple tag that takes context.
-    pass
-
-@register.simple_tag(takes_context=True)
-def translate_log_value(context, value, prefix=''):
-    """
-    Translates a log value using the MS_TRANS dictionary available in context.
-    """
-    if not value:
-        return ""
-        
-    ms_trans = context.get('MS_TRANS', {})
-    if not ms_trans:
-        # Fallback if MS_TRANS not in context (shouldn't happen in profile)
-        return str(value)
+    request = get_current_request()
+    ms_trans = _get_request_translations(request)
         
     # Construct key: e.g. 'action_login', 'model_user'
     key = f"{prefix}_{str(value).lower()}" if prefix else str(value).lower()

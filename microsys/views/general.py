@@ -125,4 +125,3 @@ def options_view(request):
         'disk_percent': disk_percent,
     }
     return render(request, 'microsys/includes/options.html', context)
-

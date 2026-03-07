@@ -689,6 +689,41 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
     Returns JSON with rendered HTML for list and form.
     """
     model = None
+    form_class = None  # Optional: override the form discovered by get_model_classes
+    show_table = True  # Set False to render form-only (no table/filter)
+    show_form = True   # Set False to render table-only (no form)
+    template_name = None  # Optional: override the default combined template
+
+    def _get_form_kwargs(self, form_class):
+        """Introspect form __init__/__new__ and pass user/request if accepted."""
+        import inspect
+        extra = {}
+
+        # Check both __init__ and __new__ (UserModalForm uses __new__)
+        for method in (form_class.__init__, getattr(form_class, '__new__', None)):
+            if method is None:
+                continue
+            try:
+                sig = inspect.signature(method)
+            except (ValueError, TypeError):
+                continue
+
+            params = sig.parameters
+            has_var_keyword = any(
+                p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
+            )
+
+            # Always pass user if the form explicitly names it OR accepts **kwargs
+            # (custom forms like UserModalForm pop 'user' before calling super)
+            if 'user' in params or has_var_keyword:
+                extra.setdefault('user', self.request.user)
+
+            # Only pass request when explicitly named (NOT on **kwargs alone,
+            # because it would propagate to BaseModelForm.__init__ and crash)
+            if 'request' in params:
+                extra.setdefault('request', self.request)
+
+        return extra
 
     def get_model(self):
         if self.model:
@@ -720,42 +755,65 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Failed to resolve classes'}, status=500)
 
         # 2. Handle List (Table)
-        queryset = model.objects.all()
-        # Filter (optional)
-        if classes['filter']:
-            f = classes['filter'](request.GET, queryset=queryset)
-            from microsys.utils import setup_filter_helper
-            setup_filter_helper(f, request)
-            queryset = f.qs
-        else:
-            f = None
+        table = None
+        f = None
+        if self.show_table:
+            queryset = model.objects.all()
+            # Filter (optional)
+            if classes['filter']:
+                f = classes['filter'](request.GET, queryset=queryset)
+                from microsys.utils import setup_filter_helper
+                setup_filter_helper(f, request)
+                queryset = f.qs
 
-        table = classes['table'](queryset, request=request)
-        # Marker for templates to know it's a modal context
-        table.is_dynamic_modal = True
-        
-        RequestConfig(request, paginate={'per_page': 10}).configure(table)
+            table = classes['table'](queryset, request=request)
+            # Marker for templates to know it's a modal context
+            table.is_dynamic_modal = True
+            
+            RequestConfig(request, paginate={'per_page': 10}).configure(table)
 
-        # 3. Handle Form (Edit or Create)
+        # 3. Resolve instance (always — needed for form, detail, or table-edit)
         instance = None
         pk = kwargs.get('pk') or request.GET.get('id')
         if pk and pk != 'new':
             instance = get_object_or_404(model, pk=pk)
+
+        # 4. Handle Form (Edit or Create)
+        form = None
+        if self.show_form:
+            form_class = self.form_class or classes['form']
+            extra_kwargs = self._get_form_kwargs(form_class)
+            form = form_class(instance=instance, **extra_kwargs)
         
-        form_class = classes['form']
-        form = form_class(instance=instance)
-        
-        # 4. Render
+        # 5. Render
         context = {
             'model': model,
             'table': table,
             'form': form,
             'filter': f,
             'instance': instance,
+            'object': instance,  # Django convention alias
             'MS_TRANS': _get_request_translations(request),
         }
+
+        # Auto-merge model-defined modal context (convention: get_modal_context)
+        if instance and hasattr(instance, 'get_modal_context'):
+            extra = instance.get_modal_context()
+            if isinstance(extra, dict):
+                context.update(extra)
         
-        html = render_to_string('microsys/includes/dynamic_modal_combined.html', context, request=request)
+        tpl = self.template_name
+        
+        # 6. Fallback to AutoDetail View if form/table are disabled and no template is provided
+        if not self.show_form and not self.show_table and not tpl:
+            from microsys.utils import _build_generic_detail_context
+            context['auto_detail_fields'] = _build_generic_detail_context(instance, request)
+            tpl = 'microsys/includes/dynamic_modal_detail.html'
+            
+        if not tpl:
+            tpl = 'microsys/includes/dynamic_modal_combined.html'
+            
+        html = render_to_string(tpl, context, request=request)
         return JsonResponse({'html': html})
 
     def post(self, request, *args, **kwargs):
@@ -769,20 +827,26 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             instance = get_object_or_404(model, pk=pk)
 
         classes = get_model_classes(model._meta.model_name, app_label=model._meta.app_label)
-        form = classes['form'](request.POST, request.FILES, instance=instance)
+        form_class = self.form_class or classes['form']
+        extra_kwargs = self._get_form_kwargs(form_class)
+        form = form_class(request.POST, request.FILES, instance=instance, **extra_kwargs)
 
         if form.is_valid():
-            obj = form.save(commit=False)
-            # created_by/updated_by auto-populated by ScopedModel.save()
-            
-            # Scope forced for non-superusers
-            if is_scope_enabled() and hasattr(obj, 'scope'):
-                user_scope = getattr(getattr(request.user, 'profile', None), 'scope', None)
-                if user_scope and not request.user.is_superuser:
-                    obj.scope = user_scope
-            
-            obj.save()
-            form.save_m2m()
+            # Forms with handles_save=True manage their own save cycle
+            if getattr(form, 'handles_save', False):
+                obj = form.save(commit=True)
+            else:
+                obj = form.save(commit=False)
+                # created_by/updated_by auto-populated by ScopedModel.save()
+                
+                # Scope forced for non-superusers
+                if is_scope_enabled() and hasattr(obj, 'scope'):
+                    user_scope = getattr(getattr(request.user, 'profile', None), 'scope', None)
+                    if user_scope and not request.user.is_superuser:
+                        obj.scope = user_scope
+                
+                obj.save()
+                form.save_m2m()
             
             # Log action
             log_user_action(request, "UPDATE" if pk else "CREATE", instance=obj, model_name=model._meta.model_name)

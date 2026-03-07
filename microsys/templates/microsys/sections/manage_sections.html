@@ -13,7 +13,7 @@
 
     {# Tab Navigation for Section Models #}
     {% if models %}
-    <ul class="nav nav-tabs" id="sectionTabs" role="tablist">
+    <ul class="nav nav-tabs border-0" id="sectionTabs" role="tablist">
         {% for model in models %}
         <li class="nav-item" role="presentation">
             <a class="nav-link {% if model.name == active_model %}active{% endif %}" 
@@ -35,7 +35,7 @@
 
     {# Form Card #}
     {% if form %}
-    <div class="card border-light shadow-sm mb-5 no-print">
+    <div class="card border-0 shadow-sm mb-5 no-print">
         <!-- <div class="card-header text-center">
             <h4 class="me-5">
                 {% if form.instance.id %}
@@ -79,7 +79,7 @@
 
     {# Table Card #}
     {% if table %}
-    <div class="card border-light shadow-sm pt-2">
+    <div class="card border-0 shadow-sm pt-2">
         <!-- <div class="card-header text-center">
             <h4 class="me-5">{{ MS_TRANS.list_label }} {{ ar_names }}</h4>
         </div> -->

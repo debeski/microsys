@@ -14,7 +14,9 @@ from .users import (
     edit_user,
     delete_user,
     reset_password,
+    User,
 )
+from ..forms import UserModalForm, UserProfileEditForm
 
 # 2FA
 from .twofa import (
@@ -57,4 +59,4 @@ from .activitylog import (
 )
 
 # Profile
-from .profile import user_profile, edit_profile
+from .profile import user_profile

@@ -106,6 +106,7 @@
     
     .sidebar.collapsed {
         width: 0 !important; /* Completely hide when collapsed on mobile */
+        min-width: 0 !important;
         border: none !important;
         overflow: hidden !important;
         inset-inline-end: 0; 

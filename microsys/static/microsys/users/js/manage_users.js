@@ -11,12 +11,6 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleScopes.addEventListener('change', handleToggleScopes);
     }
 
-    // 3. Delete User Modal (Main page)
-    const deleteModal = document.getElementById("deleteModal");
-    if (deleteModal) {
-        deleteModal.addEventListener("show.bs.modal", handleDeleteModalShow);
-    }
-
     // Event Delegation for Scope Modal content (loaded via AJAX)
     const scopeModalBody = document.getElementById('scopeModalBody');
     if (scopeModalBody) {
@@ -175,17 +169,4 @@ function performScopeToggle(url, csrfToken, checkbox, targetState) {
         alert('حدث خطأ في الاتصال بالخادم. يرجى المحاولة مرة أخرى.');
         checkbox.checked = !targetState; // Revert
     });
-}
-
-function handleDeleteModalShow(event) {
-    const button = event.relatedTarget;
-    const userName = button.getAttribute("data-user-name");
-    const deleteUrl = button.getAttribute("data-delete-url");
-    
-    document.getElementById("userName").textContent = userName;
-    
-    const form = document.getElementById("deleteForm");
-    if (form && deleteUrl) {
-        form.action = deleteUrl;
-    }
 }

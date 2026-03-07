@@ -1,7 +1,7 @@
 # microsys/translations.py
 # ========================
 # Lightweight translation string table for the microsys framework.
-# Developers can override any key via MICROSYS_CONFIG['translations'] in settings.py,
+# Developers can override any key via System Settings in the UI,
 # or add new language dicts entirely. This dict is unlimited — add as many keys as needed.
 #
 # Usage in templates:  {{ MS_TRANS.key_name }}
@@ -50,6 +50,21 @@ MICROSYS_STRINGS = {
         'profile_desc': 'عرض وتعديل بيانات ملفك الشخصي.',
         'go': 'الذهاب',
         'activity_24h': 'النشاط (آخر 24 ساعة)',
+        'system_settings_title': 'إعدادات النظام العامة',
+        'system_settings_label': 'إعدادات النظام (System Settings)',
+        'system_settings_btn': 'إدارة إعدادات النظام',
+
+        # System Settings Form
+        'form_sys_name_ar': 'اسم النظام (عربي)',
+        'form_sys_name_en': 'اسم النظام (إنجليزي)',
+        'form_sys_default_lang': 'اللغة الافتراضية',
+        'form_sys_logo': 'الشعار (Logo)',
+        'form_sys_favicon': 'أيقونة الموقع (Favicon)',
+        'form_sys_languages': 'اللغات المتوفرة (JSON)',
+        'help_sys_languages': 'مثال: {"ar": "العربية", "en": "English"}',
+        'form_sys_translations': 'تجاوز الترجمات (JSON)',
+        'help_sys_translations': 'مثال: {"ar": {"app_microsys": "النظام"}}',
+        'btn_save': 'حفظ التعديلات',
 
         # Options page
         'options_title': 'خيارات التطبيق',
@@ -476,6 +491,21 @@ MICROSYS_STRINGS = {
         'profile_desc': 'View and edit your profile details.',
         'go': 'Go',
         'activity_24h': 'Activity (Last 24 Hours)',
+        'system_settings_title': 'General System Settings',
+        'system_settings_label': 'System Settings',
+        'system_settings_btn': 'Manage System Settings',
+
+        # System Settings Form
+        'form_sys_name_ar': 'System Name (Arabic)',
+        'form_sys_name_en': 'System Name (English)',
+        'form_sys_default_lang': 'Default Language',
+        'form_sys_logo': 'System Logo (Logo)',
+        'form_sys_favicon': 'Site Icon (Favicon)',
+        'form_sys_languages': 'Available Languages (JSON)',
+        'help_sys_languages': 'Example: {"ar": "العربية", "en": "English"}',
+        'form_sys_translations': 'Translations Override (JSON)',
+        'help_sys_translations': 'Example: {"ar": {"app_microsys": "System"}}',
+        'btn_save': 'Save Changes',
 
         # Options page
         'options_title': 'Application Options',
@@ -904,26 +934,81 @@ def _discover_and_merge_translations():
             
     return merged_strings
 
-def get_strings(lang_code, overrides=None):
+def get_strings(lang_code=None, overrides=None):
     """
     Get the translation dict for a given language code.
-    Falls back to 'ar' if the language is not found.
+    Falls back to current active language if not provided,
+    using the same resolution order as microsys_context:
+      1. User Profile preference (via thread-local request)
+      2. Session 'lang' key
+      3. System default_language (from config)
+      4. Django's get_language()
+      5. Final fallback: 'en'
     Merges optional overrides on top.
     """
+    from django.utils.translation import get_language
+    from microsys.middleware import get_current_request
+    
+    try:
+        from microsys.utils import get_system_config
+        sys_config = get_system_config()
+        default_sys_lang = sys_config.get('default_language', 'en')
+    except Exception:
+        default_sys_lang = 'en'
+        
+    if not lang_code:
+        request = get_current_request()
+        if request:
+            # 1. User Profile Preference
+            if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False):
+                profile = getattr(request.user, 'profile', None)
+                if profile:
+                    user_prefs = getattr(profile, 'preferences', None) or {}
+                    lang_code = user_prefs.get('language')
+            
+            # 2. Session
+            if not lang_code and hasattr(request, 'session'):
+                lang_code = request.session.get('lang') or request.session.get('django_language')
+        
+        # 3. System default_language
+        if not lang_code:
+            lang_code = default_sys_lang
+        
+        # 4. Django's get_language()
+        if not lang_code:
+            lang_code = get_language()
+    
+    lang = lang_code or default_sys_lang
+    # handle en-us -> en
+    lang = lang.split('-')[0]
+    
     # Get all discovered strings (cached)
     all_strings = _discover_and_merge_translations()
     
-    # Start with Arabic as base fallback
-    base = dict(all_strings.get('ar', {}))
+    # Start with default_sys_lang as base fallback
+    base = dict(all_strings.get(default_sys_lang, {}))
 
     # Layer the requested language on top
-    if lang_code != 'ar':
-        lang_strings = all_strings.get(lang_code, {})
+    if lang != default_sys_lang:
+        lang_strings = all_strings.get(lang, {})
         base.update(lang_strings)
 
     # Layer project-level overrides on top
     if overrides and isinstance(overrides, dict):
-        lang_overrides = overrides.get(lang_code, {})
+        lang_overrides = overrides.get(lang, {})
         base.update(lang_overrides)
 
     return base
+
+def lazy_translator(key, default_val):
+    """
+    Returns a lazy proxy that evaluates to the translated string
+    at render time, using the current thread's language.
+    Perfect for patching global class attributes like Column.verbose_name.
+    """
+    from django.utils.functional import lazy
+    def _translate():
+        s = get_strings()
+        return s.get(key, default_val)
+    # Using str type so Django templates format it correctly
+    return lazy(_translate, str)()

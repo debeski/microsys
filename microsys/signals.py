@@ -283,3 +283,83 @@ def create_user_profile(sender, instance, created, **kwargs):
         Profile = apps.get_model('microsys', 'Profile')
         Profile.objects.get_or_create(user=instance)
 
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_user_connected_profiles(sender, instance, created, **kwargs):
+    """
+    Dynamically discover all models linked to User via OneToOneField and 
+    create profile instances for them with failsafe dummy values if required.
+    """
+    if not created:
+        return
+
+    from .utils import get_user_linked_models
+    from django.db import models
+    from django.utils import timezone
+
+    linked_models = get_user_linked_models()
+    
+    for lm in linked_models:
+        model_class = apps.get_model(lm['app_label'], lm['model_name'])
+        
+        # Skip if somehow already exists
+        if model_class.objects.filter(**{lm['field_name']: instance}).exists():
+            continue
+
+        dummy_kwargs = {lm['field_name']: instance}
+        
+        # Introspect fields to populate required ones with dummy data
+        for field in model_class._meta.fields:
+            if field.name == lm['field_name'] or field.primary_key:
+                continue
+                
+            # If the field has a default or is allowed to be blank/null, skip
+            if field.has_default() or field.blank or field.null:
+                continue
+                
+            # If it's an auto-added date/time field (like in ScopedModel)
+            if getattr(field, 'auto_now', False) or getattr(field, 'auto_now_add', False):
+                continue
+
+            # It's required. Generate a dummy value based on type.
+            if isinstance(field, (models.IntegerField, models.DecimalField, models.FloatField)):
+                dummy_kwargs[field.name] = 0
+            elif isinstance(field, (models.DateField, models.DateTimeField)):
+                if isinstance(field, models.DateTimeField):
+                    dummy_kwargs[field.name] = timezone.now()
+                else:
+                    dummy_kwargs[field.name] = '2007-01-01'
+            elif isinstance(field, (models.CharField, models.TextField)):
+                if field.choices:
+                    # Provide the first choice's key, preferably 'employee' if found
+                    choices_keys = [c[0] for c in field.choices]
+                    if 'employee' in choices_keys:
+                        dummy_kwargs[field.name] = 'employee'
+                    else:
+                        dummy_kwargs[field.name] = choices_keys[0] if choices_keys else '-'
+                else:
+                    dummy_kwargs[field.name] = '-'
+            elif isinstance(field, models.ForeignKey):
+                related_model = field.related_model
+                # Try to create a dummy entry
+                try:
+                    dummy_obj, obj_created = related_model.objects.get_or_create(name='-')
+                    dummy_kwargs[field.name] = dummy_obj
+                except Exception:
+                    # Fallback to the first available instance
+                    first_obj = related_model.objects.first()
+                    dummy_kwargs[field.name] = first_obj
+            elif getattr(models, 'FileField', None) and isinstance(field, getattr(models, 'FileField', type(None))):
+                dummy_kwargs[field.name] = ''
+        
+        # Safety catch for models that require 'name' but we didn't populate it
+        if 'name' in [f.name for f in model_class._meta.fields] and 'name' not in dummy_kwargs:
+             if not model_class._meta.get_field('name').blank and not model_class._meta.get_field('name').null:
+                  dummy_kwargs['name'] = instance.get_full_name() or instance.username or '-'
+        
+        # Instantiate and save
+        try:
+            model_class.objects.create(**dummy_kwargs)
+        except Exception as e:
+            # Silently fail if creation is impossible (e.g. strict DB constraints we couldn't bypass)
+            pass
+

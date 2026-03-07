@@ -71,9 +71,11 @@ class CustomLoginView(LoginView):
         if url:
             return url
             
-        # 2. Check MICROSYS_CONFIG['home_url']
-        ms_config = getattr(settings, 'MICROSYS_CONFIG', {})
-        home_url = ms_config.get('home_url')
+        # 2. Check System Config for home_url
+        from microsys.utils import get_system_config
+        config_dict = get_system_config()
+        home_url = config_dict.get('home_url')
+            
         if home_url:
             from django.shortcuts import resolve_url
             try:
@@ -234,13 +236,24 @@ def edit_user(request, pk):
 
 
 # User Management — Soft-deletes a user (deactivate + rename for reuse)
-@user_passes_test(is_superuser)
+from django.contrib.auth.decorators import permission_required
+@permission_required('auth.delete_user', raise_exception=True)
 def delete_user(request, pk):
     user = get_object_or_404(User, pk=pk)
 
-    # Prevent deletion of any superuser
-    if user.is_superuser:
-        messages.error(request, "لا يمكن حذف المشرف الرئيسي للنظام!")
+    # Explicitly prevent self-deletion just in case
+    if user == request.user:
+        messages.error(request, "لا يمكنك حذف حسابك الخاص!")
+        return redirect('manage_users')
+
+    # Prevent deletion of any superuser by a non-superuser
+    if user.is_superuser and not request.user.is_superuser:
+        messages.error(request, "ليس لديك صلاحية لحذف المشرفين!")
+        return redirect('manage_users')
+
+    # Prevent deletion of the final superuser
+    if user.is_superuser and User.objects.filter(is_superuser=True, is_active=True).count() <= 1:
+        messages.error(request, "لا يمكن حذف المشرف الرئيسي الأخير للنظام!")
         return redirect('manage_users')
 
     # Restrict to same scope
