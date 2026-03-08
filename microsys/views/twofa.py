@@ -18,7 +18,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 
 # Project imports
-from ..utils import _get_request_translations
+from ..translations import get_strings
 
 User = get_user_model()
 
@@ -34,7 +34,7 @@ def send_otp(request, user, intent='login'):
     # Store code for 5 minutes (300 seconds)
     cache.set(cache_key, {'code': code, 'attempts': 0}, timeout=300)
     
-    s = _get_request_translations(request)
+    s = get_strings()
     subject_key = '2fa_login_email_subject' if intent == 'login' else '2fa_setup_email_subject'
     subject = s.get(subject_key, 'Authentication Code')
     
@@ -96,7 +96,7 @@ def verify_otp_view(request, intent='login'):
     Handles OTP verification for Login and Activating specific methods.
     intent: 'login', 'enable_email', 'enable_phone', 'enable_totp'
     """
-    s = _get_request_translations(request)
+    s = get_strings()
     error_message = None
     user = None
 
@@ -291,7 +291,7 @@ def disable_2fa(request):
     if is_ajax:
         return JsonResponse({'status': 'success'})
         
-    messages.success(request, _get_request_translations(request).get('2fa_disabled_msg', 'Disabled'))
+    messages.success(request, get_strings().get('2fa_disabled_msg', 'Disabled'))
     return redirect('user_profile')
 
 # 2FA Helper — Resends OTP code for login or method activation

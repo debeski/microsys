@@ -20,17 +20,7 @@ from .translations import get_strings
 User = get_user_model()
 
 
-def _get_form_strings(user=None):
-    """Get translation strings for forms."""
-    from .utils import get_system_config
-    config_dict = get_system_config()
-    lang = config_dict.get('default_language', 'ar')
-    overrides = config_dict.get('translations', None)
-        
-    if user and user.is_authenticated and hasattr(user, 'profile'):
-        prefs = user.profile.preferences or {}
-        lang = prefs.get('language', lang)
-    return get_strings(lang, overrides=overrides)
+
 
 def _attach_is_staff_permission(form, widget_id=None):
     perm_field = form.fields.get('permissions')
@@ -58,7 +48,7 @@ def _attach_is_staff_permission(form, widget_id=None):
     option_id = f"{field_id}_is_staff"
 
     # helper to check translations on widget
-    s = getattr(perm_field.widget, 'translations', _get_form_strings())
+    s = getattr(perm_field.widget, 'translations', get_strings())
 
     option = {
         'name': 'is_staff',
@@ -102,7 +92,7 @@ class GroupedPermissionWidget(ChoiceWidget):
 
     def get_context(self, name, value, attrs):
         context = super().get_context(name, value, attrs)
-        s = getattr(self, 'translations', _get_form_strings())
+        s = getattr(self, 'translations', get_strings())
         
         # Get current selected values (as strings/ints)
         if value is None:
@@ -322,7 +312,7 @@ class CustomUserCreationForm(UserCreationForm):
                 self.fields['is_staff'].help_text = "ليس لديك صلاحية لتعيين هذا المستخدم كمسؤول."
 
         # Load translations
-        s = _get_form_strings(self.user_context)
+        s = get_strings()
         
         # Inject translations into widget
         self.fields['permissions'].widget.translations = s
@@ -470,7 +460,7 @@ class CustomUserChangeForm(UserChangeForm):
             self.fields['scope'].initial = user_instance.profile.scope
 
         # Labels
-        s = _get_form_strings(self.user_context)
+        s = get_strings()
         self.fields['permissions'].widget.translations = s
 
         self.fields["username"].label = s.get('form_username', "اسم المستخدم")
@@ -628,7 +618,7 @@ class ResetPasswordForm(SetPasswordForm):
 
     def __init__(self, user, *args, **kwargs):
         super().__init__(user, *args, **kwargs)
-        s = _get_form_strings(user)
+        s = get_strings()
         self.fields['username'].initial = user.username
         self.fields['username'].label = s.get('form_username', "Username")
         
@@ -672,7 +662,7 @@ class UserProfileEditForm(forms.ModelForm):
         self.user_context = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        s = _get_form_strings(user_instance)
+        s = get_strings()
 
         if user_instance and hasattr(user_instance, 'profile'):
             self.fields['phone'].initial = user_instance.profile.phone
@@ -761,7 +751,7 @@ class UserProfileEditForm(forms.ModelForm):
 class CustomPasswordChangeForm(PasswordChangeForm):
     def __init__(self, user, *args, **kwargs):
         super().__init__(user, *args, **kwargs)
-        s = _get_form_strings(user)
+        s = get_strings()
         
         # Current Password
         self.fields['old_password'].label = s.get('form_old_password', "Current Password")
@@ -784,7 +774,7 @@ class ScopeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        s = _get_form_strings() # Scope form usually admin only, maybe pass user?
+        s = get_strings()
         # But scope form often used in modals?
         # If we have request in kwargs we can use it, but typically ModelForms don't get request.
         # Fallback to default is okay for now or we can inject request if needed.
@@ -817,7 +807,7 @@ class SystemSettingsForm(forms.ModelForm):
         
         # Determine language context from user or request
         user = self._user or (self.request.user if self.request else None)
-        s = _get_form_strings(user)
+        s = get_strings()
         
         # Support passing translations directly via kwargs in Dynamic Modal
         if hasattr(self, 'translations') and self.translations:

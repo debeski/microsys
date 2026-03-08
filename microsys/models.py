@@ -355,9 +355,8 @@ class TranslationMixin:
             translated_fields = getattr(self.__class__, 'translated_fields', [])
             
             if base_field in translated_fields:
-                from microsys.middleware import get_current_request
-                from microsys.utils import _get_request_lang
-                lang = _get_request_lang(get_current_request())
+                from django.utils.translation import get_language
+                lang = get_language() or 'en'
                 
                 # Try fetching localized version
                 try:

@@ -9,7 +9,8 @@ from django_tables2 import SingleTableMixin
 from django_filters.views import FilterView
 
 # Project imports
-from ..utils import is_scope_enabled, _get_request_translations
+from ..utils import is_scope_enabled
+from ..translations import get_strings
 
 
 # Activity Log View — Paginated, filterable list of user activity with scope support
@@ -52,7 +53,7 @@ class UserActivityLogView(LoginRequiredMixin, UserPassesTestMixin, SingleTableMi
 
     def get_table_kwargs(self):
         kwargs = super().get_table_kwargs()
-        kwargs['translations'] = _get_request_translations(self.request)
+        kwargs['translations'] = get_strings()
         kwargs['request'] = self.request
         return kwargs
 

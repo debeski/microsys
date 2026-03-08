@@ -150,48 +150,7 @@ def get_system_config():
     return final_config
 
 
-# Translation Helper — Retrieves default translation strings using system language config
-def _get_default_strings():
-    """Helper to get default global strings dict"""
-    config = get_system_config()
-    lang = config.get('default_language', 'en')
-    overrides = config.get('translations', None)
-    return get_strings(lang, overrides=overrides)
 
-# Translation Helper — Resolves the current user's language code
-def _get_request_lang(request=None):
-    """
-    Resolve the current user's language code.
-    Resolution Order:
-    1. User Profile Preference (if authenticated)
-    2. Session 'lang' or 'django_language' key
-    3. System Default (microsys config or LANGUAGE_CODE)
-    """
-    config = get_system_config()
-    default_lang = config.get('default_language', settings.LANGUAGE_CODE)
-    lang = None
-    
-    if request:
-        # 1. User Profile
-        if hasattr(request, 'user') and request.user.is_authenticated and hasattr(request.user, 'profile'):
-            user_prefs = request.user.profile.preferences or {}
-            lang = user_prefs.get('language')
-            
-        # 2. Session
-        if not lang and hasattr(request, 'session'):
-            lang = request.session.get('lang') or request.session.get('django_language')
-        
-    # 3. Default
-    return lang or default_lang
-
-
-# Translation Helper — Resolves per-request language and returns translation strings
-def _get_request_translations(request=None):
-    """Resolve the current user's language and return translation strings."""
-    lang = _get_request_lang(request)
-    config = get_system_config()
-    overrides = config.get('translations', None)
-    return get_strings(lang, overrides=overrides)
 
 # Context Menu Helper — Filters context menu actions based on user permissions
 def filter_context_actions(user, actions):
@@ -550,8 +509,22 @@ def collect_related_objects(instance):
     """
     related_data = {}
     
+    # Identify M2M through models to skip their reverse relationships
+    through_models = set()
+    for f in instance._meta.get_fields():
+        if getattr(f, 'many_to_many', False):
+            try:
+                through = getattr(f, 'through', getattr(getattr(f, 'remote_field', None), 'through', None))
+                if through:
+                    through_models.add(through)
+            except AttributeError:
+                pass
+
     # Iterate over all fields to find relations
     for field in instance._meta.get_fields():
+        if getattr(field, 'related_model', None) in through_models:
+            continue
+
         if field.auto_created and not field.concrete:
             # Reverse Relations (OneToMany, OneToOne)
             # e.g. department.affiliate_set
@@ -561,22 +534,24 @@ def collect_related_objects(instance):
                 
                 related_msg = getattr(instance, accessor, None)
                 if related_msg:
-                    # Check if it's a Manager (OneToMany) or single object (OneToOne)
+                    # Check if it's a Manager (OneToMany/ManyToMany) or single object (OneToOne)
                     if hasattr(related_msg, 'all'):
                         # Limit to reasonable amount
                         qs = related_msg.all()[:20] 
                         if qs:
                             items = [str(obj) for obj in qs]
-                            name = field.related_model._meta.verbose_name_plural
-                            related_data[name] = items
+                            name = str(field.related_model._meta.verbose_name_plural)
+                            if name not in related_data:
+                                related_data[name] = items
                     else:
                         # OneToOne
-                        name = field.related_model._meta.verbose_name
-                        related_data[name] = [str(related_msg)]
+                        name = str(field.related_model._meta.verbose_name)
+                        if name not in related_data:
+                            related_data[name] = [str(related_msg)]
             except Exception:
                 pass
                 
-        elif field.many_to_many:
+        elif hasattr(field, 'many_to_many') and field.many_to_many:
             # Forward M2M
             try:
                 manager = getattr(instance, field.name, None)
@@ -584,8 +559,9 @@ def collect_related_objects(instance):
                     qs = manager.all()[:20]
                     if qs:
                         items = [str(obj) for obj in qs]
-                        name = field.related_model._meta.verbose_name_plural
-                        related_data[name] = items
+                        name = str(field.related_model._meta.verbose_name_plural)
+                        if name not in related_data:
+                            related_data[name] = items
             except Exception:
                 pass
                 
@@ -1257,10 +1233,13 @@ def toggle_sidebar(request):
 # Form Helper — Automatically sets placeholders and direction based on language
 def set_field_attrs(form, request=None):
     """Set common attributes for all fields in the form."""
-    ms_trans = _get_request_translations(request)
+    ms_trans = get_strings()
     
     # Detect language for direction
-    lang = _get_request_lang(request)
+    lang = getattr(request, 'LANGUAGE_CODE', None)
+    if not lang:
+        from django.utils.translation import get_language
+        lang = get_language() or 'en'
     direction = 'rtl' if lang.startswith('ar') else 'ltr' 
     
     for field_name in form.fields:
@@ -1275,10 +1254,10 @@ def set_field_attrs(form, request=None):
             suffix = ""
             if "__gte" in field_name:
                 clean_name = field_name.replace("__gte", "")
-                suffix = f" ({ms_trans.get('from', 'من')})"
+                suffix = f" ({ms_trans.get('filter_from', 'من')})"
             elif "__lte" in field_name:
                 clean_name = field_name.replace("__lte", "")
-                suffix = f" ({ms_trans.get('to', 'إلى')})"
+                suffix = f" ({ms_trans.get('filter_to', 'إلى')})"
             
             # Try to resolve base label (e.g. label_created_at)
             base_label = ms_trans.get(f"label_{clean_name}") or field.label

@@ -13,18 +13,6 @@ from django.conf import settings as django_settings
 User = get_user_model()
 
 
-def _get_filter_strings(request=None):
-    """Get translation strings for filter labels/placeholders."""
-    from .utils import get_system_config
-    config_dict = get_system_config()
-    lang = config_dict.get('default_language', 'ar')
-    overrides = config_dict.get('translations', None)
-
-    if request and request.user.is_authenticated and hasattr(request.user, 'profile'):
-        prefs = request.user.profile.preferences or {}
-        lang = prefs.get('language', lang)
-    return get_strings(lang, overrides=overrides)
-
 class UserFilter(django_filters.FilterSet):
     keyword = django_filters.CharFilter(
         method='filter_keyword',
@@ -74,7 +62,7 @@ class UserActivityLogFilter(django_filters.FilterSet):
         }
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        s = _get_filter_strings(getattr(self, 'request', None))
+        s = get_strings()
 
         # Update labels from translations
         self.filters['year'].extra['empty_label'] = s.get('filter_year', 'السنة')

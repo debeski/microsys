@@ -27,13 +27,13 @@ from ..utils import (
     resolve_form_class_for_model,
     has_related_records,
     collect_related_objects,
-    _get_request_translations,
     get_model_classes,
     _get_m2m_through_defaults,
     _create_minimal_instance_from_post,
     log_user_action,
     setup_filter_helper,
 )
+from ..translations import get_strings
 
 User = get_user_model()
 
@@ -148,7 +148,7 @@ def core_models_view(request):
         accepts_model_name = False
 
     # Pass model_name to constructor if supported, otherwise inject it as an attribute
-    translations = _get_request_translations(request)
+    translations = get_strings()
     if accepts_model_name:
         table = TableClass(queryset, model_name=model_param, translations=translations, request=request)
     else:
@@ -641,45 +641,53 @@ def get_section_details(request):
     Get section details and related objects via AJAX (Smart View).
     Returns JSON with fields and related lists.
     """
-    model_name = request.GET.get('model')
-    pk = request.GET.get('pk')
-    
-    if not model_name or not pk:
-        return JsonResponse({'success': False, 'error': 'معلومات ناقصة'}, status=400)
-    
-    model = resolve_model_by_name(model_name)
-    if not model:
-        return JsonResponse({'success': False, 'error': 'القسم غير موجود'}, status=404)
-    
     try:
-        instance = model.objects.get(pk=pk)
-    except model.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'العنصر غير موجود'}, status=404)
-    
-    # 1. Collect Fields
-    fields_data = {}
-    exclude_fields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at', 'deleted_by', 'scope', 'polymorphic_ctype', 'password']
-    
-    for field in model._meta.fields:
-        if field.name not in exclude_fields:
-            try:
-                val = getattr(instance, field.name)
-                # Handle choices
-                if hasattr(instance, f"get_{field.name}_display"):
-                     val = getattr(instance, f"get_{field.name}_display")()
-                fields_data[field.verbose_name] = str(val) if val is not None else ""
-            except:
-                pass
+        model_name = request.GET.get('model')
+        pk = request.GET.get('pk')
+        
+        if not model_name or not pk:
+            return JsonResponse({'success': False, 'error': 'معلومات ناقصة'}, status=400)
+        
+        model = resolve_model_by_name(model_name)
+        if not model:
+            return JsonResponse({'success': False, 'error': 'القسم غير موجود'}, status=404)
+        
+        try:
+            instance = model.objects.get(pk=pk)
+        except model.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'العنصر غير موجود'}, status=404)
+        
+        # 1. Collect Fields
+        fields_data = {}
+        exclude_fields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at', 'deleted_by', 'scope', 'polymorphic_ctype', 'password']
+        
+        for field in model._meta.fields:
+            if field.name not in exclude_fields:
+                try:
+                    val = getattr(instance, field.name)
+                    # Handle choices
+                    if hasattr(instance, f"get_{field.name}_display"):
+                         val = getattr(instance, f"get_{field.name}_display")()
+                    fields_data[str(field.verbose_name)] = str(val) if val is not None else ""
+                except:
+                    pass
 
-    # 2. Collect Related Objects
-    related_objects = collect_related_objects(instance)
-    
-    return JsonResponse({
-        'success': True,
-        'title': str(instance),
-        'fields': fields_data,
-        'related': related_objects
-    })
+        # 2. Collect Related Objects
+        related_objects = collect_related_objects(instance)
+        
+        return JsonResponse({
+            'success': True,
+            'title': str(instance),
+            'fields': fields_data,
+            'related': related_objects
+        })
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        })
 
 
 # Dynamic Modal CRUD — Universal class-based view for managing any model via AJAX modals
@@ -793,7 +801,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             'filter': f,
             'instance': instance,
             'object': instance,  # Django convention alias
-            'MS_TRANS': _get_request_translations(request),
+            'MS_TRANS': get_strings(),
         }
 
         # Auto-merge model-defined modal context (convention: get_modal_context)
@@ -858,7 +866,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             'model': model,
             'form': form,
             'instance': instance,
-            'MS_TRANS': _get_request_translations(request),
+            'MS_TRANS': get_strings(),
         }
         # Render combined view for validation failure
         html = render_to_string('microsys/includes/dynamic_modal_combined.html', context, request=request)
@@ -901,7 +909,7 @@ class DynamicModalDeleteView(LoginRequiredMixin, View):
         if related:
             return JsonResponse({
                 'success': False, 
-                'error': _get_request_translations(request).get('delete_error_related', 'لا يمكن الحذف لارتباطه بسجلات أخرى.')
+                'error': get_strings().get('delete_error_related', 'لا يمكن الحذف لارتباطه بسجلات أخرى.')
             })
             
         name = str(instance)

@@ -138,7 +138,8 @@ MICROSYS_STRINGS = {
         'tbl_scope_default': 'عام',
 
         # Filter placeholders
-        'filter_search': 'البحث',
+        'label_keyword': 'بحث...',
+        # 'filter_search': 'البحث',
         'filter_year': 'السنة',
         'filter_scope': 'النطاق',
         'filter_all': 'الكل',
@@ -580,7 +581,8 @@ MICROSYS_STRINGS = {
         'tbl_scope_default': 'General',
 
         # Filter placeholders
-        'filter_search': 'Search',
+        'label_keyword': 'Search...',
+        # 'filter_search': 'Search',
         'filter_year': 'Year',
         'filter_scope': 'Scope',
         'filter_all': 'All',
@@ -939,44 +941,50 @@ def _discover_and_merge_translations():
 def get_strings(lang_code=None, overrides=None):
     """
     Get the translation dict for a given language code.
-    Falls back to current active language if not provided,
-    using the same resolution order as microsys_context:
+    If lang_code is not provided, dynamically resolves it from (in order):
       1. User Profile preference (via thread-local request)
-      2. Session 'lang' key
-      3. System default_language (from config)
+      2. Session 'lang'/'django_language' key
+      3. System default_language (from DB or settings)
       4. Django's get_language()
-      5. Final fallback: 'en'
-    Merges optional overrides on top.
+      5. Fallback to 'en'
+
+    Merges project-level overrides on top of the base strings automatically, unless explicitly requested.
+    This function is the ultimate single source of truth for translations in microsys.
     """
     from django.utils.translation import get_language
     from microsys.middleware import get_current_request
     
+    # ── 1. Fetch System Settings ──
     try:
         from microsys.utils import get_system_config
         sys_config = get_system_config()
         default_sys_lang = sys_config.get('default_language', 'en')
+        if overrides is None:
+            overrides = sys_config.get('translations', {})
     except Exception:
         default_sys_lang = 'en'
+        overrides = overrides or {}
         
+    # ── 2. Resolve Language Code ──
     if not lang_code:
         request = get_current_request()
         if request:
-            # 1. User Profile Preference
+            # 2.A User Profile Preference
             if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False):
                 profile = getattr(request.user, 'profile', None)
                 if profile:
                     user_prefs = getattr(profile, 'preferences', None) or {}
                     lang_code = user_prefs.get('language')
             
-            # 2. Session
+            # 2.B Session
             if not lang_code and hasattr(request, 'session'):
                 lang_code = request.session.get('lang') or request.session.get('django_language')
         
-        # 3. System default_language
+        # 2.C System Default Language
         if not lang_code:
             lang_code = default_sys_lang
         
-        # 4. Django's get_language()
+        # 2.D Django Thread Local
         if not lang_code:
             lang_code = get_language()
     
@@ -984,18 +992,14 @@ def get_strings(lang_code=None, overrides=None):
     # handle en-us -> en
     lang = lang.split('-')[0]
     
-    # Get all discovered strings (cached)
+    # ── 3. Merge Strings ──
     all_strings = _discover_and_merge_translations()
-    
-    # Start with default_sys_lang as base fallback
     base = dict(all_strings.get(default_sys_lang, {}))
 
-    # Layer the requested language on top
     if lang != default_sys_lang:
         lang_strings = all_strings.get(lang, {})
         base.update(lang_strings)
 
-    # Layer project-level overrides on top
     if overrides and isinstance(overrides, dict):
         lang_overrides = overrides.get(lang, {})
         base.update(lang_overrides)

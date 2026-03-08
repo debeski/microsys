@@ -23,27 +23,8 @@ def ms_timesince(context, value, arg=None):
     except Exception:
         return ""
 
-    # Get default language from System Config
-    from microsys.utils import get_system_config
-    config_dict = get_system_config()
-    default_lang = config_dict.get('default_language', 'ar')
-    
-    # Use the language already resolved by context processor if available
-    # This is critical because context_processors.py might determine lang differently than get_language()
-    current_lang = context.get('CURRENT_LANG')
-    
-    # Fallback if context var is missing
-    if not current_lang:
-        current_lang = default_lang
-        
-        # Last resort check thread local
-        from django.utils.translation import get_language
-        thread_lang = get_language()
-        if thread_lang and thread_lang in ['ar', 'en']:
-            current_lang = thread_lang
-    
-    project_overrides = config_dict.get('translations', None)
-    strings = get_strings(current_lang, overrides=project_overrides)
+    strings = get_strings()
+    current_lang = strings.get('lang_code_id', 'ar')  # Safe fallback if needed by template tag processing, but mainly get_strings() handles the translation mapping natively now.
     
     # Normalize buffer (replace non-breaking spaces)
     ts = ts.replace('\xa0', ' ')

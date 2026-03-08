@@ -331,10 +331,8 @@ def _patch_django_gettext():
     
     def _patched_gettext(message):
         try:
-            from microsys.middleware import get_current_request
-            from microsys.utils import _get_request_translations
-            request = get_current_request()
-            ms_trans = _get_request_translations(request)
+            from microsys.translations import get_strings
+            ms_trans = get_strings()
             
             if message in ms_trans:
                 return ms_trans[message]
@@ -348,10 +346,8 @@ def _patch_django_gettext():
         
     def _patched_pgettext(context, message):
         try:
-            from microsys.middleware import get_current_request
-            from microsys.utils import _get_request_translations
-            request = get_current_request()
-            ms_trans = _get_request_translations(request)
+            from microsys.translations import get_strings
+            ms_trans = get_strings()
             
             context_key = f"{context}_{message}".lower().replace(' ', '_')
             if context_key in ms_trans:

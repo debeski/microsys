@@ -9,15 +9,9 @@ from django.conf import settings
 User = get_user_model()
 
 
-def _get_default_strings():
-    """Get translation strings using the project default language."""
-    from .utils import get_system_config
-    config_dict = get_system_config()
-    lang = config_dict.get('default_language', 'ar')
-    overrides = config_dict.get('translations', None)
-    return get_strings(lang, overrides=overrides)
 
 
+# 
 from django.urls import reverse
 import json
 
@@ -37,11 +31,6 @@ class UserTable(tables.Table):
         format="H:i Y-m-d ",
         verbose_name="اخر دخول"
     )
-    # actions = tables.TemplateColumn(
-    #     template_name='microsys/users/user_actions.html',
-    #     orderable=False,
-    #     verbose_name='',
-    # )
 
     class Meta:
         model = User
@@ -55,9 +44,8 @@ class UserTable(tables.Table):
                 {"type": "divider"},
                 {"label": "edit_label", "icon": "bi bi-pencil", "type": "event", "event": "micro:record:edit", "data": {"model": "user", "id": record.pk, "name": getattr(record, 'full_name', record.username) or record.username}},
                 {"label": "reset_password", "icon": "bi bi-key", "type": "event", "event": "micro:reset-password", "data": {"id": record.pk, "username": record.username, "url": reverse('reset_password', args=[record.pk])}},
-            ]) # Simplified for now, auto-patch will handle labels if we use keys
+            ])
         }
-        # row_attrs is handled in __init__ to allow dynamic behavior
 
 class UserActivityLogTable(tables.Table):
     timestamp = tables.DateColumn(
@@ -92,10 +80,12 @@ class UserActivityLogTable(tables.Table):
             ]),
         }
 
+
+
     def render_action(self, value, record):
         """Translate action type dynamically."""
-        from .utils import _get_request_translations
-        s = _get_request_translations(getattr(self, 'request', None))
+        from .translations import get_strings
+        s = get_strings()
         raw_value = record.action
         if not raw_value:
             return "-"
@@ -105,8 +95,8 @@ class UserActivityLogTable(tables.Table):
         """Translate model name dynamically."""
         if not value:
             return "-"
-        from .utils import _get_request_translations
-        s = _get_request_translations(getattr(self, 'request', None))
+        from .translations import get_strings
+        s = get_strings()
         keys_to_try = [
             f"model_{value.lower().replace('.', '_')}", 
             f"model_{value.split('.')[-1].lower()}"
@@ -115,9 +105,6 @@ class UserActivityLogTable(tables.Table):
             if key in s:
                 return s[key]
         return value
-
-
-
 
 class UserActivityLogTableNoUser(UserActivityLogTable):
     class Meta(UserActivityLogTable.Meta):

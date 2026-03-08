@@ -64,13 +64,13 @@
         let html = '<div class="row g-3">';
         for (const [modelName, items] of Object.entries(relatedData)) {
             html += `
-                <div class="col-md-6">
+                <div class="col-sm-12">
                     <div class="glass-card h-100 p-3">
                         <div class="info-label-sm mb-2 text-primary fw-bold border-bottom pb-1" style="font-size: 0.8rem;">
                             <i class="bi bi-diagram-2 me-1"></i> ${modelName}
                         </div>
                         <ul class="list-group list-group-flush bg-transparent">
-                            ${items.map(item => `<li class="list-group-item bg-transparent border-0 py-1 px-1 small text-white-50"><i class="bi bi-dot me-1"></i> ${item}</li>`).join('')}
+                            ${items.map(item => `<li class="list-group-item bg-transparent border-0 py-1 px-1 small text-muted"><i class="bi bi-dot me-1"></i> ${item}</li>`).join('')}
                         </ul>
                     </div>
                 </div>

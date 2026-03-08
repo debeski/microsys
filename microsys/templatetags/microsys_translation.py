@@ -4,7 +4,6 @@ from microsys.translations import get_strings
 register = template.Library()
 
 from microsys.middleware import get_current_request
-from microsys.utils import _get_request_translations
 
 @register.filter
 def translate_log(value, prefix=''):
@@ -17,7 +16,7 @@ def translate_log(value, prefix=''):
         return ""
         
     request = get_current_request()
-    ms_trans = _get_request_translations(request)
+    ms_trans = get_strings()
         
     # Construct key: e.g. 'action_login', 'model_user'
     key = f"{prefix}_{str(value).lower()}" if prefix else str(value).lower()

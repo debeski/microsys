@@ -15,7 +15,8 @@ from django_tables2 import RequestConfig, SingleTableView
 from django.views.generic.detail import DetailView
 
 # Project imports
-from ..utils import is_scope_enabled, _get_request_translations, is_staff, is_superuser, log_user_action, get_client_ip, get_user_linked_models
+from ..utils import is_scope_enabled, is_staff, is_superuser, log_user_action, get_client_ip, get_user_linked_models
+from ..translations import get_strings
 from .twofa import send_otp
 
 
@@ -57,7 +58,7 @@ class CustomLoginView(LoginView):
             self.request.session['lang'] = lang_param
             
         # 2. Use the smart helper (now handles session automatically)
-        context['MS_TRANS'] = _get_request_translations(self.request)
+        context['MS_TRANS'] = get_strings()
 
         return context
 
@@ -116,7 +117,7 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, FilterView, SingleTa
 
     def get_table_kwargs(self):
         kwargs = super().get_table_kwargs()
-        kwargs['translations'] = _get_request_translations(self.request)
+        kwargs['translations'] = get_strings()
         kwargs['request'] = self.request
         return kwargs
 
@@ -351,7 +352,7 @@ class UserDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         
         # Create table manually
         UserActivityLogTableNoUser = import_string('microsys.tables.UserActivityLogTableNoUser')
-        table = UserActivityLogTableNoUser(logs_qs, translations=_get_request_translations(self.request))
+        table = UserActivityLogTableNoUser(logs_qs, translations=get_strings())
         RequestConfig(self.request, paginate={'per_page': 10}).configure(table)
         
         context['table'] = table
