@@ -149,9 +149,6 @@ def get_system_config():
 
     return final_config
 
-
-
-
 # Context Menu Helper — Filters context menu actions based on user permissions
 def filter_context_actions(user, actions):
     """
