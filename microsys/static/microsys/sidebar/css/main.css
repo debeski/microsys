@@ -252,8 +252,8 @@
     inset-inline-start: 0;
     width: 100%;
     /* Glassmorphism for visibility over scrolling content */
-    background: linear-gradient(to top, rgba(225, 239, 253, 0.95), rgba(225, 239, 253, 0));
-    backdrop-filter: blur(2px);
+    background: linear-gradient(to top, rgba(var(--bs-primary-rgb), 0.1), rgba(var(--bs-primary-rgb), 0));
+    backdrop-filter: blur(10px);
     z-index: 1050; /* Ensure it's above scrolling accordion items */
     pointer-events: none; /* Let clicks pass through to content if needed */
     display: flex;

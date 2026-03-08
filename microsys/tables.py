@@ -51,10 +51,10 @@ class UserTable(tables.Table):
         row_attrs = {
             "data-micro-context": "true",
             "data-micro-actions": lambda record: json.dumps([
-                {"label": "عرض", "icon": "bi bi-eye", "type": "event", "event": "micro:view-user-details", "data": {"url": reverse('user_detail_modal', args=[record.pk])}, "dblclick": True},
+                {"label": "view_label", "icon": "bi bi-eye", "type": "event", "event": "micro:view-user-details", "data": {"url": reverse('user_detail_modal', args=[record.pk])}, "dblclick": True},
                 {"type": "divider"},
-                {"label": "تعديل", "icon": "bi bi-pencil", "type": "event", "event": "micro:record:edit", "data": {"model": "user", "id": record.pk, "name": getattr(record, 'full_name', record.username) or record.username}},
-                {"label": "إعادة تعيين كلمة المرور", "icon": "bi bi-key", "type": "event", "event": "micro:reset-password", "data": {"id": record.pk, "username": record.username, "url": reverse('reset_password', args=[record.pk])}},
+                {"label": "edit_label", "icon": "bi bi-pencil", "type": "event", "event": "micro:record:edit", "data": {"model": "user", "id": record.pk, "name": getattr(record, 'full_name', record.username) or record.username}},
+                {"label": "reset_password", "icon": "bi bi-key", "type": "event", "event": "micro:reset-password", "data": {"id": record.pk, "username": record.username, "url": reverse('reset_password', args=[record.pk])}},
             ]) # Simplified for now, auto-patch will handle labels if we use keys
         }
         # row_attrs is handled in __init__ to allow dynamic behavior
@@ -94,7 +94,8 @@ class UserActivityLogTable(tables.Table):
 
     def render_action(self, value, record):
         """Translate action type dynamically."""
-        s = _get_default_strings()
+        from .utils import _get_request_translations
+        s = _get_request_translations(getattr(self, 'request', None))
         raw_value = record.action
         if not raw_value:
             return "-"
@@ -104,7 +105,8 @@ class UserActivityLogTable(tables.Table):
         """Translate model name dynamically."""
         if not value:
             return "-"
-        s = _get_default_strings()
+        from .utils import _get_request_translations
+        s = _get_request_translations(getattr(self, 'request', None))
         keys_to_try = [
             f"model_{value.lower().replace('.', '_')}", 
             f"model_{value.split('.')[-1].lower()}"

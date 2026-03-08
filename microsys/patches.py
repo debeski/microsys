@@ -294,6 +294,26 @@ def _patch_table_init():
                     column.column.verbose_name = lazy_translator(k, raw_vname)
                     break
 
+        # django-tables2: Translate context menu actions inside row_attrs
+        if hasattr(self, 'row_attrs') and 'data-micro-actions' in self.row_attrs:
+            orig_actions = self.row_attrs['data-micro-actions']
+            if callable(orig_actions):
+                def _translated_actions(record):
+                    import json
+                    try:
+                        raw_json = orig_actions(record)
+                        if not raw_json:
+                            return raw_json
+                        actions = json.loads(raw_json)
+                        for act in actions:
+                            if 'label' in act and isinstance(act['label'], str):
+                                # Translate the label using the resolved translation dictionary `s`
+                                act['label'] = str(s.get(act['label'], act['label']))
+                        return json.dumps(actions)
+                    except Exception:
+                        return orig_actions(record)
+                self.row_attrs['data-micro-actions'] = _translated_actions
+
     tables.Table.__init__ = _patched_init
 
 

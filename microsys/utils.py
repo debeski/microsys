@@ -125,7 +125,9 @@ def get_system_config():
     for db_k in db_config.keys():
         if db_k not in ['languages', 'translations']:
             for lang_code in final_config.get('languages', {}).keys():
-                final_config.pop(f"{db_k}_{lang_code}", None)
+                loc_key = f"{db_k}_{lang_code}"
+                if loc_key not in db_config:
+                    final_config.pop(loc_key, None)
     
     # Deep merge languages
     langs = default_config['languages'].copy()

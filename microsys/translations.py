@@ -134,6 +134,7 @@ MICROSYS_STRINGS = {
         'tbl_action': 'الإجراء',
         'tbl_object_id': 'رقم العنصر',
         'tbl_number': 'الهدف',
+        'tbl_created_by': 'أنشئ بواسطة',
         'tbl_scope_default': 'عام',
 
         # Filter placeholders
@@ -575,6 +576,7 @@ MICROSYS_STRINGS = {
         'tbl_action': 'Action',
         'tbl_object_id': 'Object ID',
         'tbl_number': 'Target',
+        'tbl_created_by': 'Created By',
         'tbl_scope_default': 'General',
 
         # Filter placeholders
