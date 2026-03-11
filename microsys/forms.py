@@ -591,9 +591,8 @@ class UserModalForm:
     """
     handles_save = True  # Tells DynamicModalManagerView to call save(commit=True) directly
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, user=None, **kwargs):
         instance = kwargs.get('instance')
-        user = kwargs.get('user')
 
         if instance and instance.pk:
             # Edit mode — use change form
@@ -604,6 +603,7 @@ class UserModalForm:
             # Remove instance for creation form (UserCreationForm doesn't expect it)
             kwargs.pop('instance', None)
 
+        kwargs['user'] = user
         form = form_cls(*args, **kwargs)
         form.handles_save = True
         # Ensure no <form> tag in modal context (modal template provides it)
@@ -656,10 +656,10 @@ class UserProfileEditForm(forms.ModelForm):
         model = User
         fields = ['username', 'first_name', 'last_name', 'email']
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         # Extract instance and pop 'user' before super().__init__
         user_instance = kwargs.get('instance')
-        self.user_context = kwargs.pop('user', None)
+        self.user_context = user
         super().__init__(*args, **kwargs)
         
         s = get_strings()

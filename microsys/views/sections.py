@@ -717,21 +717,29 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
                 continue
 
             params = sig.parameters
-            has_var_keyword = any(
-                p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
-            )
 
-            # Always pass user if the form explicitly names it OR accepts **kwargs
-            # (custom forms like UserModalForm pop 'user' before calling super)
-            if 'user' in params or has_var_keyword:
+            # Pass user if explicitly named as a parameter
+            if 'user' in params:
                 extra.setdefault('user', self.request.user)
 
-            # Only pass request when explicitly named (NOT on **kwargs alone,
-            # because it would propagate to BaseModelForm.__init__ and crash)
+            # Pass request when explicitly named
             if 'request' in params:
                 extra.setdefault('request', self.request)
 
         return extra
+
+    def _build_form(self, form_class, *args, **kwargs):
+        """
+        Safely instantiate a form, injecting user/request only when accepted.
+        Falls back to instantiation without extra kwargs if they cause errors.
+        """
+        extra_kwargs = self._get_form_kwargs(form_class)
+        merged = {**kwargs, **extra_kwargs}
+        try:
+            return form_class(*args, **merged)
+        except TypeError:
+            # Form doesn't accept the extra kwargs — retry without them
+            return form_class(*args, **kwargs)
 
     def get_model(self):
         if self.model:
@@ -790,8 +798,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
         form = None
         if self.show_form:
             form_class = self.form_class or classes['form']
-            extra_kwargs = self._get_form_kwargs(form_class)
-            form = form_class(instance=instance, **extra_kwargs)
+            form = self._build_form(form_class, instance=instance)
         
         # 5. Render
         context = {
@@ -836,8 +843,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
 
         classes = get_model_classes(model._meta.model_name, app_label=model._meta.app_label)
         form_class = self.form_class or classes['form']
-        extra_kwargs = self._get_form_kwargs(form_class)
-        form = form_class(request.POST, request.FILES, instance=instance, **extra_kwargs)
+        form = self._build_form(form_class, request.POST, request.FILES, instance=instance)
 
         if form.is_valid():
             # Forms with handles_save=True manage their own save cycle

@@ -575,7 +575,7 @@ def _build_generic_detail_context(instance, request=None):
     from microsys.utils import is_scope_enabled
     from microsys.translations import get_strings
 
-    s = _get_default_strings()
+    s = get_strings()
     if request and request.user.is_authenticated and hasattr(request.user, 'profile'):
         lang = request.user.profile.preferences.get('language', 'en') if request.user.profile.preferences else 'en'
         s = get_strings(lang)
@@ -688,7 +688,7 @@ def _build_generic_table_class(model):
             self.model_name = model_name
         self.request = request
         
-        s = translations or _get_default_strings()
+        s = translations or get_strings()
         
         # Context Menu Helper
         def get_actions(record):
