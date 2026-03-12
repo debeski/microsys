@@ -1233,11 +1233,9 @@ def set_field_attrs(form, request=None):
     ms_trans = get_strings()
     
     # Detect language for direction
-    lang = getattr(request, 'LANGUAGE_CODE', None)
-    if not lang:
-        from django.utils.translation import get_language
-        lang = get_language() or 'en'
-    direction = 'rtl' if lang.startswith('ar') else 'ltr' 
+    from microsys.translations import get_current_language_code
+    lang = get_current_language_code()
+    direction = 'rtl' if lang.startswith('ar') else 'ltr'
     
     for field_name in form.fields:
         field = form.fields.get(field_name)
@@ -1316,7 +1314,7 @@ def setup_filter_helper(filter_instance, request=None, preserve_keys=None):
     
     # Determine which keys to preserve in the URL and form state
     if preserve_keys is None:
-        preserve_keys = ['type', 'sort', 'per_page', 'export_type', 'model', 'id']
+        preserve_keys = ['type', 'sort', 'per_page', 'export_type', 'model', 'id', 'category']
         
     layout_hidden = []
     if request and request.GET:
@@ -1366,7 +1364,7 @@ def setup_filter_helper(filter_instance, request=None, preserve_keys=None):
     # Wrap divs in a row container for consistent layout even if form tag is missing
     helper.layout = Layout(
         *layout_hidden, 
-        Div(*divs, css_class='row g-2 align-items-center mb-0')
+        Div(*divs, css_class='row g-2 align-items-start mb-0')
     )
     filter_instance.form.helper = helper
     

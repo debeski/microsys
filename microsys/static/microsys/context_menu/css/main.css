@@ -9,7 +9,7 @@
 
 .context-menu {
     position: fixed;
-    z-index: 1050;
+    z-index: 9999;
     min-width: 140px;
     background: var(--bs-body-bg, #fff);
     border: 1px solid var(--bs-border-color, #dee2e6);

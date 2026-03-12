@@ -292,6 +292,10 @@ def create_user_connected_profiles(sender, instance, created, **kwargs):
     if not created:
         return
 
+    # Superusers/admins should not get auto-created linked profiles
+    if instance.is_superuser:
+        return
+
     from .utils import get_user_linked_models
     from django.db import models
     from django.utils import timezone

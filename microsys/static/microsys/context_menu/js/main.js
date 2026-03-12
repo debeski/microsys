@@ -20,6 +20,9 @@
     document.addEventListener('DOMContentLoaded', init);
 
     function init() {
+        if (window.__microContextMenuInitialized) return;
+        window.__microContextMenuInitialized = true;
+
         // Create Menu DOM if not exists
         if (!document.getElementById('microContextMenu')) {
             createMenuDOM();

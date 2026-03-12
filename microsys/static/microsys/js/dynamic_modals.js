@@ -4,6 +4,9 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    if (window.__microDynamicModalsInitialized) return;
+    window.__microDynamicModalsInitialized = true;
+
     const modalEl = document.getElementById('universalDynamicModal');
     if (!modalEl) return;
 
@@ -68,13 +71,35 @@ document.addEventListener('DOMContentLoaded', function() {
     // 2. Load Content via AJAX
     function openModalAndLoad(url) {
         
-        // Show loading state
-        modalBody.innerHTML = `
-            <div class="text-center p-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>`;
+        // Show loading state without changing size
+        let existingOverlay = modalBody.querySelector('.dynamic-modal-overlay');
+        if (!existingOverlay) {
+            // If there's content, add an overlay to keep the size. If empty, just show simple loading.
+            if (modalBody.innerHTML.trim() && !modalBody.innerHTML.includes('spinner-border')) {
+                const overlay = document.createElement('div');
+                overlay.className = 'dynamic-modal-overlay position-absolute top-0 start-0 w-100 h-100 bg-white d-flex align-items-center justify-content-center';
+                overlay.style.zIndex = '1055';
+                overlay.style.opacity = '0.7';
+                
+                // Spinner inside overlay
+                overlay.innerHTML = `
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                `;
+                // Make sure modal body is positioned relative so overlay covers it
+                modalBody.style.position = 'relative';
+                modalBody.appendChild(overlay);
+            } else {
+                // Initial load, no content yet. Show simple spinner.
+                modalBody.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-center w-100 p-5" style="min-height: 200px;">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>`;
+            }
+        }
         
         dynamicModal.show();
 
@@ -93,6 +118,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Execute any inline scripts returned in the HTML payload
                 const scripts = modalBody.querySelectorAll('script');
                 scripts.forEach(oldScript => {
+                    // Prevent re-executing core scripts that bind global events
+                    if (oldScript.src && (
+                        oldScript.src.includes('dynamic_modals.js') || 
+                        oldScript.src.includes('context_menu/js/main.js') ||
+                        oldScript.src.includes('context_menu/js/section_manager.js')
+                    )) {
+                        return;
+                    }
+
                     const newScript = document.createElement('script');
                     // Copy attributes (especially `nonce` for CSP)
                     Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
@@ -149,6 +183,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (pk && confirm('Are you sure you want to delete this record?')) {
                     deleteRecord(pk);
                 }
+            });
+        });
+
+        // Back buttons (View Mode)
+        const backBtns = modalBody.querySelectorAll('.dynamic-back-btn');
+        backBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                openModalAndLoad(currentBaseUrl);
             });
         });
 
@@ -255,4 +298,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p>${msg}</p>
             </div>`;
     }
+
+    // 6. Context Menu Integration (Catch events fired by auto-generated tables)
+    modalEl.addEventListener('micro:record:edit', function(e) {
+        if (!modalEl.classList.contains('show')) return;
+        e.stopPropagation();
+        
+        const data = e.detail.data;
+        if (!data || !data.id) return;
+        
+        const editUrl = currentBaseUrl.endsWith('/') ? 
+            currentBaseUrl + data.id + '/' : 
+            currentBaseUrl + '/' + data.id + '/';
+        openModalAndLoad(editUrl);
+    });
+
+    modalEl.addEventListener('micro:record:delete', function(e) {
+        if (!modalEl.classList.contains('show')) return;
+        e.stopPropagation();
+        
+        const data = e.detail.data;
+        if (!data || !data.id) return;
+        
+        if (confirm('Are you sure you want to delete this record (ID: ' + data.id + ')?')) {
+            deleteRecord(data.id);
+        }
+    });
+
+    modalEl.addEventListener('micro:record:view', function(e) {
+        if (!modalEl.classList.contains('show')) return;
+        e.stopPropagation();
+        
+        const data = e.detail.data;
+        if (!data || !data.id) return;
+        
+        const viewUrl = currentBaseUrl.endsWith('/') ? 
+            currentBaseUrl + data.id + '/?action=view' : 
+            currentBaseUrl + '/' + data.id + '/?action=view';
+        openModalAndLoad(viewUrl);
+    });
+
 });

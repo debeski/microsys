@@ -32,3 +32,11 @@
         <div class="text-muted small mt-1">ID: {{ related_object.pk }}</div>
     </div>
 {% endif %}
+
+{% if request.GET.action == 'view' %}
+<div class="mt-4 text-end border-top pt-3">
+    <button type="button" class="btn btn-outline-secondary px-4 rounded-pill dynamic-back-btn">
+        <i class="bi bi-arrow-right me-1"></i> {{ MS_TRANS.btn_back|default:"رجوع" }}
+    </button>
+</div>
+{% endif %}

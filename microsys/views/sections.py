@@ -773,7 +773,13 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
         # 2. Handle List (Table)
         table = None
         f = None
-        if self.show_table:
+        
+        # Action override
+        action = request.GET.get('action')
+        show_table = self.show_table if action != 'view' else False
+        show_form = self.show_form if action != 'view' else False
+
+        if show_table:
             queryset = model.objects.all()
             # Filter (optional)
             if classes['filter']:
@@ -796,7 +802,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
 
         # 4. Handle Form (Edit or Create)
         form = None
-        if self.show_form:
+        if show_form:
             form_class = self.form_class or classes['form']
             form = self._build_form(form_class, instance=instance)
         
@@ -809,6 +815,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             'instance': instance,
             'object': instance,  # Django convention alias
             'MS_TRANS': get_strings(),
+            'form_has_submit': getattr(form, "_auto_helper", False),
         }
 
         # Auto-merge model-defined modal context (convention: get_modal_context)
@@ -820,7 +827,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
         tpl = self.template_name
         
         # 6. Fallback to AutoDetail View if form/table are disabled and no template is provided
-        if not self.show_form and not self.show_table and not tpl:
+        if not show_form and not show_table and not tpl:
             from microsys.utils import _build_generic_detail_context
             context['auto_detail_fields'] = _build_generic_detail_context(instance, request)
             tpl = 'microsys/includes/dynamic_modal_detail.html'
@@ -873,6 +880,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             'form': form,
             'instance': instance,
             'MS_TRANS': get_strings(),
+            'form_has_submit': getattr(form, "_auto_helper", False),
         }
         # Render combined view for validation failure
         html = render_to_string('microsys/includes/dynamic_modal_combined.html', context, request=request)

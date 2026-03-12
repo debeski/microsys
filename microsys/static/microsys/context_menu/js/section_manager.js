@@ -81,6 +81,9 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        if (window.__microSectionManagerInitialized) return;
+        window.__microSectionManagerInitialized = true;
+
         const sectionDataEl = document.getElementById('sectionData');
         if (!sectionDataEl) return;
         
@@ -91,6 +94,9 @@
         // Smart Delete Handler
         // ---------------------------------------------------------
         document.body.addEventListener('micro:record:delete', function(e) {
+            // Ignore events that originated from inside a dynamic modal (handled by dynamic_modals.js)
+            if (e.target.closest('.modal')) return;
+
             const data = e.detail.data;
             if (!confirm('هل أنت متأكد من حذف: ' + data.name + ' ؟')) return;
 
@@ -145,6 +151,9 @@
         // Smart View Handler
         // ---------------------------------------------------------
         document.body.addEventListener('micro:record:view', function(e) {
+            // Ignore events that originated from inside a dynamic modal
+            if (e.target.closest('.modal')) return;
+
             const data = e.detail.data;
             const url = `${sectionData.detailsUrl}?model=${data.model}&pk=${data.id}`;
 
@@ -199,6 +208,9 @@
         // Smart Edit Handler (Fallback for generic Section Managers)
         // ---------------------------------------------------------
         document.body.addEventListener('micro:record:edit', function(e) {
+            // Ignore events that originated from inside a dynamic modal
+            if (e.target.closest('.modal')) return;
+
             const data = e.detail.data;
             if (sectionData && sectionData.editUrlTemplate) {
                 const url = sectionData.editUrlTemplate.replace('{id}', data.id);
