@@ -5,20 +5,23 @@ from django.apps import apps
 
 
 def custom_permission_str(self):
-    """Custom Arabic translations for Django permissions"""
+    """Custom translations for Django permissions based on active language"""
+    from microsys.translations import get_strings
+    
     permission_name = str(self.name)
+    strings = get_strings()
 
     # Translation map for keywords
     replacements = {
-        "Can add": "إضافة",
-        "Can change": "تعديل",
-        "Can delete": "حذف",
-        "Can view": "عرض",
-        "permission": "الصلاحيات",
+        "Can add": strings.get("can_add", "إضافة"),
+        "Can change": strings.get("can_change", "تعديل"),
+        "Can delete": strings.get("can_delete", "حذف"),
+        "Can view": strings.get("can_view", "عرض"),
+        "permission": strings.get("permission_word", "الصلاحيات"),
     }
 
-    for en, ar in replacements.items():
-        permission_name = permission_name.replace(en, ar)
+    for en, target in replacements.items():
+        permission_name = permission_name.replace(en, target)
 
     return permission_name.strip()
 

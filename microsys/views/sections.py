@@ -32,6 +32,7 @@ from ..utils import (
     _create_minimal_instance_from_post,
     log_user_action,
     setup_filter_helper,
+    has_submit_button,
 )
 from ..translations import get_strings
 
@@ -376,7 +377,7 @@ def core_models_view(request):
         'filter': filter_obj,
         'table': table,
         'id': instance_id,
-        'form_has_submit': getattr(form, "_auto_helper", False),  # Flag to hide template buttons
+        'hide_form_buttons': getattr(form, "_auto_helper", False) or has_submit_button(form),
         'show_cancel': 'id' in request.GET, # Kept for other uses if any
         'cancel_url': cancel_url,
         'ar_name': selected_data['verbose_name'],
@@ -815,7 +816,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             'instance': instance,
             'object': instance,  # Django convention alias
             'MS_TRANS': get_strings(),
-            'form_has_submit': getattr(form, "_auto_helper", False),
+            'hide_form_buttons': getattr(form, "_auto_helper", False) or has_submit_button(form),
         }
 
         # Auto-merge model-defined modal context (convention: get_modal_context)
@@ -880,7 +881,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             'form': form,
             'instance': instance,
             'MS_TRANS': get_strings(),
-            'form_has_submit': getattr(form, "_auto_helper", False),
+            'hide_form_buttons': getattr(form, "_auto_helper", False) or has_submit_button(form),
         }
         # Render combined view for validation failure
         html = render_to_string('microsys/includes/dynamic_modal_combined.html', context, request=request)

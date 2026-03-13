@@ -3,7 +3,7 @@
 <form method="post" action="{{ request.path }}{% if request.GET.model %}?model={{ request.GET.model }}{% endif %}{% if request.GET.id %}&id={{ request.GET.id }}{% endif %}">
     {% csrf_token %}
     {% crispy form %}
-    {% if not form_has_submit %}
+    {% if not hide_form_buttons %}
         <div class="mt-3 text-end pt-3 border-top">
             {% if instance %}
                 <div class="d-inline-flex align-items-center">

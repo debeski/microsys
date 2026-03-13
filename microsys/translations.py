@@ -257,6 +257,11 @@ MICROSYS_STRINGS = {
         'btn_change_password': 'تغيير كلمة المرور',
         
         # Permissions UI
+        'can_add': 'إضافة',
+        'can_change': 'تعديل',
+        'can_delete': 'حذف',
+        'can_view': 'عرض',
+        'permission_word': 'الصلاحيات',
         'perm_staff_access': 'صلاحيات الإدارة',
         'perm_manage_users': 'إدارة المستخدمين',
         'perm_view_sections': 'عرض الأقسام',
@@ -699,6 +704,11 @@ MICROSYS_STRINGS = {
         'btn_change_password': 'Change Password',
         
         # Permissions UI
+        'can_add': 'Can add',
+        'can_change': 'Can change',
+        'can_delete': 'Can delete',
+        'can_view': 'Can view',
+        'permission_word': 'permission',
         'perm_staff_access': 'Management Access',
         'perm_manage_users': 'User Management',
         'perm_view_sections': 'View Sections',

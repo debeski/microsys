@@ -162,9 +162,9 @@ class GroupedPermissionWidget(ChoiceWidget):
             current_id = attrs.get('id', 'id_permissions') if attrs else 'id_permissions'
 
             # Translate permission label if possible
-            # perm.name is the DB field, str(perm) is 'app | model | name'
-            # We want just the name part, but translated.
-            perm_label = s.get(f"perm_{codename}", perm.name)
+            # We use str(perm) to respect the dynamic translations 
+            # applied in apps.py (which overrides Permission.__str__)
+            perm_label = s.get(f"perm_{codename}", str(perm))
 
             # Special Help Text for manage_staff
             help_text = ""

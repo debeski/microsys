@@ -1421,3 +1421,44 @@ def translate_choices(choices, ms_trans):
             translated.append((value, ms_trans.get(f'choice_{value}', label)))
     return translated
 
+
+# Form Helper — Detects if a Crispy form layout already contains Submit/Button elements
+def has_submit_button(form):
+    """
+    Recursively inspects a Crispy Form helper layout to determine if the developer
+    has already included a Submit or Button object. Used to auto-hide duplicate
+    buttons in generic modal/section templates.
+    """
+    if not hasattr(form, 'helper') or not form.helper or not getattr(form.helper, 'layout', None):
+        return False
+        
+    from crispy_forms.layout import Submit, Button, HTML
+    
+    def check_node(node):
+        # Direct match for Submit or Button objects
+        if isinstance(node, (Submit, Button)):
+            return True
+            
+        # Match inside raw HTML objects
+        if isinstance(node, HTML) and hasattr(node, 'html'):
+            html_content = str(node.html).lower()
+            if '<button' in html_content and 'type="submit"' in html_content:
+                return True
+            if '<input' in html_content and 'type="submit"' in html_content:
+                return True
+            if 'class="btn' in html_content and ('save' in html_content or 'حفظ' in html_content):
+                # Catch-all for generic styled buttons that look like save buttons
+                return True
+                
+        # Recursive check for any nested layout objects (Rows, Divs, Fieldsets, etc.)
+        if hasattr(node, 'fields') and node.fields:
+            for child in node.fields:
+                if check_node(child):
+                    return True
+        return False
+        
+    for item in form.helper.layout.fields:
+        if check_node(item):
+            return True
+            
+    return False

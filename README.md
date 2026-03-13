@@ -182,7 +182,7 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 - **System Integration**: Centralized management for users, permissions and system scopes.
 - **Profile Extension**: Automatically links a `Profile` to your existing User model.
 - **Scope Management**: Optional, dynamic scope isolation system with abstract `ScopedModel`.
-- **Permissions**: Custom grouped permission UI (App/Model/Action).
+- **Permissions**: Custom grouped permission UI (App/Model/Action) with dynamic multi-language translation for permission prefixes.
 - **User Detail View**: Detailed page for user profile, activity, and last login.
 - **Dynamic Auxiliary Model Detection**: Zero-Boilerplate Zero-Code Detection of auxiliary models using model attrs.
 - **Dynamic Forms, Filters and Tables**: Automatically detects and registers or creates forms, filters and tables to auxiliary models.
