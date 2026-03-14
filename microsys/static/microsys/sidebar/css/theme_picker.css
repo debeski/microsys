@@ -151,15 +151,3 @@
 .theme-circle-red   { background: #7f1d1d; }
 .theme-circle-dark  { background: #0f172a; }
 
-/* Dark Mode Overrides for the Popup */
-:root.theme-dark .theme-popup {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.1);
-    color: white;
-}
-:root.theme-dark .sidebar-toolbar {
-    border-top-color: rgba(255, 255, 255, 0.05);
-}
-:root.theme-dark .theme-option-circle.active {
-    box-shadow: 0 0 0 2px #1e293b, 0 0 0 4px #3b82f6 !important;
-}

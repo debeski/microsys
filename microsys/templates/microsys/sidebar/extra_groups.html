@@ -1,6 +1,6 @@
 {% if groups %}
 <div class="accordion accordion-flush" id="sidebarExtraAccordion">
-{% for group_name, group in groups.items %}
+{% for group in groups %}
     <div class="accordion-item" data-group-id="{{ group.id }}">
         <h2 class="accordion-header d-flex flex-nowrap align-items-center{% if group.url and group.url != '#' %} has-url-btn{% endif %}">
             <button class="accordion-button{% if not group.is_open %} collapsed{% endif %}" 
@@ -11,17 +11,17 @@
                     aria-expanded="{% if group.is_open %}true{% else %}false{% endif %}" 
                     aria-controls="{{ group.id }}">
                 <i class="bi {{ group.icon }} me-2" style="font-size: 24px;"></i>
-                <span class="flex-grow-1 text-start">{{ group_name }}</span>
+                <span class="flex-grow-1 text-start">{{ group.label }}</span>
             </button>
             {% if group.url and group.url != '#' %}
-            <a href="{{ group.url }}" class="group-url-btn" title="{{ group_name }}">
+            <a href="{{ group.url }}" class="group-url-btn" title="{{ group.label }}">
                 <i class="bi bi-kanban group-url-icon"></i>
             </a>
             {% endif %}
         </h2>
         <div id="{{ group.id }}" 
              class="accordion-collapse collapse{% if group.is_open %} show{% endif %}">
-            <div class="accordion-body p-0" data-group-name="{{ group_name|slugify }}">
+            <div class="accordion-body p-0" data-group-name="{{ group.raw_name|slugify }}">
                 {% for item in group.items %}
                 <a href="{{ item.url }}" 
                    class="list-group-item list-group-item-action{% if item.active %} active{% endif %}"

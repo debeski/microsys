@@ -73,8 +73,8 @@
     <script src="{% static 'microsys/accessibility/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/language/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/language/js/translations.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
-    <script src="{% static 'microsys/autofill/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
-    <script src="{% static 'microsys/main/js/prevent_double_submit.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+    <script src="{% static 'microsys/helpers/autofill/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+    <script src="{% static 'microsys/helpers/prevent_double_submit.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 
 </head>
 <body>
@@ -145,7 +145,7 @@
             });
         });
     </script>
-    {% include 'microsys/includes/micro_context_menu.html' %}
-    {% include 'microsys/includes/dynamic_modal.html' %}
+    {% include 'microsys/helpers/micro_context_menu.html' %}
+    {% include 'microsys/helpers/dynamic_modal.html' %}
 </body>
 </html>

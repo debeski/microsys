@@ -348,7 +348,12 @@ class CustomUserCreationForm(UserCreationForm):
 
 
         self.helper = FormHelper()
-        layout_blocks = [
+        self.helper.form_tag = False
+        
+        from microsys.utils import is_scope_enabled
+        scope_visible = 'scope' in self.fields and getattr(self.fields['scope'].widget, 'input_type', '') != 'hidden' and is_scope_enabled()
+
+        step_1_fields = [
             Row(Field("username", css_class="form-control")),
             Row(Field("password1", css_class="form-control")),
             Row(Field("password2", css_class="form-control")),
@@ -363,35 +368,45 @@ class CustomUserCreationForm(UserCreationForm):
                 Div(Field("email", css_class="form-control"), css_class="col-md-6"),
                 css_class="row"
             ),
+            Field("is_active")
         ]
         
-        if 'scope' in self.fields and getattr(self.fields['scope'].widget, 'input_type', '') != 'hidden':
-            layout_blocks.append(Row(Field("scope", css_class="form-control")))
+        if scope_visible:
+            step_1_fields.append(Row(Field("scope", css_class="form-control")))
             
-        layout_blocks.extend([
+        step_1_div = Div(*step_1_fields, css_class="wizard-step wizard-step-1")
+        
+        step_2_fields = [
             HTML("<hr>"),
-            Field("permissions", css_class="col-12"),
-            "is_active",
-            FormActions(
-                HTML(
-                    f"""
-                    <button type="submit" class="btn btn-success rounded-pill">
-                        <i class="bi bi-person-plus-fill text-light me-1 h4"></i>
-                        {s.get('btn_add', 'إضافة')}
-                    </button>
-                    """
-                ),
-                HTML(
-                    f"""
-                    <button type="button" class="btn btn-danger rounded-pill" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
-                    </button>
-                    """
-                )
-            )
-        ])
+            Field("permissions", css_class="col-12")
+        ]
+        step_2_div = Div(*step_2_fields, css_class="wizard-step wizard-step-2", style="display: none;")
 
-        self.helper.layout = Layout(*layout_blocks)
+        actions = FormActions(
+            HTML(
+                f"""
+                <button type="button" class="btn btn-secondary rounded-pill ms-btn-prev" style="display: none;">
+                    <i class="bi bi-arrow-right-circle text-light me-1 h4"></i> {s.get('btn_prev', 'السابق')}
+                </button>
+                <button type="button" class="btn btn-primary rounded-pill ms-btn-next">
+                    {s.get('btn_next', 'التالي')} <i class="bi bi-arrow-left-circle text-light ms-1 h4"></i>
+                </button>
+                <button type="submit" class="btn btn-success rounded-pill ms-btn-submit" style="display: none;">
+                    <i class="bi bi-person-plus-fill text-light me-1 h4"></i>
+                    {s.get('btn_add', 'إضافة')}
+                </button>
+                """
+            ),
+            HTML(
+                f"""
+                <button type="button" class="btn btn-danger rounded-pill" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
+                </button>
+                """
+            )
+        )
+
+        self.helper.layout = Layout(step_1_div, step_2_div, actions)
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -521,7 +536,10 @@ class CustomUserChangeForm(UserChangeForm):
         self.helper = FormHelper()
         self.helper.form_tag = False
         
-        layout_blocks = [
+        from microsys.utils import is_scope_enabled
+        scope_visible = 'scope' in self.fields and getattr(self.fields['scope'].widget, 'input_type', '') != 'hidden' and is_scope_enabled()
+        
+        step_1_fields = [
             Row(Field("username", css_class="form-control")),            
             HTML("<hr>"),
             Row(
@@ -534,35 +552,45 @@ class CustomUserChangeForm(UserChangeForm):
                 Div(Field("email", css_class="form-control"), css_class="col-md-6"),
                 css_class="row"
             ),
+            Field("is_active")
         ]
         
-        if 'scope' in self.fields and getattr(self.fields['scope'].widget, 'input_type', '') != 'hidden':
-            layout_blocks.append(Row(Field("scope", css_class="form-control")))
+        if scope_visible:
+            step_1_fields.append(Row(Field("scope", css_class="form-control")))
             
-        layout_blocks.extend([
-            HTML("<hr>"),
-            Field("permissions", css_class="col-12"),
-            "is_active",
-            FormActions(
-                HTML(
-                    f"""
-                    <button type="submit" class="btn btn-success rounded-pill">
-                        <i class="bi bi-person-plus-fill text-light me-1 h4"></i>
-                        {s.get('btn_update', 'تحديث')}
-                    </button>
-                    """
-                ),
-                HTML(
-                    f"""
-                    <button type="button" class="btn btn-danger rounded-pill" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
-                    </button>
-                    """
-                )
-            )
-        ])
+        step_1_div = Div(*step_1_fields, css_class="wizard-step wizard-step-1")
         
-        self.helper.layout = Layout(*layout_blocks)
+        step_2_fields = [
+            HTML("<hr>"),
+            Field("permissions", css_class="col-12")
+        ]
+        step_2_div = Div(*step_2_fields, css_class="wizard-step wizard-step-2", style="display: none;")
+
+        actions = FormActions(
+            HTML(
+                f"""
+                <button type="button" class="btn btn-secondary rounded-pill ms-btn-prev" style="display: none;">
+                    <i class="bi bi-arrow-right-circle text-light me-1 h4"></i> {s.get('btn_prev', 'السابق')}
+                </button>
+                <button type="button" class="btn btn-primary rounded-pill ms-btn-next">
+                    {s.get('btn_next', 'التالي')} <i class="bi bi-arrow-left-circle text-light ms-1 h4"></i>
+                </button>
+                <button type="submit" class="btn btn-success rounded-pill ms-btn-submit" style="display: none;">
+                    <i class="bi bi-person-check-fill text-light me-1 h4"></i>
+                    {s.get('btn_update', 'تحديث')}
+                </button>
+                """
+            ),
+            HTML(
+                f"""
+                <button type="button" class="btn btn-danger rounded-pill" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle text-light me-1 h4"></i> {s.get('btn_cancel', 'إلغـــاء')}
+                </button>
+                """
+            )
+        )
+        
+        self.helper.layout = Layout(step_1_div, step_2_div, actions)
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -590,6 +618,7 @@ class UserModalForm:
     based on whether an instance with a PK is provided.
     """
     handles_save = True  # Tells DynamicModalManagerView to call save(commit=True) directly
+    refresh_parent = True # Tells dynamic_modals.js to reload the page on success
 
     def __new__(cls, *args, user=None, **kwargs):
         instance = kwargs.get('instance')

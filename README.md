@@ -243,6 +243,14 @@ Every action (CRUD, Login/Logout, etc.) is automatically recorded in the `UserAc
 - **Searchable**: View and filter activity logs directly from the system dashboard.
 - **Deduplication**: `UserActivityLog.safe_log()` prevents duplicate entries within a 2-second window.
 
+4. Interactive User Wizard
+User management in dynamic modals now features a sleek 2-step interactive wizard:
+- **Step 1: Account Details**: Captures core credentials, profile information, and conditional scope assignment.
+- **Step 2: Permissions**: Interactive grouped permission selection with master-toggle support for applications and models.
+
+5. Dynamic Permission Translation
+The system automatically translates standard Django permission prefixes (Add, Change, Delete, View) into the active language, providing a completely localized experience for non-English speakers.
+
 **Accessing Middleware Context:**
 Use these helpers to grab the active user or request anywhere (e.g., in `save()` or signals):
 ```python
@@ -1465,3 +1473,4 @@ microsys/
 | v1.18.3  | • **Context Menu Smart View Duplicate Data Fix**: Fixed a bug in `collect_related_objects` where M2M relations were processed twice (via both `auto_created` reverse accessors and `many_to_many` forward accessors), causing duplicate cards in the Smart View modal. Added tracking to ensure relations are only added once. <br> • **Modal CSS Fix**: Replaced hardcoded `text-white-50` class with theme-adaptive `text-muted` in `section_manager.js` to ensure related records list items are visible in both light and dark themes. |
 | v1.18.4  | • **Filter Layout Suffix Fix**: Fixed hardcoded fallback strings `'from'` and `'to'` in `set_field_attrs` to properly consult the mapped translation dictionary keys `'filter_from'` and `'filter_to'` when computing translated placeholders for range filters (`__gte` and `__lte`). |
 | v1.18.5  | • **Leftover `_get_default_strings` Fix**: Replaced two remaining references to the removed `_get_default_strings()` function in `utils.py` (`_build_generic_detail_context` and `_build_generic_table_class`) with `get_strings()`. These stale references caused `NameError` → 500 Internal Server Error when the Dynamic Modal Manager auto-generated tables/detail views for models like `SystemSettings`. |
+| v1.19.0  | • **Interactive User Wizard**: Transformed user creation and editing into an interactive 2-step wizard (Account Details & Permissions) within the dynamic modal system. <br> • **Dynamic Permission Translation**: Implemented a system-wide patch to dynamically translate permission prefixes and labels based on the active language. <br> • **Permission Widget Polishing**: Fixed "Select All" functionality at both App and Model levels in the permission widget using event delegation for reliable AJAX support. <br> • **Modal Flow Optimization**: Updated the dynamic modal success handler to trigger a parent page reload specifically for the user management flow, ensuring the list view is always synchronized with changes. |

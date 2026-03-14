@@ -166,5 +166,5 @@ def user_profile(request):
         'config_2fa': get_2fa_config(), # Inject 2FA availability
     }
 
-    return render(request, 'microsys/profile/profile.html', context)
+    return render(request, 'microsys/users/profile.html', context)
 

@@ -142,7 +142,7 @@
 .stats-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--primal_dark);
+    color: var(--primal);
 }
 .stats-label {
     font-size: 0.85rem;
@@ -182,7 +182,7 @@ html[dir="rtl"] .activity-timeline {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background-color: var(--primal);
+    background-color: var(--granour);
     border: 2px solid #fff;
     box-shadow: 0 0 0 2px #e9ecef;
     z-index: 1;

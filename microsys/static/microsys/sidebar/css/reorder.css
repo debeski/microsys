@@ -70,22 +70,3 @@
 .sidebar.collapsed .sidebar-toolbar {
     justify-content: center;
 }
-
-/* Dark Mode Overrides */
-:root.theme-dark .reorder-toggle {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-:root.theme-dark .reorder-toggle:hover,
-:root.theme-dark .reorder-toggle.active {
-    color: var(--primal, #3b82f6);
-}
-
-:root.theme-dark .reorder-toggle.active {
-    background-color: rgba(59, 130, 246, 0.2);
-}
-
-:root.theme-dark .drop-indicator {
-    background: var(--primal, #3b82f6);
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-}

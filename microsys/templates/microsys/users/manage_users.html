@@ -252,5 +252,5 @@
     });
     </script>
     <script src="{% static 'microsys/users/js/manage_users.js' %}" nonce="{{ request.csp_nonce }}"></script>
-{% include 'microsys/includes/dynamic_modal.html' %}
+    <script src="{% static 'microsys/users/js/wizard.js' %}" nonce="{{ request.csp_nonce }}"></script>
 {% endblock %}

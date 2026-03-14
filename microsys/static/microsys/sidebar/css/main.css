@@ -1,6 +1,6 @@
 .sidebar {
     z-index: 900;
-    transition: width 0.2s ease-in-out;
+    transition: width 0.1s ease-in-out;
     background: linear-gradient(180deg, #f1f7fd 0%, #e1effd 100%);
     position: sticky;
     top: var(--header-height, 60px);
@@ -63,7 +63,7 @@
 
 .sidebar .list-group-item span,
 .sidebar .accordion-button span {
-    transition: opacity 0.2s ease, visibility 0.2s;
+    transition: opacity 0.1s ease, visibility 0.1s;
     white-space: nowrap;
 }
 
@@ -98,7 +98,7 @@
         top: var(--header-height, 60px);
         inset-inline-end: 0;
         width: 250px;
-        transition: width 0.15s ease-in-out;
+        transition: width 0.1s ease-in-out;
         height: calc(100vh - var(--header-height, 60px));
         z-index: 1000;
         --sidebar-item-px: 6px;
@@ -126,7 +126,7 @@
     color: #5a6474; /* Softer text color */
     margin: 4px 0;
     border-radius: 12px !important; /* Rounded pill shape */
-    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 0.1s cubic-bezier(0.25, 0.8, 0.25, 1);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -135,19 +135,17 @@
     overflow: hidden;
 }
 
-.sidebar .list-group-item:hover {
+.sidebar .list-group-item:hover,
+.sidebar .list-group-item.active {
     background-color: transparent !important;
     color: var(--primal) !important;
-    transform: translateX(calc(var(--hover-shift, -1) * 4px)); /* RTL: -4px, LTR: +4px */
+    transform: translateX(calc(var(--hover-shift, -1) * 4px));
+    font-weight: 700 !important;
 }
 
 .sidebar .list-group-item.active {
-    border: 1px solid transparent !important; /* Keep the 1px reserve */
-    background-color: rgba(35, 99, 195, 0.05) !important; /* Lighter soft blue */
-    color: var(--primal) !important;
-    font-weight: 700 !important;
-    box-shadow: 0 4px 12px rgba(35, 99, 195, 0.08) !important;
-    transform: translateX(calc(var(--hover-shift, -1) * 4px));
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
 }
 
 .sidebar .list-group-item i,
@@ -157,7 +155,7 @@
     justify-content: center;
     flex-shrink: 0;
     font-size: 1.25rem;
-    transition: transform 0.2s ease, color 0.2s;
+    transition: transform 0.1s ease, color 0.1s;
     color: #8c98a4; /* Muted icon color by default */
 }
 
@@ -183,7 +181,7 @@
     gap: 10px;
     white-space: nowrap;
     overflow: hidden;
-    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 0.1s cubic-bezier(0.25, 0.8, 0.25, 1);
     box-shadow: none !important;
     outline: none !important;
 }
@@ -193,15 +191,11 @@
     outline: none !important;
 }
 
-.sidebar .accordion-button:not(.collapsed) {
-    background-color: rgba(35, 99, 195, 0.04) !important; /* Very subtle open state */
+.sidebar .accordion-button:not(.collapsed),
+.sidebar .accordion-button:hover {
+    background-color: transparent !important;
     color: var(--primal) !important;
     font-weight: 700 !important;
-}
-
-.sidebar .accordion-button:hover {
-    color: var(--primal) !important;
-    background-color: transparent !important;
     transform: translateX(calc(var(--hover-shift, -1) * 4px));
 }
 
@@ -298,7 +292,7 @@
     text-decoration: none;
     flex-shrink: 0;
     font-size: 0.95rem;
-    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 0.1s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .sidebar .group-url-btn:hover {

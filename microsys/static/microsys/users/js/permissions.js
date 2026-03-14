@@ -1,66 +1,65 @@
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Permissions Widget JS Loaded');
+(function() {
+    function initPermissionWidget() {
+        // Master Checkbox Logic: App Level
+        // Using event delegation on document body for dynamic content
+    }
 
-    // Handle Card Header Clicks for Toggle
-    document.querySelectorAll('.permissions-card-header').forEach(header => {
-        header.addEventListener('click', function(e) {
-            // Prevent toggle if clicking directly on the checkbox
-            if (e.target.closest('.form-check')) return;
-
-            const targetId = this.getAttribute('data-bs-target');
-            const target = document.querySelector(targetId);
-            if (target) {
-                const isCollapsed = target.classList.contains('show');
-                if (isCollapsed) {
-                    this.classList.add('collapsed');
-                    bootstrap.Collapse.getOrCreateInstance(target).hide();
-                } else {
-                    this.classList.remove('collapsed');
-                    bootstrap.Collapse.getOrCreateInstance(target).show();
-                }
-            }
-        });
-    });
-
-    // Master Checkbox Logic: App Level
-    document.querySelectorAll('.app-master-checkbox').forEach(master => {
-        master.addEventListener('change', function() {
-            const isChecked = this.checked;
-            const card = this.closest('.permissions-card');
+    // Attach to document for event delegation
+    document.body.addEventListener('change', function(e) {
+        // App Level Master
+        if (e.target.matches('.app-master-checkbox')) {
+            const isChecked = e.target.checked;
+            const card = e.target.closest('.permissions-card');
             card.querySelectorAll('.permission-checkbox, .model-master-checkbox').forEach(cb => {
                 if (cb.disabled) return;
                 cb.checked = isChecked;
                 cb.indeterminate = false;
             });
-            updateGlobalStatus();
-        });
-    });
+        }
 
-    // Master Checkbox Logic: Model Level
-    document.querySelectorAll('.model-master-checkbox').forEach(master => {
-        master.addEventListener('change', function() {
-            const isChecked = this.checked;
-            const modelGroup = this.closest('.model-group');
+        // Model Level Master
+        if (e.target.matches('.model-master-checkbox')) {
+            const isChecked = e.target.checked;
+            const modelGroup = e.target.closest('.model-group');
             modelGroup.querySelectorAll('.permission-checkbox').forEach(cb => {
                 if (cb.disabled) return;
                 cb.checked = isChecked;
             });
-            updateAppMasterStatus(this.closest('.permissions-card'));
-            updateGlobalStatus();
-        });
+            updateAppMasterStatus(e.target.closest('.permissions-card'));
+        }
+
+        // Individual Permission Checkbox
+        if (e.target.matches('.permission-checkbox')) {
+            updateModelMasterStatus(e.target.closest('.model-group'));
+            updateAppMasterStatus(e.target.closest('.permissions-card'));
+        }
     });
 
-    // Individual Permission Checkbox Logic
-    document.querySelectorAll('.permission-checkbox').forEach(cb => {
-        cb.addEventListener('change', function() {
-            updateModelMasterStatus(this.closest('.model-group'));
-            updateAppMasterStatus(this.closest('.permissions-card'));
-            updateGlobalStatus();
-        });
+    // Delegate Click for toggling
+    document.body.addEventListener('click', function(e) {
+        const header = e.target.closest('.permissions-card-header');
+        if (header) {
+            if (e.target.closest('.prevent-toggle')) return;
+            
+            const targetId = header.getAttribute('data-bs-target');
+            const target = document.querySelector(targetId);
+            if (target) {
+                const isCollapsed = !target.classList.contains('show');
+                if (!isCollapsed) {
+                    header.classList.add('collapsed');
+                    bootstrap.Collapse.getOrCreateInstance(target).hide();
+                } else {
+                    header.classList.remove('collapsed');
+                    bootstrap.Collapse.getOrCreateInstance(target).show();
+                }
+            }
+        }
     });
 
     function updateModelMasterStatus(modelGroup) {
+        if (!modelGroup) return;
         const master = modelGroup.querySelector('.model-master-checkbox');
+        if (!master) return;
         const children = Array.from(modelGroup.querySelectorAll('.permission-checkbox')).filter(c => !c.disabled);
         const checkedCount = children.filter(c => c.checked).length;
 
@@ -69,26 +68,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateAppMasterStatus(card) {
+        if (!card) return;
         const master = card.querySelector('.app-master-checkbox');
-        const children = Array.from(card.querySelectorAll('.permission-checkbox')).filter(c => !c.disabled);
-        const checkedCount = children.filter(c => c.checked).length;
+        if (!master) return;
+        const children = Array.from(card.querySelectorAll('.permission-checkbox')).filter(c => !c.checked);
+        const allChildren = Array.from(card.querySelectorAll('.permission-checkbox')).filter(c => !c.disabled);
+        const checkedCount = allChildren.length - children.length;
 
-        master.checked = checkedCount === children.length && children.length > 0;
-        master.indeterminate = checkedCount > 0 && checkedCount < children.length;
+        master.checked = checkedCount === allChildren.length && allChildren.length > 0;
+        master.indeterminate = checkedCount > 0 && checkedCount < allChildren.length;
     }
 
-    function updateGlobalStatus() {
-        // Optional: Update top-level "Global" selectors if any remain
-    }
+    // Export sync functions to window just in case
+    window.syncPermissionsStatus = function(container) {
+        const root = container || document;
+        root.querySelectorAll('.model-group').forEach(group => updateModelMasterStatus(group));
+        root.querySelectorAll('.permissions-card').forEach(card => updateAppMasterStatus(card));
+    };
 
-    // Initial State Sync
-    document.querySelectorAll('.model-group').forEach(group => updateModelMasterStatus(group));
-    document.querySelectorAll('.permissions-card').forEach(card => updateAppMasterStatus(card));
+    // Initial sync for whatever is present
+    setTimeout(window.syncPermissionsStatus, 100);
 
-    // Prevent toggle propagation for specific elements
-    document.querySelectorAll('.prevent-toggle').forEach(el => {
-        el.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-    });
-});
+})();
+

@@ -95,16 +95,37 @@ def _process_extra_items(config, request, user_prefs=None, ms_trans=None):
             
             # Auto-expand if the group's dashboard URL is currently active
             # (Behavior removed: we now rely solely on 'active' inner items or explicit user 'open_accordions' state)
-            processed_groups[translated_group_name] = {
+            processed_groups[group_name] = {  # Use internal group_name as key for easier sorting logic
+                'label': translated_group_name,
                 'icon': group_icon,
                 'url': group_url,
                 'items': items,
                 'has_active': any(item['active'] for item in items),
                 'is_open': is_open,
                 'id': group_id,
+                'raw_name': group_name, # Keep for reordering lookups
             }
     
     return processed_groups
+
+def _sort_sidebar(items, order, id_field='url_name'):
+    """Helper to sort sidebar items list based on a list of IDs."""
+    if not order or not items:
+        return items
+    
+    # items might be a list or a list-like dict values
+    items_list = list(items)
+    
+    item_map = {item.get(id_field): item for item in items_list if item.get(id_field)}
+    sorted_items = []
+    
+    for id_val in order:
+        if id_val in item_map:
+            sorted_items.append(item_map.pop(id_val))
+    
+    # Append any remaining items (newly discovered, etc.)
+    sorted_items.extend(item_map.values())
+    return sorted_items
 
 def microsys_context(request):
     """
@@ -201,7 +222,7 @@ def microsys_context(request):
     
     # Filter by user permissions
     sidebar_items = []
-    extra_groups = {}
+    extra_groups_dict = {}
 
     if request.user.is_authenticated:
         if request.user.is_superuser:
@@ -217,7 +238,38 @@ def microsys_context(request):
             sidebar_items = visible
         
         # Process extra items for authenticated users
-        extra_groups = _process_extra_items(config, request, user_prefs, ms_trans)
+        extra_groups_dict = _process_extra_items(config, request, user_prefs, ms_trans)
+        
+        # --- Apply Reordering based on user_prefs ---
+        layout = user_prefs.get('sidebar_layout', {})
+        
+        # 1. Sort Auto Items
+        if sidebar_items and layout.get('auto_items'):
+            sidebar_items = _sort_sidebar(sidebar_items, layout['auto_items'], 'url_name')
+            
+        # 2. Sort Accordion Groups
+        extra_groups_list = list(extra_groups_dict.values())
+        if extra_groups_list and layout.get('accordion_groups_order'):
+            extra_groups_list = _sort_sidebar(extra_groups_list, layout['accordion_groups_order'], 'id')
+            
+        # 3. Sort Items within groups
+        group_items_orders = layout.get('group_items', {})
+        from django.utils.text import slugify
+        for group in extra_groups_list:
+            # Reconstruct the storage key used by JS
+            # JS: STORAGE_KEY_PREFIX_EXTRA + slugify(groupName)
+            # where groupName is the span text (label) or dataset.groupName
+            # Actually, using internal group_name is safer.
+            # Local key in JS: 'sidebar_extra_' + slugify(groupLabel)
+            # Let's use the same logic as JS 'restoreContainer' in main.html
+            group_raw = group.get('raw_name', '')
+            storage_key = 'sidebar_extra_' + slugify(group_raw)
+            if storage_key in group_items_orders:
+                group['items'] = _sort_sidebar(group['items'], group_items_orders[storage_key], 'url_name')
+        
+        extra_groups = extra_groups_list
+    else:
+        extra_groups = []
     
     context['sidebar_auto_items'] = sidebar_items
     context['sidebar_extra_groups'] = extra_groups

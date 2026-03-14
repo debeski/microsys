@@ -31,6 +31,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Cleanup backdrop and body classes on hide just in case
+    modalEl.addEventListener('hide.bs.modal', function() {
+        // Fix for "Blocked aria-hidden on an element because its descendant retained focus"
+        // If the active element is inside the modal, blur it before the modal hides.
+        if (modalEl.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+    });
+
     modalEl.addEventListener('hidden.bs.modal', function () {
         // Remove any lingering backdrops
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
@@ -53,23 +61,24 @@ document.addEventListener('DOMContentLoaded', function() {
         currentBaseUrl = url;
         if (titleText) titleText.textContent = title;
         
-        openModalAndLoad(url);
+        openModalAndLoad(url, trigger);
     });
 
     // Programmatic trigger (Context Menu / external integrations)
     document.body.addEventListener('micro:dynamic_modal:open', function(e) {
         const url = e.detail.data?.url || e.detail.action?.url;
         const title = e.detail.data?.title || e.detail.action?.title || 'تفاصيل';
+        const trigger = e.detail.trigger || null;
         
         if (!url) return;
         currentBaseUrl = url;
         if (titleText) titleText.textContent = title;
         
-        openModalAndLoad(url);
+        openModalAndLoad(url, trigger);
     });
 
     // 2. Load Content via AJAX
-    function openModalAndLoad(url) {
+    function openModalAndLoad(url, trigger = null) {
         
         // Show loading state without changing size
         let existingOverlay = modalBody.querySelector('.dynamic-modal-overlay');
@@ -101,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        dynamicModal.show();
+        dynamicModal.show(trigger);
 
         fetch(url, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -224,6 +233,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
+                if (data.refresh_parent) {
+                    window.location.reload();
+                    return;
+                }
                 // Refresh the list and clear the form by reloading the base URL
                 openModalAndLoad(currentBaseUrl);
             } else if (data.html) {

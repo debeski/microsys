@@ -197,25 +197,35 @@
         const items = container.querySelectorAll(`:scope > [data-${slugifyAttr(idAttribute)}]`);
         const order = Array.from(items).map(item => item.dataset[idAttribute]);
         
+        // 1. Update local storage (individual key for backward compat/local speed)
         try {
             localStorage.setItem(storageKey, JSON.stringify(order));
         } catch (e) {
             console.warn('Could not save sidebar order (localStorage):', e);
         }
 
-        // Save to DB via global API
+        // 2. Update DB via consolidated sidebar_layout
         if (window.updatePreferences) {
-            const currentOrder = window.USER_PREFS?.sidebar_order || {};
-            const newSidebarOrder = Object.assign({}, currentOrder);
-            newSidebarOrder[storageKey] = order;
+            const currentPrefs = window.USER_PREFS || {};
+            const currentLayout = currentPrefs.sidebar_layout || {};
+            
+            // Reconstruct the specific part of the layout
+            if (storageKey === STORAGE_KEY_AUTO) {
+                currentLayout.auto_items = order;
+            } else if (storageKey === STORAGE_KEY_GROUPS) {
+                currentLayout.accordion_groups_order = order;
+            } else if (storageKey.startsWith(STORAGE_KEY_PREFIX_EXTRA)) {
+                if (!currentLayout.group_items) currentLayout.group_items = {};
+                currentLayout.group_items[storageKey] = order;
+            }
             
             window.updatePreferences({ 
-                sidebar_order: newSidebarOrder 
+                sidebar_layout: currentLayout 
             });
             
-            // Re-update local USER_PREFS immediately for UI consistency
+            // Sync local USER_PREFS
             if (window.USER_PREFS) {
-                window.USER_PREFS.sidebar_order = newSidebarOrder;
+                window.USER_PREFS.sidebar_layout = currentLayout;
             }
         }
     }
@@ -250,13 +260,24 @@
     function restoreContainerOrder(container, storageKey, idAttribute) {
         let savedOrder;
         try {
-            // Try USER_PREFS first
-            if (window.USER_PREFS?.sidebar_order?.[storageKey]) {
-                savedOrder = window.USER_PREFS.sidebar_order[storageKey];
+            const layout = window.USER_PREFS?.sidebar_layout || {};
+            
+            // Try structured layout first
+            if (storageKey === STORAGE_KEY_AUTO && layout.auto_items) {
+                savedOrder = layout.auto_items;
+            } else if (storageKey === STORAGE_KEY_GROUPS && layout.accordion_groups_order) {
+                savedOrder = layout.accordion_groups_order;
+            } else if (storageKey.startsWith(STORAGE_KEY_PREFIX_EXTRA) && layout.group_items?.[storageKey]) {
+                savedOrder = layout.group_items[storageKey];
             } else {
-                // Fallback to localStorage
-                const saved = localStorage.getItem(storageKey);
-                if (saved) savedOrder = JSON.parse(saved);
+                // Fallback to legacy sidebar_order if it exists (for transition)
+                if (window.USER_PREFS?.sidebar_order?.[storageKey]) {
+                    savedOrder = window.USER_PREFS.sidebar_order[storageKey];
+                } else {
+                    // Final fallback to localStorage
+                    const saved = localStorage.getItem(storageKey);
+                    if (saved) savedOrder = JSON.parse(saved);
+                }
             }
         } catch (e) {
             return; // Invalid, use default

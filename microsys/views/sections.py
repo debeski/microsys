@@ -831,10 +831,10 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
         if not show_form and not show_table and not tpl:
             from microsys.utils import _build_generic_detail_context
             context['auto_detail_fields'] = _build_generic_detail_context(instance, request)
-            tpl = 'microsys/includes/dynamic_modal_detail.html'
+            tpl = 'microsys/helpers/dynamic_modal_detail.html'
             
         if not tpl:
-            tpl = 'microsys/includes/dynamic_modal_combined.html'
+            tpl = 'microsys/helpers/dynamic_modal_combined.html'
             
         html = render_to_string(tpl, context, request=request)
         return JsonResponse({'html': html})
@@ -873,7 +873,10 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             # Log action
             log_user_action(request, "UPDATE" if pk else "CREATE", instance=obj, model_name=model._meta.model_name)
             
-            return JsonResponse({'success': True})
+            return JsonResponse({
+                'success': True,
+                'refresh_parent': getattr(form, 'refresh_parent', False)
+            })
         
         # Form invalid, return form HTML with errors
         context = {
@@ -884,7 +887,7 @@ class DynamicModalManagerView(LoginRequiredMixin, View):
             'hide_form_buttons': getattr(form, "_auto_helper", False) or has_submit_button(form),
         }
         # Render combined view for validation failure
-        html = render_to_string('microsys/includes/dynamic_modal_combined.html', context, request=request)
+        html = render_to_string('microsys/helpers/dynamic_modal_combined.html', context, request=request)
         return JsonResponse({'success': False, 'html': html})
 
 

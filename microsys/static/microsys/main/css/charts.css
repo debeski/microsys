@@ -10,12 +10,6 @@
     /* optional shadow via filter if supported, but usually SVG filters are complex in CSS */
 }
 
-/* Dark Theme Specifics for Background */
-:root.theme-dark .js-plotly-plot .plotly .hoverlayer .hovertext path {
-    fill: #1e293b !important; /* Dark Slate Background */
-    stroke: #334155 !important; /* Border Color */
-}
-
 /* 2. Target the Text */
 .hoverlayer .hovertext text {
     text-anchor: end !important;
@@ -24,11 +18,6 @@
     font-family: 'Shabwa', sans-serif !important;
     fill: var(--title, #333) !important; 
     text-shadow: none !important;
-}
-
-/* Dark Theme Text Overlay */
-:root.theme-dark .hoverlayer .hovertext text {
-    fill: #e2e8f0 !important;
 }
 
 /* Correct legend text alignment in RTL context for Plotly Chart */

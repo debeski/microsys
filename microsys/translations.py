@@ -254,6 +254,8 @@ MICROSYS_STRINGS = {
         'btn_add': 'إضافة',
         'btn_update': 'تحديث',
         'btn_cancel': 'إلغاء',
+        'btn_next': 'التالي',
+        'btn_prev': 'السابق',
         'btn_change_password': 'تغيير كلمة المرور',
         
         # Permissions UI
@@ -701,6 +703,8 @@ MICROSYS_STRINGS = {
         'btn_add': 'Add',
         'btn_update': 'Update',
         'btn_cancel': 'Cancel',
+        'btn_next': 'Next',
+        'btn_prev': 'Previous',
         'btn_change_password': 'Change Password',
         
         # Permissions UI

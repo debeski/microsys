@@ -18,7 +18,7 @@ class UserActivityLogView(LoginRequiredMixin, UserPassesTestMixin, SingleTableMi
     model = apps.get_model('microsys', 'UserActivityLog')
     table_class = import_string('microsys.tables.UserActivityLogTable')
     filterset_class = import_string('microsys.filters.UserActivityLogFilter')
-    template_name = "microsys/users/user_activity_log.html"
+    template_name = "microsys/activitylog/activity_log.html"
 
     def test_func(self):
         return self.request.user.is_staff  # Only staff can access logs
@@ -72,7 +72,7 @@ class UserActivityLogView(LoginRequiredMixin, UserPassesTestMixin, SingleTableMi
 class ActivityLogDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = apps.get_model('microsys', 'UserActivityLog')
     context_object_name = 'log'
-    template_name = 'microsys/activity/activity_log_detail_modal.html'
+    template_name = 'microsys/activitylog/activity_log_detail_modal.html'
 
     def test_func(self):
         # Allow superusers or users with specific permission

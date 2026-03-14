@@ -58,15 +58,27 @@
                 
                 // Try to get USER_PREFS from script tag above if available
                 var prefs = window.USER_PREFS || {};
-                var savedOrder = prefs.sidebar_order || {};
+                var savedLayout = prefs.sidebar_layout || {};
+                var savedLegacy = prefs.sidebar_order || {};
 
                 function restoreContainer(container, storageKey, identifierAttr) {
                     var saved;
-                    // Try DB pref first
-                    if (savedOrder[storageKey]) {
-                        saved = savedOrder[storageKey];
-                    } else {
-                        // Fallback to localStorage
+                    // 1. Try new structured layout first
+                    if (storageKey === STORAGE_KEY_AUTO && savedLayout.auto_items) {
+                        saved = savedLayout.auto_items;
+                    } else if (storageKey === STORAGE_KEY_GROUPS && savedLayout.accordion_groups_order) {
+                        saved = savedLayout.accordion_groups_order;
+                    } else if (storageKey.indexOf(STORAGE_KEY_PREFIX_EXTRA) === 0 && savedLayout.group_items && savedLayout.group_items[storageKey]) {
+                        saved = savedLayout.group_items[storageKey];
+                    } 
+                    
+                    // 2. Fallback to legacy sidebar_order
+                    if (!saved && savedLegacy[storageKey]) {
+                        saved = savedLegacy[storageKey];
+                    }
+                    
+                    // 3. Fallback to localStorage
+                    if (!saved) {
                         try {
                             saved = localStorage.getItem(storageKey);
                             if (saved) saved = JSON.parse(saved);
