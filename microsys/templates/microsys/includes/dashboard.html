@@ -21,7 +21,7 @@
         <!-- 1. SECTIONS -->
         <div class="col-xl-4 col-md-6 fade-in-up stagger-1">
             <a href="{% url 'manage_sections' %}" class="text-decoration-none h-100">
-                <div class="card module-card shadow-sm module-success">
+                <div class="card module-card shadow-sm module-forest">
                     <div class="card-body">
                         <div class="module-icon-wrapper">
                             <i class="bi bi-diagram-3"></i>
@@ -39,7 +39,7 @@
         <!-- 2. USERS -->
         <div class="col-xl-4 col-md-6 fade-in-up stagger-2">
             <a href="{% url 'manage_users' %}" class="text-decoration-none h-100">
-                <div class="card module-card shadow-sm module-primary">
+                <div class="card module-card shadow-sm module-sky">
                     <div class="card-body">
                         <div class="module-icon-wrapper">
                             <i class="bi bi-people"></i>
@@ -58,7 +58,7 @@
         {% if user.is_staff %}
         <div class="col-xl-4 col-md-6 fade-in-up stagger-3">
             <a href="{% url 'user_activity_log' %}" class="text-decoration-none h-100">
-                <div class="card module-card shadow-sm module-info">
+                <div class="card module-card shadow-sm module-indigo">
                     <div class="card-body">
                         <div class="module-icon-wrapper">
                             <i class="bi bi-clock-history"></i>
@@ -77,7 +77,7 @@
         <!-- 4. PROFILE -->
         <div class="col-xl-4 col-md-6 fade-in-up stagger-4">
             <a href="{% url 'user_profile' %}" class="text-decoration-none h-100">
-                <div class="card module-card shadow-sm module-purple">
+                <div class="card module-card shadow-sm module-aqua">
                     <div class="card-body">
                         <div class="module-icon-wrapper">
                             <i class="bi bi-person-badge"></i>
@@ -95,7 +95,7 @@
         <!-- 5. SETTINGS -->
         <div class="col-xl-4 col-md-6 fade-in-up stagger-5">
             <a href="{% url 'options_view' %}" class="text-decoration-none h-100">
-                <div class="card module-card shadow-sm module-warning">
+                <div class="card module-card shadow-sm module-dark">
                     <div class="card-body">
                         <div class="module-icon-wrapper">
                             <i class="bi bi-gear"></i>
@@ -114,7 +114,7 @@
         {% if user.is_superuser %}
         <div class="col-xl-4 col-md-6 fade-in-up stagger-6">
             <a href="{% url 'options_view' %}?setup=1" class="text-decoration-none h-100">
-                <div class="card module-card shadow-sm module-dark">
+                <div class="card module-card shadow-sm module-blood">
                     <div class="card-body">
                         <div class="module-icon-wrapper">
                             <i class="bi bi-sliders"></i>

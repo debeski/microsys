@@ -47,3 +47,16 @@
     color: var(--primal_dark) !important;
     font-weight: 700;
 }
+
+/* Nav Pills Theme Overrides */
+.nav-pills {
+    --bs-nav-pills-link-active-bg: var(--primal);
+    --bs-nav-pills-link-active-color: #fff;
+}
+
+/* Ensure hover state also feels dynamic */
+.nav-pills .nav-link:hover:not(.active) {
+    background-color: rgba(var(--primal-rgb), 0.1);
+    color: var(--primal);
+}
+

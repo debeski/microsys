@@ -4,6 +4,45 @@
     --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
+.hero-section {
+    background: linear-gradient(135deg, var(--primal) 0%, #1a1a1a 100%);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    margin-bottom: 2.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.hero-section::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+}
+
+.hero-greeting {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.hero-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
+
+.hero-date {
+    font-size: 1rem;
+    opacity: 0.7;
+}
+
 .module-card {
     border: none;
     border-radius: 18px;
@@ -15,11 +54,6 @@
     display: flex;
     flex-direction: column;
     box-shadow: var(--card-shadow);
-}
-
-.theme-dark .module-card {
-    background: #2a2a2a;
-    border: 1px solid rgba(255,255,255,0.05);
 }
 
 .module-card:hover {
@@ -57,20 +91,12 @@
     color: #2b2b2b;
 }
 
-.theme-dark .module-name {
-    color: #e0e0e0;
-}
-
 .module-desc {
     color: #6c757d;
     font-size: 0.95rem;
     line-height: 1.6;
     margin-bottom: 1.5rem;
     flex-grow: 1;
-}
-
-.theme-dark .module-desc {
-    color: #a0a0a0;
 }
 
 .module-action {
@@ -92,13 +118,32 @@
 }
 
 /* Color Themes */
-.module-success .module-icon-wrapper { background: rgba(25, 135, 84, 0.1); color: #198754; }
-.module-primary .module-icon-wrapper { background: rgba(13, 110, 253, 0.1); color: #0d6efd; }
-.module-info .module-icon-wrapper    { background: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
-.module-purple .module-icon-wrapper  { background: rgba(111, 66, 193, 0.1); color: #6f42c1; }
-.module-warning .module-icon-wrapper { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
-.module-dark .module-icon-wrapper    { background: rgba(33, 37, 41, 0.1); color: #212529; }
-.theme-dark .module-dark .module-icon-wrapper { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.module-forest .module-icon-wrapper { background: rgba(25, 135, 84, 0.1); color: #198754; }
+.module-lime .module-icon-wrapper   { background: rgba(101, 163, 13, 0.1); color: #65a30d; }
+.module-sky .module-icon-wrapper    { background: rgba(13, 110, 253, 0.1); color: #0d6efd; }
+.module-teal .module-icon-wrapper   { background: rgba(13, 148, 136, 0.1); color: #0d9488; }
+.module-aqua .module-icon-wrapper   { background: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
+.module-indigo .module-icon-wrapper { background: rgba(111, 66, 193, 0.1); color: #6f42c1; }
+.module-violet .module-icon-wrapper { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
+.module-gold .module-icon-wrapper   { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+.module-bronze .module-icon-wrapper { background: rgba(180, 83, 9, 0.1); color: #b45309; }
+.module-blood .module-icon-wrapper  { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+.module-dark .module-icon-wrapper   { background: rgba(33, 37, 41, 0.1); color: #212529; }
+.module-silver .module-icon-wrapper { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+
+.module-forest .text-forest { color: #198754; }
+.module-lime .text-lime     { color: #65a30d; }
+.module-sky .text-sky       { color: #0d6efd; }
+.module-teal .text-teal     { color: #0d9488; }
+.module-aqua .text-aqua     { color: #0dcaf0; }
+.module-indigo .text-indigo { color: #6f42c1; }
+.module-violet .text-violet { color: #7c3aed; }
+.module-gold .text-gold     { color: #ffc107; }
+.module-bronze .text-bronze { color: #b45309; }
+.module-blood .text-blood   { color: #dc3545; }
+.module-dark .text-dark     { color: #212529; }
+.module-silver .text-silver { color: #64748b; }
+
 
 /* Micro-animations */
 @keyframes fadeInUp {
@@ -130,9 +175,4 @@
     padding: 1.5rem;
     box-shadow: var(--card-shadow);
     border: 1px solid rgba(0, 0, 0, 0.03);
-}
-
-.theme-dark .chart-container-sys {
-    background: #2a2a2a;
-    border: 1px solid rgba(255,255,255,0.05);
 }

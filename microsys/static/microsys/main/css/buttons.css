@@ -60,7 +60,7 @@
 }
 
 /* Info Button (Download Zip / Advanced Search) - Soft Cyan/Blue */
-.btn-info {
+/* .btn-info {
     background-color: #bae6fd !important;
     color: #055160 !important;
 }
@@ -68,7 +68,7 @@
 .btn-info:hover {
     background-color: #7dd3fc !important;
     box-shadow: 0 4px 12px rgba(5, 81, 96, 0.15);
-}
+} */
 
 /* Danger Button (Delete) - Soft Red */
 .btn-danger {

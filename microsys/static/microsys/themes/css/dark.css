@@ -897,3 +897,24 @@ html[dir="rtl"] :root.theme-dark .activity-timeline {
 .bg-primary {
     background-color: var(--table-row-hover) !important;
 }
+
+.theme-dark .module-dark .module-icon-wrapper { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+.theme-dark .chart-container-sys {
+    background: #2a2a2a;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.theme-dark .module-card {
+    background: #2a2a2a;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.theme-dark .module-name {
+    color: #e0e0e0;
+}
+
+.theme-dark .module-desc {
+    color: #a0a0a0;
+}
+

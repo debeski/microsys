@@ -42,6 +42,22 @@
             }
         })();
     </script>
+    <script nonce="{{ request.csp_nonce }}">
+        // Dynamic FOUC Prevention for collapsible cards
+        (function() {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.endsWith('Collapsed') && localStorage.getItem(key) === 'true') {
+                    const storageKeyBase = key.replace('Collapsed', '');
+                    const style = document.createElement('style');
+                    style.id = `fouc-${storageKeyBase}`;
+                    // Hide the body element associated with this key
+                    style.innerHTML = `#${storageKeyBase}Body { display: none !important; }`;
+                    document.head.appendChild(style);
+                }
+            }
+        })();
+    </script>
     {% load static %}
 
     <!-- Include CSS (direction-aware bootstrap) -->
