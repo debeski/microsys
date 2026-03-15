@@ -1,0 +1,56 @@
+{% load static %}
+<div id="ms-user-dropdown-card" class="ms-user-dropdown-card no-print">
+    <div class="ms-dropdown-header">
+        <div class="ms-user-text">
+            <span class="ms-display-name">{{ user.get_full_name|default:user.username }}</span>
+            <span class="ms-user-role">
+                {% if user.is_superuser %}
+                    {{ MS_TRANS.role_superuser }}
+                {% elif user.is_staff %}
+                    {{ MS_TRANS.role_staff }}
+                {% else %}
+                    {{ MS_TRANS.role_user }}
+                {% endif %}
+            </span>
+        </div>
+        {% if user.profile.profile_pic %}
+            <img src="{{ user.profile.profile_pic.url }}" alt="{{ user.username }}" class="ms-avatar-preview">
+        {% else %}
+            <div class="ms-avatar-preview d-flex align-items-center justify-content-center bg-light text-secondary">
+                <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="ms-dropdown-toolbar">
+        <div class="ms-toolbar-left">
+            <a href="{% url 'user_profile' %}" class="ms-tool-btn" title="{{ MS_TRANS.profile }}">
+                <i class="bi bi-person-bounding-box"></i>
+            </a>
+        </div>
+        <div class="ms-toolbar-right">
+            {% if user.is_staff %}
+            <a href="{% url 'manage_users' %}" class="ms-tool-btn" title="{{ MS_TRANS.manage_users }}">
+                <i class="bi bi-people-fill"></i>
+            </a>
+            {% endif %}
+            
+            {% if perms.microsys.view_useractivitylog or user.is_superuser %}
+            <a href="{% url 'user_activity_log' %}" class="ms-tool-btn" title="{{ MS_TRANS.activity_log }}">
+                <i class="bi bi-clock-history"></i>
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'options_view' %}" class="ms-tool-btn" title="{{ MS_TRANS.options_title }}">
+                <i class="bi bi-gear-fill"></i>
+            </a>
+            
+            <form method="POST" action="{% url 'logout' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="ms-tool-btn text-danger border-danger-subtle" title="{{ MS_TRANS.logout }}">
+                    <i class="bi bi-box-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

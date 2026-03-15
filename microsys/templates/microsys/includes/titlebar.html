@@ -14,44 +14,56 @@
             </p>
         </div>
     </div>
-        <!-- The Login Button -->
     <div class="pe-2 d-flex align-items-center">
         <!-- Extra Titlebar Controls (Dynamically injected by autofill.js) -->
-        <!-- Tutorial Trigger -->
-            {% if user.is_authenticated %}
-        <div class="m-0 signout-wrapper">
-            <a href="{{ APP_CONFIG.home_url }}" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.btn_home }}">
-                <i class="bi bi-house-fill signout-icon"></i>
-                <span class="signout-name">{{ MS_TRANS.btn_home }}</span>
+        
+        {% if user.is_authenticated %}
+            <!-- Modern User Dropdown Trigger -->
+            <div id="ms-user-dropdown-trigger" class="ms-user-trigger no-print ms-2">
+                {% if user.profile.profile_pic %}
+                    <img src="{{ user.profile.profile_pic.url }}" class="ms-trigger-avatar" alt="{{ user.username }}">
+                {% else %}
+                    <div class="ms-trigger-avatar d-flex align-items-center justify-content-center bg-light text-secondary border">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                {% endif %}
+                <span class="ms-trigger-name">{{ user.username }}</span>
+            </div>
+            
+            {# Commented out legacy buttons #}
+            {% comment %}
+            <div class="m-0 signout-wrapper">
+                <a href="{{ APP_CONFIG.home_url }}" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.btn_home }}">
+                    <i class="bi bi-house-fill signout-icon"></i>
+                    <span class="signout-name">{{ MS_TRANS.btn_home }}</span>
+                </a>
+            </div>
+
+            <div class="m-0 signout-wrapper ms-2">
+                <button id="start-tour" type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.tour_title }}" aria-label="{{ MS_TRANS.help }}">
+                    <i class="bi bi-question-circle-fill signout-icon"></i>
+                    <span class="signout-name">{{ MS_TRANS.help }}</span>
+                    <span class="visually-hidden">{{ MS_TRANS.help }}</span>
+                </button>
+            </div>
+
+            <form method="POST" action="{% url 'logout' %}" class="m-0 signout-wrapper ms-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.logout }}" aria-label="{{ MS_TRANS.logout }} {{ user.username }}" style="--signout-name-ch: {{ user.username|length }};">
+                    <i class="bi bi-box-arrow-left signout-icon"></i>
+                    <span class="signout-name">{{ user.username }}</span>
+                    <span class="visually-hidden">{{ MS_TRANS.logout }}</span>
+                </button>
+            </form>
+            {% endcomment %}
+        {% else %}
+            <!-- Login Button for Unauthenticated Users (circular icon) -->
+            {% if request.resolver_match.url_name != 'login' %}
+            <a href="{% url 'login' %}" class="ms-login-round" title="{{ MS_TRANS.login }}">
+                <i class="bi bi-person-lock"></i>
             </a>
-        </div>
-
-        <div class="m-0 signout-wrapper ms-2">
-            <button id="start-tour" type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.tour_title }}" aria-label="{{ MS_TRANS.help }}">
-                <i class="bi bi-question-circle-fill signout-icon"></i>
-                <span class="signout-name">{{ MS_TRANS.help }}</span>
-                <span class="visually-hidden">{{ MS_TRANS.help }}</span>
-            </button>
-        </div>
+            {% endif %}
         {% endif %}
-
-    {% if user.is_authenticated %}
-        <!-- Logout Button (expands to show user name on hover) -->
-        <form method="POST" action="{% url 'logout' %}" class="m-0 signout-wrapper ms-2">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-primary d-flex align-items-center px-2 login-title-btn titlebar-signout" title="{{ MS_TRANS.logout }}" aria-label="{{ MS_TRANS.logout }} {{ user.username }}" style="--signout-name-ch: {{ user.username|length }};">
-                <i class="bi bi-box-arrow-left signout-icon"></i>
-                <span class="signout-name">{{ user.username }}</span>
-                <span class="visually-hidden">{{ MS_TRANS.logout }}</span>
-            </button>
-        </form>
-    {% else %}
-        <!-- Login Button for Unauthenticated Users (hidden on login page) -->
-        {% if request.resolver_match.url_name != 'login' %}
-        <a href="{% url 'login' %}" class="btn btn-sm btn-light login-title-btn me-2">
-            <span class="d-none d-sm-inline">{{ MS_TRANS.login }}</span> &nbsp; <i class="bi bi-box-arrow-in-right"></i>
-        </a>
-        {% endif %}
-    {% endif %}
+    </div>
     </div>
 </div>

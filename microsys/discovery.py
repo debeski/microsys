@@ -69,7 +69,7 @@ def get_sidebar_config(lang_code=None):
         # Format: {'group_name': {'icon': 'bi-gear', 'items': [{'url_name': 'x', 'label': 'X', 'icon': 'bi-x'}]}}
         'EXTRA_ITEMS': {},
         # Built-in system group (appended after user EXTRA_ITEMS when enabled)
-        'SYSTEM_GROUP_ENABLED': True,
+        'SYSTEM_GROUP_ENABLED': False,
         'SYSTEM_GROUP': system_group,
         # Default overrides for auto-discovered items
         # Format: {'url_name': {'label': 'X', 'icon': 'bi-x', 'order': 10}}

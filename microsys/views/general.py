@@ -17,34 +17,10 @@ from django.db.models import Count
 from django.db.models.functions import TruncHour
 
 
-# Dashboard View — Landing page with activity charts and dynamic branding
-@login_required
-def dashboard(request):
-    """
-    Dashboard/Landing page that reflects dynamic branding.
-    """
-    # Prepare Activity Chart Data
-    UserActivityLog = apps.get_model('microsys', 'UserActivityLog')
-    now = timezone.now()
-    
-    # 1. Last 24 Hours (Group by Hour)
-    last_24h = now - timezone.timedelta(hours=24)
-    activity_24h = UserActivityLog.objects.filter(created_at__gte=last_24h) \
-        .annotate(hour=TruncHour('created_at')) \
-        .values('hour') \
-        .annotate(count=Count('id')) \
-        .order_by('hour')
-    
-    data_24h_labels = [entry['hour'].strftime('%H:00') for entry in activity_24h]
-    data_24h_values = [entry['count'] for entry in activity_24h]
-
-    context = {
-        'current_time': now,
-        'chart_data': {
-            'last_24h': json.dumps({'labels': data_24h_labels, 'values': data_24h_values}),
-        }
-    }
-    return render(request, 'microsys/includes/dashboard.html', context)
+# Dashboard View removed as per UX enhancements
+# @login_required
+# def dashboard(request):
+#     ...
 
 # System Options — Displays accessibility settings, system info, and README specs
 @login_required

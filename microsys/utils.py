@@ -78,7 +78,7 @@ def get_system_config():
         'logo': '/static/img/base_logo.png',
         'login_logo': '/static/img/login_logo.webp',
         'favicon': '/static/favicon.ico',
-        'home_url': '/sys/',
+        'home_url': '/sys/users/',
         'default_language': 'en',
         'languages': {
             'ar': {'name': 'العربية', 'dir': 'rtl', 'flag': '🇱🇾'},

@@ -72,6 +72,7 @@
     <link rel="stylesheet" href="{% static 'microsys/main/css/titlebar.css' %}">
     <link rel="stylesheet" href="{% static 'microsys/main/css/tables.css' %}">
     <link rel="stylesheet" href="{% static 'microsys/main/css/dropdowns.css' %}">
+    <link rel="stylesheet" href="{% static 'microsys/main/css/user_dropdown.css' %}">
     <link rel="stylesheet" href="{% static 'microsys/main/css/pagination.css' %}">
     <link rel="stylesheet" href="{% static 'microsys/themes/css/main.css' %}">
     <link rel="stylesheet" href="{% static 'microsys/accessibility/css/main.css' %}">
@@ -91,6 +92,7 @@
     <script src="{% static 'microsys/language/js/translations.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/helpers/autofill/js/main.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     <script src="{% static 'microsys/helpers/prevent_double_submit.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+    <script src="{% static 'microsys/main/js/user_dropdown.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 
 </head>
 <body>
@@ -98,6 +100,9 @@
     <!-- Title Bar -->
     {% block titlebar %}
     {% include 'microsys/includes/titlebar.html' %}
+    {% if user.is_authenticated %}
+    {% include 'microsys/includes/user_dropdown.html' %}
+    {% endif %}
     {% endblock %}
 
     {% block layout %}
